@@ -30,10 +30,10 @@ public:
                 column_count++;
             }
 
-            if (column_count == 10) {
+            if (column_count == 10) { // Ensure 10 columns as expected
                 ok = true;
             } else {
-                std::cerr << "Input file has the wrong number of columns" << std::endl;
+                std::cerr << "Input file has the wrong number of columns: " << column_count << std::endl;
             }
         }
     }
@@ -42,7 +42,7 @@ public:
         return ok;
     }
 
-    bool readNextRow(MotionProfileRow& row) {
+    bool readNextRow(NavSolutionNed& row) {
         if (!file.good()) return false;
 
         std::string line;
@@ -57,15 +57,17 @@ public:
 
             if (values.size() == 10) {
                 row.time = values[0];
-                row.latitude = degToRad(values[1]);
-                row.longitude = degToRad(values[2]);
+                row.latitude = helpers::degToRad(values[1]);
+                row.longitude = helpers::degToRad(values[2]);
                 row.height = values[3];
-                row.north_velocity = values[4];
-                row.east_velocity = values[5];
-                row.down_velocity = values[6];
-                row.roll_angle = degToRad(values[7]);
-                row.pitch_angle = degToRad(values[8]);
-                row.yaw_angle = degToRad(values[9]);
+                row.velocity_ned = Eigen::Vector3d(values[4], values[5], values[6]);
+
+                double roll = helpers::degToRad(values[7]);
+                double pitch = helpers::degToRad(values[8]);
+                double yaw = helpers::degToRad(values[9]);
+
+                row.C_b_n = helpers::rpyToR(roll, pitch, yaw);
+
                 return true;
             }
         }
@@ -76,5 +78,6 @@ private:
     std::ifstream file;
     bool ok;
 };
+
 
 #endif
