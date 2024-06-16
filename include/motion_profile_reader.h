@@ -1,3 +1,6 @@
+#ifndef MOTION_PROFILE_READER_H
+#define MOTION_PROFILE_READER_H
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -6,6 +9,8 @@
 #include <cmath>
 
 #include "helpers.h"
+
+using namespace helpers;
 
 class MotionProfileReader {
 public:
@@ -71,3 +76,5 @@ private:
     std::ifstream file;
     bool ok;
 };
+
+#endif

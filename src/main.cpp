@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 
     // Iterate data loader
 
-    MotionProfileReader reader("profile.csv");
+    MotionProfileReader reader("/home/tommaso/Workspace/grovesCpp/data/Profile_4.csv");
 
     MotionProfileRow row;
     while (reader.readNextRow(row)) {

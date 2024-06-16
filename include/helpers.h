@@ -1,5 +1,7 @@
-#include <Eigen/Dense>
+#ifndef HELPERS_H
+#define HELPERS_H
 
+#include <Eigen/Dense>
 
 namespace helpers {
 
@@ -45,16 +47,17 @@ namespace helpers {
                                 const ImuMeasurements & imu_meas);
 
     // IMU model
-    IMUMeasurements imuModel(const ImuMeasurements & true_imu_meas, 
-                            const ImuErrors & imu_errors,
-
-                            )
+    ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas, 
+                            const ImuErrors & imu_errors
+                            );
 
     // NED to ECEF
     NavSolutionEcef nedToEcef(const NavSolutionNed & nav_sol_ned);
 
-    double degToRad(const double & degrees) const {
+    inline double degToRad(const double & degrees) {
         return degrees * 0.01745329252; // Conversion factor from degrees to radians
     }
 
 }
+
+#endif
