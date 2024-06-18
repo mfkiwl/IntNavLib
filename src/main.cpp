@@ -40,8 +40,10 @@ int main(int argc, char** argv)
         // Get true ecef nav sol from motion profile in ned
         true_nav_ecef = nedToEcef(true_nav_ned);
 
-        // // Get true specific force and angular rates
-        // true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
+        // TODO unit test
+
+        // Get true specific force and angular rates
+        true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
 
         // // Get imu measurements by applying IMU model
         // imu_meas = imuModel(true_imu_meas, imu_errors);

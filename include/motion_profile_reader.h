@@ -60,13 +60,15 @@ public:
                 row.latitude = helpers::degToRad(values[1]);
                 row.longitude = helpers::degToRad(values[2]);
                 row.height = values[3];
-                row.velocity_ned = Eigen::Vector3d(values[4], values[5], values[6]);
+                row.v_b_n = Eigen::Vector3d(values[4], values[5], values[6]);
 
                 double roll = helpers::degToRad(values[7]);
                 double pitch = helpers::degToRad(values[8]);
                 double yaw = helpers::degToRad(values[9]);
 
-                row.C_b_n = helpers::rpyToR(roll, pitch, yaw);
+                Eigen::Vector3d rpy;
+                rpy << roll, pitch, yaw;
+                row.C_b_n = helpers::rpyToR(rpy);
 
                 return true;
             }

@@ -3,11 +3,12 @@
 namespace helpers {
 
 NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
+
     // Extract the inputs
     double L_b = nav_sol_ned.latitude;
     double lambda_b = nav_sol_ned.longitude;
     double h_b = nav_sol_ned.height;
-    Eigen::Vector3d v_eb_n = nav_sol_ned.velocity_ned;
+    Eigen::Vector3d v_eb_n = nav_sol_ned.v_b_n;
     Eigen::Matrix3d C_b_n = nav_sol_ned.C_b_n;
 
     // Compute transverse radius of curvature
@@ -37,17 +38,19 @@ NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
 
     // Construct the output structure
     NavSolutionEcef nav_sol_ecef;
-    nav_sol_ecef.position_ecef = r_eb_e;
-    nav_sol_ecef.velocity_ecef = v_eb_e;
+    nav_sol_ecef.p_b_e = r_eb_e;
+    nav_sol_ecef.v_b_e = v_eb_e;
     nav_sol_ecef.C_b_e = C_b_e;
 
     return nav_sol_ecef;
 }
 
 
-Eigen::Matrix3d rpyToR(const double & roll, 
-                        const double & pitch, 
-                        const double & yaw) {
+Eigen::Matrix3d rpyToR(const Eigen::Vector3d & rpy) {
+
+    double roll = rpy(0);
+    double pitch = rpy(1);
+    double yaw = rpy(2);
 
     // Precompute sines and cosines of Euler angles
     double sin_phi = std::sin(roll);
@@ -70,6 +73,147 @@ Eigen::Matrix3d rpyToR(const double & roll,
     C(2,2) = cos_phi * cos_theta;
 
     return C;
+}
+
+Eigen::Vector3d rToRpy(const Eigen::Matrix3d & C) {
+
+    Eigen::Vector3d rpy;
+
+    rpy(1,1) = atan2(C(2,3),C(3,3));
+    rpy(2,1) = - asin(C(1,3));      
+    rpy(3,1) = atan2(C(1,2),C(1,1));
+
+    return rpy;
+}
+
+ImuMeasurements kinematicsEcef(const NavSolutionEcef & old_nav, const NavSolutionEcef & new_nav) {
+    
+    double tor_i = new_nav.time - old_nav.time;
+
+    // Init measurements to 0
+    ImuMeasurements true_imu_meas;
+    true_imu_meas.f = Eigen::Vector3d::Zero();
+    true_imu_meas.omega = Eigen::Vector3d::Zero();
+
+    if (tor_i > 0) {
+
+    // From (2.145) determine the Earth rotation over the update interval
+    // C_Earth = C_e_i' * old_C_e_i
+
+    double alpha_ie = omega_ie * tor_i;
+
+    double cos_alpha_ie = cos(alpha_ie);
+    double sin_alpha_ie = sin(alpha_ie);
+
+    Eigen::Matrix3d C_Earth;
+    C_Earth << cos_alpha_ie, sin_alpha_ie, 0,
+                            -sin_alpha_ie, cos_alpha_ie, 0,
+                                        0,             0,  1;
+
+    // Obtain coordinate transformation matrix from the old attitude (w.r.t.
+    // an inertial frame) to the new (compensate for earth rotation)
+    Eigen::Matrix3d C_old_new = new_nav.C_b_e.transpose() * C_Earth * old_nav.C_b_e;
+
+    // Calculate the approximate angular rate w.r.t. an inertial frame
+    Eigen::Vector3d alpha_ib_b;
+    alpha_ib_b(0) = 0.5 * (C_old_new(1,2) - C_old_new(2,1));
+    alpha_ib_b(1) = 0.5 * (C_old_new(2,0) - C_old_new(0,2));
+    alpha_ib_b(2) = 0.5 * (C_old_new(0,1) - C_old_new(1,0));
+
+    // Calculate and apply the scaling factor
+    double temp = acos(0.5 * (C_old_new(1,1) + C_old_new(2,2) + C_old_new(3,3) - 1.0));
+    if (temp > 2e-5) // scaling is 1 if temp is less than this
+        alpha_ib_b = alpha_ib_b * temp/sin(temp);
+    
+    // Calculate the angular rate
+    true_imu_meas.omega = alpha_ib_b / tor_i;
+
+    // Calculate the specific force resolved about ECEF-frame axes
+    // From (5.36)
+    Eigen::Vector3d omega_ie_vec;
+    omega_ie_vec << 0 , 0 , omega_ie;
+    Eigen::Vector3d f_ib_e = ((new_nav.v_b_e - old_nav.v_b_e) / tor_i) - gravityEcef(new_nav.p_b_e)
+        + 2 * skewSymmetric(omega_ie_vec) * old_nav.v_b_e;
+
+    // Calculate the average body-to-ECEF-frame coordinate transformation
+    // matrix over the update interval using (5.84) and (5.85)
+
+    double mag_alpha = alpha_ib_b.norm();
+    Eigen::Matrix3d Alpha_ib_b = skewSymmetric(alpha_ib_b);
+
+    Eigen::Vector3d alpha_ie_vec;
+    alpha_ie_vec << 0 , 0 , alpha_ie;   
+
+    Eigen::Matrix3d ave_C_b_e;
+    if (mag_alpha>1e-8) {
+        ave_C_b_e = old_nav.C_b_e * 
+            (Eigen::Matrix3d::Identity() + 
+
+            (1 - cos(mag_alpha) / pow(mag_alpha,2)) *
+            Alpha_ib_b + 
+            
+            (1 - sin(mag_alpha) / mag_alpha) / pow(mag_alpha,2) * 
+            Alpha_ib_b * Alpha_ib_b) - 
+
+            0.5 * skewSymmetric(alpha_ie_vec) * old_nav.C_b_e;
+    }
+    else { // Approximate if angle small enough (sum not multiply)
+        ave_C_b_e = old_nav.C_b_e -
+            0.5 * skewSymmetric(alpha_ie_vec) * old_nav.C_b_e;
+    }
+    
+    // Transform specific force to body-frame resolving axes using (5.81)
+    // Groves inverts, but cant we just transpose?
+    true_imu_meas.f = ave_C_b_e.transpose() * f_ib_e;
+
+    }
+
+    return true_imu_meas;
+
+}
+
+Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e) {
+
+    double mag_r = r_eb_e.norm();
+
+    Eigen::Vector3d g = Eigen::Vector3d::Zero();
+    // If the input position is 0,0,0, produce a dummy output
+
+    if (mag_r!=0)
+    // Calculate gravitational acceleration using (2.142)
+    {
+        double z_scale = 5 * pow(r_eb_e(2) / mag_r,2);
+
+        Eigen::Vector3d gamma_1;
+        gamma_1 << (1 - z_scale) * r_eb_e(0), 
+                    (1 - z_scale) * r_eb_e(1),
+                    (3 - z_scale) * r_eb_e(2);
+
+        Eigen::Vector3d gamma;
+        gamma = -mu / pow(mag_r,3) *
+                (r_eb_e + 1.5 * J_2 * 
+                pow(R_0 / mag_r,2) * gamma_1);
+
+        // Add centripetal acceleration using (2.133)
+        g(0) = gamma(0) + pow(omega_ie,2) * r_eb_e(0);
+        g(1) = gamma(1) + pow(omega_ie,2) * r_eb_e(1);
+        g(2) = gamma(2);
+    }
+
+    return g;
+
+}
+
+Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d & a) {
+    
+    Eigen::Matrix3d S;
+    
+    S << 0, -a(2),  a(1),
+      a(2),     0, -a(0),
+     -a(1),  a(0),     0;
+
+    return S;
+
 }
 
 };
