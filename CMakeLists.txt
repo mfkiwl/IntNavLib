@@ -18,13 +18,13 @@ find_package (glog REQUIRED)
 # include the include folder
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# ======== target 1: main ========
+# ======== target 1: ins_ecef_demo ========
 
-add_executable(main src/main.cpp
+add_executable(ins_ecef_demo src/ins_ecef_demo.cpp
                     src/helpers.cpp
                     src/lc_ins_gnss)
 
-target_link_libraries(main PRIVATE  ${OPENTHREADS_LIBRARY}
+target_link_libraries(ins_ecef_demo PRIVATE  ${OPENTHREADS_LIBRARY}
                                     ${OpenCV_LIBS}
                                     Eigen3::Eigen
                                     glog::glog
