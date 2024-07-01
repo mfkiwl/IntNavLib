@@ -46,6 +46,73 @@ NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
     return nav_sol_ecef;
 }
 
+NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
+
+// Convert position using Borkowski closed-form exact solution
+// From (2.113)
+double lambda_b = atan2(nav_sol_ecef.p_b_e(1), nav_sol_ecef.p_b_e(0));
+
+// From (C.29) and (C.30)
+double k1 = sqrt(1 - pow(e,2)) * abs(nav_sol_ecef.p_b_e(2));
+double k2 = pow(e,2) * R_0;
+double beta = sqrt(pow(nav_sol_ecef.p_b_e(0),2) + pow(nav_sol_ecef.p_b_e(1),2));
+double E = (k1 - k2) / beta;
+double F = (k1 + k2) / beta;
+
+// From (C.31)
+double P = 4/3 * (E*F + 1);
+
+// From (C.32)
+double Q = 2 * (pow(E,2) - pow(F,2));
+
+// From (C.33)
+double D = pow(P,3) + pow(Q,2);
+
+// From (C.34)
+double V = pow(sqrt(D) - Q, 1/3) - pow(sqrt(D) + Q,1/3);
+
+// From (C.35)
+double G = 0.5 * (sqrt(pow(E,2) + V) + E);
+
+// From (C.36)
+double T = sqrt(pow(G,2) + (F - V * G) / (2 * G - E)) - G;
+
+// From (C.37)
+double L_b = sgn(nav_sol_ecef.p_b_e(2)) * atan((1 - pow(T,2)) / (2 * T * sqrt (1 - pow(e,2))));
+
+// From (C.38)
+double h_b = (beta - R_0 * T) * cos(L_b) +
+    (nav_sol_ecef.p_b_e(2) - sgn(nav_sol_ecef.p_b_e(2)) * R_0 * sqrt(1 - pow(e,2))) * sin(L_b);
+      
+// Calculate ECEF to NED coordinate transformation matrix using (2.150)
+double cos_lat = cos(L_b);
+double sin_lat = sin(L_b);
+double cos_long = cos(lambda_b);
+double sin_long = sin(lambda_b);
+
+Eigen::Matrix3d C_e_n;
+C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
+                   -sin_long,            cos_long,        0,
+         -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
+     
+// Transform velocity using (2.73)
+Eigen::Vector3d v_eb_n = C_e_n * nav_sol_ecef.v_b_e;
+
+// Transform attitude using (2.15)
+Eigen::Matrix3d C_b_n = C_e_n * nav_sol_ecef.C_b_e;
+
+NavSolutionNed nav_sol_ned;
+nav_sol_ned.time = nav_sol_ecef.time;
+nav_sol_ned.latitude = L_b;
+nav_sol_ned.longitude = lambda_b;
+nav_sol_ned.height = h_b;
+nav_sol_ned.v_b_n = v_eb_n;
+nav_sol_ned.C_b_n = C_b_n;
+
+return nav_sol_ned;
+
+}
+
 
 Eigen::Matrix3d rpyToR(const Eigen::Vector3d & rpy) {
 
@@ -80,9 +147,9 @@ Eigen::Vector3d rToRpy(const Eigen::Matrix3d & C) {
 
     Eigen::Vector3d rpy;
 
-    rpy(1,1) = atan2(C(2,3),C(3,3));
-    rpy(2,1) = - asin(C(1,3));      
-    rpy(3,1) = atan2(C(1,2),C(1,1));
+    rpy(0) = atan2(C(1,2),C(2,2));
+    rpy(1) = - asin(C(0,2));      
+    rpy(2) = atan2(C(0,1),C(0,0));
 
     return rpy;
 }
@@ -362,6 +429,17 @@ new_nav.p_b_e = old_nav.p_b_e + (new_nav.v_b_e + old_nav.v_b_e) * 0.5 * tor_i;
 
 return new_nav;
 
+}
+
+// Function to get the current date and time as a formatted string
+std::string getCurrentDateTime() {
+    auto now = std::time(nullptr);
+    std::tm tm_now;
+    localtime_r(&now, &tm_now); // Use localtime_s on Windows or localtime_r on Unix-like systems
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
+    return oss.str();
 }
 
 };

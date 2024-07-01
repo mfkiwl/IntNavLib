@@ -1,10 +1,12 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <filesystem>
 
 #include "helpers.h"
 #include "lc_ins_gnss.h"
 #include "motion_profile_reader.h"
+#include "motion_profile_writer.h"
 
 int main(int argc, char** argv)
 {   
@@ -13,9 +15,20 @@ int main(int argc, char** argv)
         throw std::runtime_error("Pass the motion profile path");
     }
 
-    std::string motion_profile_filename(argv[1]);
-
-    MotionProfileReader reader(motion_profile_filename);
+    // Input profile filename
+    std::string motion_profile_filename_in(argv[1]);
+    
+    // Output profile filename
+    std::string new_directory = "../results";
+    if (!std::filesystem::exists(new_directory)) {
+        std::filesystem::create_directory(new_directory);
+    }
+    std::string base_filename = std::filesystem::path(motion_profile_filename_in).filename().string();
+    std::string datetime = getCurrentDateTime();
+    std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
+    std::string extension = std::filesystem::path(base_filename).extension().string();
+    std::string new_base_filename = filename_without_extension + "_ins_" + datetime + extension;
+    std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
 
     // ============== Random gen ==============
 
@@ -83,6 +96,9 @@ int main(int argc, char** argv)
     NavSolutionEcef est_nav_ecef;
     NavSolutionEcef est_nav_ecef_old;
 
+    // Estimated nav solution in ned
+    NavSolutionNed est_nav_ned;
+
     // Ground truth imu measurements from kinematics
     ImuMeasurements true_imu_meas;
 
@@ -92,6 +108,10 @@ int main(int argc, char** argv)
     // Current time - last time
     // In real use, need all sensors to be synced
     double tor_i;
+
+    // Init motion profile reader & writer
+    MotionProfileReader reader(motion_profile_filename_in);
+    MotionProfileWriter writer(motion_profile_filename_out);
 
     // Init both true old nav sol, and estimated old nav sol
     reader.readNextRow(true_nav_ned_old);
@@ -105,20 +125,18 @@ int main(int argc, char** argv)
         // Get true ecef nav sol from motion profile in ned
         true_nav_ecef = nedToEcef(true_nav_ned);
 
-        // TODO unit test
-
         // Get true specific force and angular rates
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
-
-        // TODO unit test
         
         // Get imu measurements by applying IMU model
         imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
 
         // Predict ecef nav solution (INS)
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
+        est_nav_ned = ecefToNed(est_nav_ecef);
 
-        // TODO Plot true nav sol & est nav sol on map
+        // Save ned output profile
+        writer.writeNextRow(est_nav_ned);
 
         true_nav_ecef_old = true_nav_ecef;
         est_nav_ecef_old = est_nav_ecef;

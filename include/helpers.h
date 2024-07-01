@@ -2,6 +2,9 @@
 #define HELPERS_H
 
 #include <random>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
 
 #include <Eigen/Dense>
 
@@ -21,6 +24,7 @@ namespace helpers {
     
     // IMU measurements
     struct ImuMeasurements {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         double time;
         Eigen::Vector3d f; // Specific forces
         Eigen::Vector3d omega; // angular velocities
@@ -30,6 +34,7 @@ namespace helpers {
 
     // IMU errors
     struct ImuErrors {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         Eigen::Vector3d b_a;              // Accelerometer biases (m/s^2)
         Eigen::Vector3d b_g;              // Gyro biases (rad/s)
         Eigen::Matrix3d M_a;              // Accelerometer scale factor and cross coupling errors
@@ -42,6 +47,7 @@ namespace helpers {
     };
 
     struct NavSolutionNed {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         double time;
         double latitude;  // Latitude in radians
         double longitude; // Longitude in radians
@@ -51,14 +57,12 @@ namespace helpers {
     };
 
     struct NavSolutionEcef {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         double time;
         Eigen::Vector3d p_b_e; // Position in ECEF frame
         Eigen::Vector3d v_b_e; // Velocity in ECEF frame
         Eigen::Matrix3d C_b_e; // Body-to-ECEF rotation matrix
     };
-
-    // IMU quantization residuals
-    typedef std::array<double, 6> ImuQuantResiduals;
 
     // Nav equations in ECEF
     NavSolutionEcef navEquationsEcef(const NavSolutionEcef & old_nav, 
@@ -81,6 +85,9 @@ namespace helpers {
     // NED to ECEF
     NavSolutionEcef nedToEcef(const NavSolutionNed & nav_sol_ned);
 
+    // ECEF to NED
+    NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef);
+
     // Converts degrees to radians
     inline double degToRad(const double & degrees) {
         return degrees * 0.01745329252;
@@ -97,6 +104,13 @@ namespace helpers {
 
     Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d & a);
 
+    // signum function
+    template <typename T> inline T sgn(const T & val) {
+    return T((T(0) < val) - (val < T(0)));
+    }
+
+    // Function to get the current date and time as a formatted string
+    std::string getCurrentDateTime();
 
 };
 
