@@ -7,6 +7,7 @@
 #include "lc_ins_gnss.h"
 #include "motion_profile_reader.h"
 #include "motion_profile_writer.h"
+#include "errors_writer.h"
 
 int main(int argc, char** argv)
 {   
@@ -23,12 +24,16 @@ int main(int argc, char** argv)
     if (!std::filesystem::exists(new_directory)) {
         std::filesystem::create_directory(new_directory);
     }
+    
     std::string base_filename = std::filesystem::path(motion_profile_filename_in).filename().string();
     std::string datetime = getCurrentDateTime();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string extension = std::filesystem::path(base_filename).extension().string();
-    std::string new_base_filename = filename_without_extension + "_ins_" + datetime + extension;
+    std::string new_base_filename = filename_without_extension + "_ins" /*+ "_" + datetime*/ + extension;
     std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
+
+    std::string errors_filename_out = new_directory + "/" + 
+                                    filename_without_extension + "_ins_errors" /*+ "_" + datetime*/ + extension;
 
     // ============== Random gen ==============
 
@@ -112,6 +117,7 @@ int main(int argc, char** argv)
     // Init motion profile reader & writer
     MotionProfileReader reader(motion_profile_filename_in);
     MotionProfileWriter writer(motion_profile_filename_out);
+    ErrorsWriter errors_writer(errors_filename_out);
 
     // Init both true old nav sol, and estimated old nav sol
     reader.readNextRow(true_nav_ned_old);
@@ -138,9 +144,12 @@ int main(int argc, char** argv)
         // Save ned output profile
         writer.writeNextRow(est_nav_ned);
 
+        // Compute and write errors
+        ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);
+        errors_writer.writeNextRow(errors);
+
         true_nav_ecef_old = true_nav_ecef;
         est_nav_ecef_old = est_nav_ecef;
-
         true_nav_ned_old = true_nav_ned;
 
     }

@@ -52,16 +52,24 @@ namespace helpers {
         double latitude;  // Latitude in radians
         double longitude; // Longitude in radians
         double height;    // Height in meters
-        Eigen::Vector3d v_b_n; // Velocity in NED frame (North, East, Down)
+        Eigen::Vector3d v_eb_n; // Velocity in NED frame (North, East, Down)
         Eigen::Matrix3d C_b_n; // Body-to-NED rotation matrix
     };
 
     struct NavSolutionEcef {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         double time;
-        Eigen::Vector3d p_b_e; // Position in ECEF frame
-        Eigen::Vector3d v_b_e; // Velocity in ECEF frame
+        Eigen::Vector3d p_eb_e; // Position in ECEF frame
+        Eigen::Vector3d v_eb_e; // Velocity in ECEF frame
         Eigen::Matrix3d C_b_e; // Body-to-ECEF rotation matrix
+    };
+
+    struct ErrorsNed {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        double time;
+        Eigen::Vector3d delta_r_eb_n; // NED Position error
+        Eigen::Vector3d delta_v_eb_n; // NED Velocity error
+        Eigen::Vector3d delta_eul_nb_n; // NED orientation error
     };
 
     // Nav equations in ECEF
@@ -111,6 +119,12 @@ namespace helpers {
 
     // Function to get the current date and time as a formatted string
     std::string getCurrentDateTime();
+
+    // Get radii of curvature from latitude
+    Eigen::Vector2d radiiOfCurvature(double L);
+
+    ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
+                                const NavSolutionNed & est_nav_sol);
 
 };
 

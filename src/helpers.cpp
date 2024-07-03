@@ -8,7 +8,7 @@ NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
     double L_b = nav_sol_ned.latitude;
     double lambda_b = nav_sol_ned.longitude;
     double h_b = nav_sol_ned.height;
-    Eigen::Vector3d v_eb_n = nav_sol_ned.v_b_n;
+    Eigen::Vector3d v_eb_n = nav_sol_ned.v_eb_n;
     Eigen::Matrix3d C_b_n = nav_sol_ned.C_b_n;
 
     // Compute transverse radius of curvature
@@ -39,8 +39,8 @@ NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
     // Construct the output structure
     NavSolutionEcef nav_sol_ecef;
     nav_sol_ecef.time = nav_sol_ned.time;
-    nav_sol_ecef.p_b_e = r_eb_e;
-    nav_sol_ecef.v_b_e = v_eb_e;
+    nav_sol_ecef.p_eb_e = r_eb_e;
+    nav_sol_ecef.v_eb_e = v_eb_e;
     nav_sol_ecef.C_b_e = C_b_e;
 
     return nav_sol_ecef;
@@ -50,12 +50,12 @@ NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
 
 // Convert position using Borkowski closed-form exact solution
 // From (2.113)
-double lambda_b = atan2(nav_sol_ecef.p_b_e(1), nav_sol_ecef.p_b_e(0));
+double lambda_b = atan2(nav_sol_ecef.p_eb_e(1), nav_sol_ecef.p_eb_e(0));
 
 // From (C.29) and (C.30)
-double k1 = sqrt(1 - pow(e,2)) * abs(nav_sol_ecef.p_b_e(2));
+double k1 = sqrt(1 - pow(e,2)) * abs(nav_sol_ecef.p_eb_e(2));
 double k2 = pow(e,2) * R_0;
-double beta = sqrt(pow(nav_sol_ecef.p_b_e(0),2) + pow(nav_sol_ecef.p_b_e(1),2));
+double beta = sqrt(pow(nav_sol_ecef.p_eb_e(0),2) + pow(nav_sol_ecef.p_eb_e(1),2));
 double E = (k1 - k2) / beta;
 double F = (k1 + k2) / beta;
 
@@ -78,11 +78,11 @@ double G = 0.5 * (sqrt(pow(E,2) + V) + E);
 double T = sqrt(pow(G,2) + (F - V * G) / (2 * G - E)) - G;
 
 // From (C.37)
-double L_b = sgn(nav_sol_ecef.p_b_e(2)) * atan((1 - pow(T,2)) / (2 * T * sqrt (1 - pow(e,2))));
+double L_b = sgn(nav_sol_ecef.p_eb_e(2)) * atan((1 - pow(T,2)) / (2 * T * sqrt (1 - pow(e,2))));
 
 // From (C.38)
 double h_b = (beta - R_0 * T) * cos(L_b) +
-    (nav_sol_ecef.p_b_e(2) - sgn(nav_sol_ecef.p_b_e(2)) * R_0 * sqrt(1 - pow(e,2))) * sin(L_b);
+    (nav_sol_ecef.p_eb_e(2) - sgn(nav_sol_ecef.p_eb_e(2)) * R_0 * sqrt(1 - pow(e,2))) * sin(L_b);
       
 // Calculate ECEF to NED coordinate transformation matrix using (2.150)
 double cos_lat = cos(L_b);
@@ -96,7 +96,7 @@ C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
          -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
      
 // Transform velocity using (2.73)
-Eigen::Vector3d v_eb_n = C_e_n * nav_sol_ecef.v_b_e;
+Eigen::Vector3d v_eb_n = C_e_n * nav_sol_ecef.v_eb_e;
 
 // Transform attitude using (2.15)
 Eigen::Matrix3d C_b_n = C_e_n * nav_sol_ecef.C_b_e;
@@ -106,7 +106,7 @@ nav_sol_ned.time = nav_sol_ecef.time;
 nav_sol_ned.latitude = L_b;
 nav_sol_ned.longitude = lambda_b;
 nav_sol_ned.height = h_b;
-nav_sol_ned.v_b_n = v_eb_n;
+nav_sol_ned.v_eb_n = v_eb_n;
 nav_sol_ned.C_b_n = C_b_n;
 
 return nav_sol_ned;
@@ -201,8 +201,8 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & old_nav, const NavSolutio
     // From (5.36)
     Eigen::Vector3d omega_ie_vec;
     omega_ie_vec << 0 , 0 , omega_ie;
-    Eigen::Vector3d f_ib_e = ((new_nav.v_b_e - old_nav.v_b_e) / tor_i) - gravityEcef(new_nav.p_b_e)
-        + 2 * skewSymmetric(omega_ie_vec) * old_nav.v_b_e;
+    Eigen::Vector3d f_ib_e = ((new_nav.v_eb_e - old_nav.v_eb_e) / tor_i) - gravityEcef(new_nav.p_eb_e)
+        + 2 * skewSymmetric(omega_ie_vec) * old_nav.v_eb_e;
 
     // Calculate the average body-to-ECEF-frame coordinate transformation
     // matrix over the update interval using (5.84) and (5.85)
@@ -292,6 +292,8 @@ ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas,
     
     ImuMeasurements imu_measurements;
 
+    imu_measurements.time = true_imu_meas.time;
+
     // Init noises
     Eigen::Vector3d accel_noise = Eigen::Vector3d::Zero();
     Eigen::Vector3d gyro_noise = Eigen::Vector3d::Zero();
@@ -351,6 +353,8 @@ NavSolutionEcef navEquationsEcef(const NavSolutionEcef & old_nav,
                                 const double & tor_i) {
 
 NavSolutionEcef new_nav;
+
+new_nav.time = imu_meas.time;
 
 // ATTITUDE UPDATE
 // From (2.145) determine the Earth rotation over the update interval
@@ -420,12 +424,12 @@ Eigen::Vector3d f_ib_e = ave_C_b_e * imu_meas.f;
 Eigen::Vector3d omega_ie_vec;
 alpha_ie_vec << 0 , 0 , omega_ie;   
 
-new_nav.v_b_e = old_nav.v_b_e + tor_i * (f_ib_e + gravityEcef(old_nav.p_b_e) -
-                        2 * skewSymmetric(omega_ie_vec) * old_nav.v_b_e);
+new_nav.v_eb_e = old_nav.v_eb_e + tor_i * (f_ib_e + gravityEcef(old_nav.p_eb_e) -
+                        2 * skewSymmetric(omega_ie_vec) * old_nav.v_eb_e);
 
 // UPDATE CARTESIAN POSITION
 // From (5.38),
-new_nav.p_b_e = old_nav.p_b_e + (new_nav.v_b_e + old_nav.v_b_e) * 0.5 * tor_i; 
+new_nav.p_eb_e = old_nav.p_eb_e + (new_nav.v_eb_e + old_nav.v_eb_e) * 0.5 * tor_i; 
 
 return new_nav;
 
@@ -440,6 +444,47 @@ std::string getCurrentDateTime() {
     std::ostringstream oss;
     oss << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
     return oss.str();
+}
+
+Eigen::Vector2d radiiOfCurvature(double L) {
+
+    // Calculate meridian radius of curvature using (2.105)
+    double temp = 1 - pow((e * sin(L)),2); 
+    double R_N = R_0 * (1 - pow(e,2)) / pow(temp,1.5);
+    // Calculate transverse radius of curvature using (2.105)
+    double R_E = R_0 / sqrt(temp);
+    Eigen::Vector2d radii;
+    radii << R_N, R_E;
+    return radii;
+}
+
+ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
+                                const NavSolutionNed & est_nav_sol){
+
+    // Position error calculation
+    Eigen::Vector2d radii = radiiOfCurvature(true_nav_sol.latitude);
+    double R_N = radii(0);
+    double R_E = radii(1);
+
+    Eigen::Vector3d delta_r_eb_n;
+    delta_r_eb_n(0) = (est_nav_sol.latitude - true_nav_sol.latitude) * (R_N + true_nav_sol.height);
+    delta_r_eb_n(1) = (est_nav_sol.longitude - true_nav_sol.longitude) * (R_E + true_nav_sol.height) * std::cos(true_nav_sol.latitude);
+    delta_r_eb_n(2) = -(est_nav_sol.height - true_nav_sol.height);
+
+    // Velocity error calculation
+    Eigen::Vector3d delta_v_eb_n = est_nav_sol.v_eb_n - true_nav_sol.v_eb_n;
+
+    // Attitude error calculation
+    Eigen::Matrix3d delta_C_b_n = est_nav_sol.C_b_n * true_nav_sol.C_b_n.transpose();
+    Eigen::Vector3d delta_eul_nb_n = -rToRpy(delta_C_b_n);
+
+    ErrorsNed errors_ned;
+    errors_ned.time = true_nav_sol.time;
+    errors_ned.delta_r_eb_n = delta_r_eb_n;
+    errors_ned.delta_v_eb_n = delta_v_eb_n;
+    errors_ned.delta_eul_nb_n = delta_eul_nb_n;
+
+    return errors_ned;
 }
 
 };

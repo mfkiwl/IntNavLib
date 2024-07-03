@@ -12,6 +12,17 @@
 
 using namespace helpers;
 
+// Column 1: time (sec)
+// Column 2: latitude (deg)
+// Column 3: longitude (deg)
+// Column 4: height (m)
+// Column 5: north velocity (m/s)
+// Column 6: east velocity (m/s)
+// Column 7: down velocity (m/s)
+// Column 8: roll angle of body w.r.t NED (deg)
+// Column 9: pitch angle of body w.r.t NED (deg)
+// Column 10: yaw angle of body w.r.t NED (deg)
+
 class MotionProfileWriter {
 public:
     MotionProfileWriter(const std::string& filename) : file(filename), ok(false) {
@@ -37,7 +48,7 @@ public:
         double longitude = helpers::radToDeg(row.longitude);
 
         // Extract velocity components
-        Eigen::Vector3d v_b_n = row.v_b_n;
+        Eigen::Vector3d v_eb_n = row.v_eb_n;
 
         // Convert rotation matrix to roll, pitch, yaw (in radians)
         Eigen::Vector3d rpy = helpers::rToRpy(row.C_b_n);
@@ -52,9 +63,9 @@ public:
              << latitude << ","
              << longitude << ","
              << row.height << ","
-             << v_b_n[0] << ","
-             << v_b_n[1] << ","
-             << v_b_n[2] << ","
+             << v_eb_n[0] << ","
+             << v_eb_n[1] << ","
+             << v_eb_n[2] << ","
              << roll << ","
              << pitch << ","
              << yaw << "\n";
