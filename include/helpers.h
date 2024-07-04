@@ -19,7 +19,7 @@ namespace helpers {
     constexpr double J_2 = 1.082627e-3; // WGS84 Earth's second gravitational constant
 
     constexpr double deg_to_rad = 0.01745329252;
-    constexpr double rad_to_deg = 1/deg_to_rad;
+    constexpr double rad_to_deg = 1.0/deg_to_rad;
     constexpr double micro_g_to_meters_per_second_squared = 9.80665e-6;
     
     // IMU measurements
@@ -59,7 +59,7 @@ namespace helpers {
     struct NavSolutionEcef {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         double time;
-        Eigen::Vector3d p_eb_e; // Position in ECEF frame
+        Eigen::Vector3d r_eb_e; // Position in ECEF frame
         Eigen::Vector3d v_eb_e; // Velocity in ECEF frame
         Eigen::Matrix3d C_b_e; // Body-to-ECEF rotation matrix
     };
@@ -78,8 +78,8 @@ namespace helpers {
                                 const double & tor_i);
 
     // Gets real imu measurements from kinematics
-    ImuMeasurements kinematicsEcef(const NavSolutionEcef & old_nav, 
-                                    const NavSolutionEcef & new_nav);
+    ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
+                                    const NavSolutionEcef & old_nav);
     
     // Gets gravity vector at given ecef position, in ecef frame
     Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e);

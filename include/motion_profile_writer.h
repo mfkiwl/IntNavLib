@@ -32,7 +32,7 @@ public:
         }
 
         // Write header
-        // file << "time,latitude,longitude,height,vx,vy,vz,roll,pitch,yaw\n";
+        file << "time,latitude,longitude,height,vx,vy,vz,roll,pitch,yaw\n";
         ok = true;
     }
 
