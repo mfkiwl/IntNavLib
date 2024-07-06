@@ -148,6 +148,8 @@ int main(int argc, char** argv)
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
         est_nav_ned = ecefToNed(est_nav_ecef);
 
+        std::cout << est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e;
+
         // Compute errors
         ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);
 
@@ -162,8 +164,6 @@ int main(int argc, char** argv)
         true_nav_ecef_old = true_nav_ecef;
         est_nav_ecef_old = est_nav_ecef;
         true_nav_ned_old = true_nav_ned;
-
-        return 0;
 
     }
 
