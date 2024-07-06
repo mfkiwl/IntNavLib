@@ -144,6 +144,7 @@ int main(int argc, char** argv)
         // ========== NAV EQUATIONS ==========
 
         // Predict ecef nav solution (INS)
+
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
         est_nav_ned = ecefToNed(est_nav_ecef);
 
@@ -161,6 +162,8 @@ int main(int argc, char** argv)
         true_nav_ecef_old = true_nav_ecef;
         est_nav_ecef_old = est_nav_ecef;
         true_nav_ned_old = true_nav_ned;
+
+        return 0;
 
     }
 

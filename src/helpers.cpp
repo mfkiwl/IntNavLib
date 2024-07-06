@@ -179,8 +179,8 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
 
     Eigen::Matrix3d C_Earth;
     C_Earth << cos_alpha_ie, sin_alpha_ie, 0.0,
-                            -sin_alpha_ie, cos_alpha_ie, 0.0,
-                                        0.0,             0.0,  1.0;
+                -sin_alpha_ie, cos_alpha_ie, 0.0,
+                    0.0,             0.0,  1.0;
 
     // Obtain coordinate transformation matrix from the old attitude (w.r.t.
     // an inertial frame) to the new (compensate for earth rotation)
@@ -221,10 +221,10 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
         ave_C_b_e = old_nav.C_b_e * 
             (Eigen::Matrix3d::Identity() + 
 
-            (1.0 - cos(mag_alpha) / pow(mag_alpha,2.0)) *
+            ((1.0 - cos(mag_alpha)) / pow(mag_alpha,2.0)) *
             Alpha_ib_b + 
             
-            (1.0 - sin(mag_alpha) / mag_alpha) / pow(mag_alpha,2.0) * 
+            ((1.0 - sin(mag_alpha) / mag_alpha) / pow(mag_alpha,2.0)) * 
             Alpha_ib_b * Alpha_ib_b) - 
 
             0.5 * skewSymmetric(alpha_ie_vec) * old_nav.C_b_e;
@@ -235,13 +235,9 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
     }
     
     // Transform specific force to body-frame resolving axes using (5.81)
-    // Groves inverts, but cant we just transpose?
-    true_imu_meas.f = ave_C_b_e.transpose() * f_ib_e; // trnaspose or inverse?
+    true_imu_meas.f = ave_C_b_e.inverse() * f_ib_e; // transpose or inverse?
 
     }
-
-    // std::cout << true_imu_meas.f << "\n";
-    // std::cout << true_imu_meas.omega << "\n\n\n";
 
     return true_imu_meas;
 
