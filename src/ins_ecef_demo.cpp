@@ -9,6 +9,10 @@
 #include "motion_profile_writer.h"
 #include "errors_writer.h"
 
+// To ensure full precisiion
+#define EIGEN_DONT_VECTORIZE
+#define EIGEN_FAST_MATH 0
+
 int main(int argc, char** argv)
 {   
 
@@ -148,7 +152,7 @@ int main(int argc, char** argv)
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
         est_nav_ned = ecefToNed(est_nav_ecef);
 
-        std::cout << est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e;
+        std::cout << est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e << "\n";
 
         // Compute errors
         ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);

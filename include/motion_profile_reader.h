@@ -30,28 +30,8 @@ public:
             std::cerr << "Failed to open file: " << filename << std::endl;
             return;
         }
-
-        // Verify the column count by reading the first row
-        std::string header;
-        if (std::getline(file, header)) {
-            std::stringstream ss(header);
-            std::string token;
-            int column_count = 0;
-            while (std::getline(ss, token, ',')) {
-                column_count++;
-            }
-
-            if (column_count == 10) { // Ensure 10 columns as expected
-                ok = true;
-            } else {
-                std::cerr << "Input file has the wrong number of columns: " << column_count << std::endl;
-            }
-        }
     }
 
-    bool isOk() const {
-        return ok;
-    }
 
     bool readNextRow(NavSolutionNed& row) {
         if (!file.good()) return false;
@@ -79,9 +59,12 @@ public:
 
                 Eigen::Vector3d rpy;
                 rpy << roll, pitch, yaw;
-                row.C_b_n = helpers::rpyToR(rpy);
+                row.C_b_n = helpers::rpyToR(rpy).transpose();
 
                 return true;
+            }
+            else{
+                throw std::runtime_error("Wrong number of columns in input profile.");
             }
         }
         return false;

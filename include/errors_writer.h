@@ -32,12 +32,8 @@ public:
         }
 
         // Write header
-        file << "time,d_north,d_east,d_down,d_v_north,d_v_east,d_v_down,d_roll,d_pitch,d_yaw\n";
+        // file << "time,d_north,d_east,d_down,d_v_north,d_v_east,d_v_down,d_roll,d_pitch,d_yaw\n";
         ok = true;
-    }
-
-    bool isOk() const {
-        return ok;
     }
 
     bool writeNextRow(const ErrorsNed& row) {

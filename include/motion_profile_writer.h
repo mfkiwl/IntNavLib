@@ -32,13 +32,10 @@ public:
         }
 
         // Write header
-        file << "time,latitude,longitude,height,vx,vy,vz,roll,pitch,yaw\n";
+        // file << "time,latitude,longitude,height,vx,vy,vz,roll,pitch,yaw\n";
         ok = true;
     }
 
-    bool isOk() const {
-        return ok;
-    }
 
     bool writeNextRow(const NavSolutionNed& row) {
         if (!file.good()) return false;
@@ -51,7 +48,7 @@ public:
         Eigen::Vector3d v_eb_n = row.v_eb_n;
 
         // Convert rotation matrix to roll, pitch, yaw (in radians)
-        Eigen::Vector3d rpy = helpers::rToRpy(row.C_b_n);
+        Eigen::Vector3d rpy = helpers::rToRpy(row.C_b_n.transpose());
 
         // Convert roll, pitch, yaw to degrees
         double roll = helpers::radToDeg(rpy[0]);
