@@ -142,8 +142,8 @@ int main(int argc, char** argv)
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
         
         // Get imu measurements by applying IMU model
-        // imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
-        imu_meas = true_imu_meas;
+        imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        //imu_meas = true_imu_meas;
 
         // ========== NAV EQUATIONS ==========
 
@@ -151,9 +151,6 @@ int main(int argc, char** argv)
 
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
         est_nav_ned = ecefToNed(est_nav_ecef);
-
-        Eigen::Vector3d delta_r_eb_e =  est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e;
-        std::cout << delta_r_eb_e.norm() << "\n";
 
         // Compute errors
         ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);
