@@ -1,6 +1,10 @@
 # IntNavLib
 
-This is my integrated navigation c++ playground.
+This is my c++ integrated navigation library.
+The aim is to have modular pieces of c++ code that can e used in integrated navigation applications.
+
+Code is still WIP and not yet a true library.
+
 The code is inspired by "Principles of GNSS, Inertial, and Multisensor Integrated Navigation" by Paul Groves.
 
 Reference: 
@@ -30,5 +34,3 @@ Reference:
 - Fuse Lidar
 
 - Fuse CVN
-
-- Tight GNSS
