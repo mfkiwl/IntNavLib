@@ -235,7 +235,7 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
     }
     
     // Transform specific force to body-frame resolving axes using (5.81)
-    true_imu_meas.f = ave_C_b_e.inverse() * f_ib_e; // transpose or inverse?
+    true_imu_meas.f = ave_C_b_e.transpose() * f_ib_e; // transpose or inverse?
 
     }
 
@@ -424,7 +424,7 @@ NavSolutionEcef navEquationsEcef(const NavSolutionEcef & old_nav,
     // From (5.36)
 
     Eigen::Vector3d omega_ie_vec;
-    alpha_ie_vec << 0.0 , 0.0 , omega_ie;   
+    omega_ie_vec << 0.0 , 0.0 , omega_ie;   
 
     new_nav.v_eb_e = old_nav.v_eb_e + tor_i * (f_ib_e + gravityEcef(old_nav.r_eb_e) -
                             2.0 * skewSymmetric(omega_ie_vec) * old_nav.v_eb_e);

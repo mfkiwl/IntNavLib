@@ -10,8 +10,8 @@
 #include "errors_writer.h"
 
 // To ensure full precisiion
-#define EIGEN_DONT_VECTORIZE
-#define EIGEN_FAST_MATH 0
+// #define EIGEN_DONT_VECTORIZE
+// #define EIGEN_FAST_MATH 0
 
 int main(int argc, char** argv)
 {   
