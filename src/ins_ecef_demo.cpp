@@ -153,6 +153,7 @@ int main(int argc, char** argv)
         est_nav_ned = ecefToNed(est_nav_ecef);
 
         Eigen::Vector3d delta_r_eb_e =  est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e;
+        std::cout << delta_r_eb_e.norm() << "\n";
 
         // Compute errors
         ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);

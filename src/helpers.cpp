@@ -204,7 +204,7 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
     // From (5.36)
     Eigen::Vector3d omega_ie_vec;
     omega_ie_vec << 0.0 , 0.0 , omega_ie;
-    Eigen::Vector3d f_ib_e = ((new_nav.v_eb_e - old_nav.v_eb_e) / tor_i) - gravityEcef(new_nav.r_eb_e)
+    Eigen::Vector3d f_ib_e = ((new_nav.v_eb_e - old_nav.v_eb_e) / tor_i) - gravityEcef(old_nav.r_eb_e)
         + 2.0 * skewSymmetric(omega_ie_vec) * old_nav.v_eb_e;
 
     // Calculate the average body-to-ECEF-frame coordinate transformation
@@ -250,7 +250,7 @@ Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e) {
     Eigen::Vector3d g = Eigen::Vector3d::Zero();
     // If the input position is 0,0,0, produce a dummy output
 
-    if (mag_r!=0.0)
+    if (mag_r >= EPSILON)
     // Calculate gravitational acceleration using (2.142)
     {
         double z_scale = 5.0 * pow(r_eb_e(2) / mag_r,2.0);
@@ -261,7 +261,7 @@ Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e) {
                     (3.0 - z_scale) * r_eb_e(2);
 
         Eigen::Vector3d gamma;
-        gamma = -mu / pow(mag_r,3.0) *
+        gamma = (-mu / pow(mag_r,3.0)) *
                 (r_eb_e + 1.5 * J_2 * 
                 pow(R_0 / mag_r,2.0) * gamma_1);
 
@@ -382,7 +382,7 @@ NavSolutionEcef navEquationsEcef(const NavSolutionEcef & old_nav,
     Eigen::Matrix3d C_new_old;
     if (mag_alpha>1.0e-8) {
         C_new_old = Eigen::Matrix3d::Identity() + 
-                    (sin(mag_alpha) / mag_alpha) * Alpha_ib_b +
+                    ((sin(mag_alpha) / mag_alpha) * Alpha_ib_b) +
                     ((1.0 - cos(mag_alpha)) / pow(mag_alpha,2.0)) * Alpha_ib_b * Alpha_ib_b;
     }
     else {

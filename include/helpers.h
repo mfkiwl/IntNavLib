@@ -11,6 +11,10 @@
 
 namespace helpers {
 
+    // Epsilon for == 0 checks
+    // Todo tune
+    constexpr double EPSILON = 1.0e-100; 
+
     // Constants for WGS84 model
     constexpr double R_0 = 6378137.0;  // WGS84 Equatorial radius in meters
     constexpr double e = 0.0818191908425; // WGS84 eccentricity
