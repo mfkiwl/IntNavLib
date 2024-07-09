@@ -10,7 +10,7 @@
 
 #include "helpers.h"
 
-using namespace helpers;
+using namespace intnavlib;
 
 // Column 1: time (sec)
 // Column 2: latitude (deg)
@@ -41,19 +41,19 @@ public:
         if (!file.good()) return false;
 
         // Convert latitude and longitude from radians to degrees
-        double latitude = helpers::radToDeg(row.latitude);
-        double longitude = helpers::radToDeg(row.longitude);
+        double latitude = radToDeg(row.latitude);
+        double longitude = radToDeg(row.longitude);
 
         // Extract velocity components
         Eigen::Vector3d v_eb_n = row.v_eb_n;
 
         // Convert rotation matrix to roll, pitch, yaw (in radians)
-        Eigen::Vector3d rpy = helpers::rToRpy(row.C_b_n.transpose());
+        Eigen::Vector3d rpy = rToRpy(row.C_b_n.transpose());
 
         // Convert roll, pitch, yaw to degrees
-        double roll = helpers::radToDeg(rpy[0]);
-        double pitch = helpers::radToDeg(rpy[1]);
-        double yaw = helpers::radToDeg(rpy[2]);
+        double roll = radToDeg(rpy[0]);
+        double pitch = radToDeg(rpy[1]);
+        double yaw = radToDeg(rpy[2]);
 
         // Write the row to the CSV file
         file << row.time << ","

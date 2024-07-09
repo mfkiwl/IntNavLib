@@ -3,11 +3,7 @@
 #include <random>
 #include <filesystem>
 
-#include "helpers.h"
-#include "lc_ins_gnss.h"
-#include "motion_profile_reader.h"
-#include "motion_profile_writer.h"
-#include "errors_writer.h"
+#include "intnavlib.h"
 
 // To ensure full precisiion
 // #define EIGEN_DONT_VECTORIZE

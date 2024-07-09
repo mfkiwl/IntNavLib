@@ -1,1 +1,0 @@
-#include "lc_ins_gnss.h"

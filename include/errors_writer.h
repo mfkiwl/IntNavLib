@@ -10,7 +10,7 @@
 
 #include "helpers.h"
 
-using namespace helpers;
+using namespace intnavlib;
 
 // Column 1: time (sec)
 // Column 2: north position error (m)
@@ -46,7 +46,7 @@ public:
         Eigen::Vector3d delta_v_eb_n = row.delta_v_eb_n;
 
         // Convert Euler angles (in radians) to degrees
-        Eigen::Vector3d delta_eul_nb_n = row.delta_eul_nb_n * helpers::rad_to_deg;
+        Eigen::Vector3d delta_eul_nb_n = row.delta_eul_nb_n * rad_to_deg;
 
         // Write the row to the CSV file
         file << row.time << ","
