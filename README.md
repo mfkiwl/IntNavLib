@@ -1,9 +1,7 @@
 # IntNavLib
 
-This is my c++ integrated navigation library.
-The aim is to have modular pieces of c++ code that can e used in integrated navigation applications.
-
-Code is still WIP and not yet a true library.
+This is my toy c++ integrated navigation library.
+The aim is to have modular pieces of c++ code that can be used in integrated navigation applications.
 
 The code is inspired by "Principles of GNSS, Inertial, and Multisensor Integrated Navigation" by Paul Groves.
 

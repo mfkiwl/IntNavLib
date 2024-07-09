@@ -142,8 +142,8 @@ int main(int argc, char** argv)
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
         
         // Get imu measurements by applying IMU model
-        imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
-        //imu_meas = true_imu_meas;
+        // imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        imu_meas = true_imu_meas;
 
         // ========== NAV EQUATIONS ==========
 
