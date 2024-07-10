@@ -1,7 +1,7 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include "constants_types.h"
 #include "helpers.h"

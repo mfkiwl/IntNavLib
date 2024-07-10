@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include "constants_types.h"
 
