@@ -7,20 +7,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Eigen3 REQUIRED)
-find_package (glog REQUIRED)
+find_package(glog REQUIRED)
 
 # Create static library
 add_library(intnavlib STATIC) 
 
+# Get all header files in the include directory
+file(GLOB PUBLIC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+
+# Get all source files in the src directory
+file(GLOB PRIVATE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+
 # Add private source files
-# private sources are only visible inside lib
 target_sources(intnavlib
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${PRIVATE_SOURCE_FILES}
 )
 
 # Add headers. We choose to keep them all public
-# public means visible from outside
 target_include_directories(intnavlib
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -31,22 +35,18 @@ set_target_properties(intnavlib PROPERTIES
                         VERSION ${PROJECT_VERSION}
                         SOVERSION ${PROJECT_VERSION_MAJOR}
                         LINKER_LANGUAGE CXX 
-                        PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/include/intnavlib.h)
+                        PUBLIC_HEADER "${PUBLIC_HEADERS}")
 
 
 # Link dependencies. PRIVATE so only visible from lib
 target_link_libraries( intnavlib
         PRIVATE
-            Eigen3
-            glog
+            Eigen3::Eigen
+            glog::glog
         )
 
 # Install instructions
 include(GNUInstallDirs)
 install(TARGETS intnavlib
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-# Optionally to install files such as config files, readme, ...
-# install(FILES ${CMAKE_BINARY_DIR}/mylib.pc
-#     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/intnavlib
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/intnavlib)

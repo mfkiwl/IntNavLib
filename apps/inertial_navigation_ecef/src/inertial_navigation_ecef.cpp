@@ -3,11 +3,13 @@
 #include <random>
 #include <filesystem>
 
-#include "intnavlib.h"
+#include "intnavlib/intnavlib.h"
 
 // To ensure full precisiion
 // #define EIGEN_DONT_VECTORIZE
 // #define EIGEN_FAST_MATH 0
+
+using namespace intnavlib;
 
 int main(int argc, char** argv)
 {   

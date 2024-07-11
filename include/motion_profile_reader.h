@@ -21,7 +21,7 @@
 // Column 9: pitch angle of body w.r.t NED (deg)
 // Column 10: yaw angle of body w.r.t NED (deg)
 
-using namespace intnavlib;
+namespace intnavlib {
 
 class MotionProfileReader {
 public:
@@ -73,6 +73,8 @@ public:
 private:
     std::ifstream file;
     bool ok;
+};
+
 };
 
 

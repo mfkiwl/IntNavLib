@@ -10,7 +10,7 @@
 
 #include "helpers.h"
 
-using namespace intnavlib;
+namespace intnavlib {
 
 // Column 1: time (sec)
 // Column 2: north position error (m)
@@ -66,6 +66,8 @@ public:
 private:
     std::ofstream file;
     bool ok;
+};
+
 };
 
 #endif
