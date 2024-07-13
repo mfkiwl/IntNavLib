@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Eigen3 REQUIRED)
-find_package(glog REQUIRED)
 
 # Create static library
 add_library(intnavlib STATIC) 
@@ -42,7 +41,6 @@ set_target_properties(intnavlib PROPERTIES
 target_link_libraries( intnavlib
         PRIVATE
             Eigen3::Eigen
-            glog::glog
         )
 
 # Install instructions

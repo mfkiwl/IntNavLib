@@ -90,7 +90,32 @@ int main(int argc, char** argv)
     // Gyro quantization level (rad/s)
     imu_errors.gyro_quant_level = 2.0e-4;
 
-    // ============== 
+    // ============== KF config ==============
+
+    LcKfConfig kf_config;
+
+    // Initial attitude uncertainty per axis (deg, converted to rad)
+    kf_config.init_att_unc = deg_to_rad * 1.0;
+    // Initial velocity uncertainty per axis (m/s)
+    kf_config.init_vel_unc = 0.1;
+    // Initial position uncertainty per axis (m)
+    kf_config.init_pos_unc = 10.0;
+    // Initial accelerometer bias uncertainty per instrument (micro-g, converted
+    // to m/s^2)
+    kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
+    // Initial gyro bias uncertainty per instrument (deg/hour, converted to rad/sec)
+    kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+
+    // Gyro noise PSD (deg^2 per hour, converted to rad^2/s)                
+    kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
+    // Accelerometer noise PSD (micro-g^2 per Hz, converted to m^2 s^-3)                
+    kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
+    // Accelerometer bias random walk PSD (m^2 s^-5)
+    kf_config.accel_bias_PSD = 1.0E-7;
+    // Gyro bias random walk PSD (rad^2 s^-3)
+    kf_config.gyro_bias_PSD = 2.0E-12;
+
+    // ============
 
     // Ground truth nav solution in ned
     NavSolutionNed true_nav_ned;
@@ -141,7 +166,6 @@ int main(int argc, char** argv)
         
         // Get imu measurements by applying IMU model
         imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
-        // imu_meas = true_imu_meas;
 
         // ========== NAV EQUATIONS ==========
 
@@ -153,9 +177,7 @@ int main(int argc, char** argv)
         // Compute errors
         ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);
 
-        // if(true_nav_ned.time > 10.0) {
-        //     std::cout << true_nav_ned.time;
-        // }
+        // INTEGRATE POS MEASUREMENTS
 
         // ========== SAVE RESULTS ==========
 

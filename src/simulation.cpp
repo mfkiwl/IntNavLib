@@ -107,8 +107,12 @@ ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas,
     std::normal_distribution<double> randn(0.0, 1.0); 
 
     if(tor_i > 0.0) {
-        accel_noise = Eigen::Vector3d::Ones() * randn(gen) * imu_errors.accel_noise_root_PSD / sqrt(tor_i);  
-        gyro_noise = Eigen::Vector3d::Ones() * randn(gen) * imu_errors.gyro_noise_root_PSD / sqrt(tor_i);
+        accel_noise << randn(gen) * imu_errors.accel_noise_root_PSD / sqrt(tor_i), 
+                        randn(gen) * imu_errors.accel_noise_root_PSD / sqrt(tor_i),
+                        randn(gen) * imu_errors.accel_noise_root_PSD / sqrt(tor_i);  
+        gyro_noise << randn(gen) * imu_errors.gyro_noise_root_PSD / sqrt(tor_i),
+                        randn(gen) * imu_errors.gyro_noise_root_PSD / sqrt(tor_i),
+                        randn(gen) * imu_errors.gyro_noise_root_PSD / sqrt(tor_i);
     }
 
     // Calculate accelerometer and gyro outputs using (4.16) and (4.17)
@@ -151,6 +155,58 @@ ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas,
     imu_measurements.omega = uq_omega_ib_b;
 
     return imu_measurements;
+}
+
+PosMeasEcef genericPosSensModel(const NavSolutionEcef & true_nav, 
+                                const double & pos_sigma,
+                                std::mt19937 & gen){
+
+    PosMeasEcef pos_meas;
+    pos_meas.time = true_nav.time;
+
+    // nomally distributed error
+    std::normal_distribution<double> randn(0.0, pos_sigma);
+
+    Eigen::Vector3d pos_error;
+    pos_error << randn(gen), randn(gen), randn(gen);
+
+    Eigen::Matrix3d cov_mat = Eigen::Matrix3d::Identity() * pos_sigma * pos_sigma;
+
+    // add error
+    pos_meas.r_eb_e = true_nav.r_eb_e + pos_error;
+    pos_meas.cov_mat = cov_mat;
+
+    return pos_meas;
+}
+
+PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav, 
+                                        const double & pos_sigma,
+                                        const double & rot_sigma,
+                                        std::mt19937 & gen){
+    PosRotMeasEcef pos_rot_meas;
+    pos_rot_meas.time = true_nav.time;
+
+    // nomally distributed error
+    std::normal_distribution<double> randn_pos(0.0, pos_sigma);
+    std::normal_distribution<double> randn_rot(0.0, rot_sigma);
+
+    Eigen::Vector3d pos_error;
+    pos_error << randn_pos(gen), randn_pos(gen), randn_pos(gen);
+
+    Eigen::Vector3d rot_error;
+    rot_error << randn_rot(gen), randn_rot(gen), randn_rot(gen);
+    Eigen::Matrix3d C_b_b = rpyToR(rot_error); // perturbation Rot mat
+
+    Eigen::Matrix<double,6,6> cov_mat = Eigen::Matrix<double,6,6>::Identity();
+    cov_mat.block<3,3>(0,0) *= pos_sigma * pos_sigma;
+    cov_mat.block<3,3>(3,3) *= rot_sigma * rot_sigma;
+
+    // add error
+    pos_rot_meas.r_eb_e = true_nav.r_eb_e + pos_error;
+    pos_rot_meas.C_b_e = C_b_b * pos_rot_meas.C_b_e;
+    pos_rot_meas.cov_mat = cov_mat;
+
+    return pos_rot_meas;
 }
 
 

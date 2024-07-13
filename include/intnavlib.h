@@ -5,6 +5,7 @@
 #include "simulation.h"
 #include "constants_types.h"
 #include "nav_equations.h"
+#include "kalman.h"
 
 #include "motion_profile_reader.h"
 #include "motion_profile_writer.h"

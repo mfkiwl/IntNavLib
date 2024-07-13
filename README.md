@@ -15,9 +15,26 @@ Reference:
   }
 ```
 
-## TODOs
+## Build & install instructions
 
-- Finish unit testing & debugging ECEF inertial navigation
+1) Clone the library in your workspace
+
+2) Install Eigen 3. On Ubuntu and other Debian-based Linux distributions, just: `sudo apt install libeigen3-dev`
+
+3) Build & install the Cmake project:
+```
+cd intnavlib
+mkdir build
+cd build
+cmake ..
+make install
+```
+
+## Using IntNavLib
+
+You can find apps using IntNavLib in the [apps](/apps/) directory.
+
+## TODOs
 
 - Integrate GNSS (LC)
 

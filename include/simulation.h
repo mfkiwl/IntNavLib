@@ -17,6 +17,16 @@ namespace intnavlib {
                             const ImuErrors & imu_errors,
                             const double & tor_i,
                             std::mt19937 & gen);
+
+    // Generic ecef position sensor model
+    PosMeasEcef genericPosSensModel(const NavSolutionEcef & true_nav, 
+                                const double & pos_sigma,
+                                std::mt19937 & gen);
+
+    // Generic ecef pose sensor model
+    PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav, 
+                                        const double & pos_sigma,
+                                        const double & rot_sigma);
     
 };
 
