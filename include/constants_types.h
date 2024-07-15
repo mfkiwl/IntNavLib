@@ -114,6 +114,42 @@ struct LcKfConfig {
 
 };
 
+struct GnssConfig {
+    // Interval between GNSS epochs (s)
+    double epoch_interval;
+
+    // Initial estimated position (m; ECEF)
+    Eigen::Vector3d init_est_r_ea_e;
+
+    // Number of satellites in constellation
+    double no_sat;
+    // Orbital radius of satellites (m)
+    double r_os;
+    // Inclination angle of satellites (deg)
+    double inclination;
+    // Longitude offset of constellation (deg)
+    double const_delta_lambda;
+    // Timing offset of constellation (s)
+    double const_delta_t;
+
+    // Mask angle (deg)
+    double mask_angle;
+    // Signal in space error SD (m) *Give residual where corrections are applied
+    double SIS_err_SD;
+    // Zenith ionosphere error SD (m) *Give residual where corrections are applied
+    double zenith_iono_err_SD;
+    // Zenith troposphere error SD (m) *Give residual where corrections are applied
+    double zenith_trop_err_SD;
+    // Code tracking error SD (m) *Can extend to account for multipath
+    double code_track_err_SD;
+    // Range rate tracking error SD (m/s) *Can extend to account for multipath
+    double rate_track_err_SD;
+    // Receiver clock offset at time=0 (m);
+    double rx_clock_offset;
+    // Receiver clock drift at time=0 (m/s);
+    double rx_clock_drift;
+};
+
 }
 
 #endif
