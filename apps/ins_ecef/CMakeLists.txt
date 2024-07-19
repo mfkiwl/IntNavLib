@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(inertial_navigation_ecef)
+project(ins_ecef)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,15 +13,15 @@ find_package(glog REQUIRED)
 
 find_package(intnavlib REQUIRED)
 
-add_executable(inertial_navigation_ecef 
-                    src/inertial_navigation_ecef.cpp
+add_executable(ins_ecef 
+                    src/ins_ecef.cpp
                     )
 
-target_include_directories(inertial_navigation_ecef 
+target_include_directories(ins_ecef 
                                     PRIVATE 
                                         ${INTNAVLIB_INCLUDE_DIRS})
 
-target_link_libraries(inertial_navigation_ecef  
+target_link_libraries(ins_ecef  
                                     PRIVATE
                                         ${OPENTHREADS_LIBRARY}
                                         Eigen3::Eigen

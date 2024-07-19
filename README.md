@@ -34,6 +34,17 @@ make install
 
 You can find apps using IntNavLib in the [apps](/apps/) directory.
 
+For example, to build and run the inertial navigation demo using ECEF navigation equations, run: 
+
+```
+cd apps/ins_ecef
+mkdir build && cd build
+cmake ..
+make -j4
+./ins_ecef <path_to>/data/Profile_3.csv
+```
+
+
 ## TODOs
 
 - Integrate GNSS (LC)

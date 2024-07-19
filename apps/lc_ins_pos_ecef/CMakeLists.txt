@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(lc_ins_gnss)
+project(lc_ins_pos_ecef)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,15 +13,15 @@ find_package(glog REQUIRED)
 
 find_package(intnavlib REQUIRED)
 
-add_executable(lc_ins_gnss 
-                    src/lc_ins_gnss.cpp
+add_executable(lc_ins_pos_ecef 
+                    src/lc_ins_pos_ecef.cpp
                     )
 
-target_include_directories(lc_ins_gnss 
+target_include_directories(lc_ins_pos_ecef 
                                     PRIVATE 
                                         ${INTNAVLIB_INCLUDE_DIRS})
 
-target_link_libraries(lc_ins_gnss  
+target_link_libraries(lc_ins_pos_ecef  
                                     PRIVATE
                                         ${OPENTHREADS_LIBRARY}
                                         Eigen3::Eigen

@@ -31,12 +31,12 @@ int main(int argc, char** argv)
     std::string datetime = getCurrentDateTime();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string extension = std::filesystem::path(base_filename).extension().string();
-    std::string new_base_filename = filename_without_extension + "_ins" /*+ "_" + datetime*/ + extension;
+    std::string new_base_filename = filename_without_extension + "_ins_ecef" /*+ "_" + datetime*/ + extension;
     std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
 
     // Errors filename
     std::string errors_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_ins_errors" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_ins_ecef_errors" /*+ "_" + datetime*/ + extension;
 
     // ============== Random gen ==============
 

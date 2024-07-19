@@ -5,7 +5,7 @@
 
 #include "intnavlib/intnavlib.h"
 
-// To ensure full precisiion
+// To ensure maximum precision, at the cost of speed
 // #define EIGEN_DONT_VECTORIZE
 // #define EIGEN_FAST_MATH 0
 
@@ -31,12 +31,17 @@ int main(int argc, char** argv)
     std::string datetime = getCurrentDateTime();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string extension = std::filesystem::path(base_filename).extension().string();
-    std::string new_base_filename = filename_without_extension + "_ins" /*+ "_" + datetime*/ + extension;
+    std::string new_base_filename = filename_without_extension + "_lc_ins_pos_ecef" /*+ "_" + datetime*/ + extension;
     std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
 
     // Errors filename
     std::string errors_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_ins_errors" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_lc_ins_pos_ecef_errors" /*+ "_" + datetime*/ + extension;
+
+    // Init motion profile reader & writer
+    MotionProfileReader reader(motion_profile_filename_in);
+    MotionProfileWriter writer(motion_profile_filename_out);
+    ErrorsWriter errors_writer(errors_filename_out);
 
     // ============== Random gen ==============
 
@@ -128,67 +133,85 @@ int main(int argc, char** argv)
     // Receiver clock drift at time=0 (m/s);
     gnssConfig.rx_clock_drift = 100.0;
 
+    // ============== Position sensor config ==============
+
+    GenericPosSensorConfig genericPosSensorConfig;
+    genericPosSensorConfig.std_pos = 5;
+    genericPosSensorConfig.epoch_interval = 1;
+
+    // ============== Position + Attitude sensor config ==============
+
+    GenericPosRotSensorConfig genericPosRotSensorConfig;
+    genericPosRotSensorConfig.std_pos = 5;
+    genericPosRotSensorConfig.std_rot = 0.01;
+    genericPosRotSensorConfig.epoch_interval = 1;
+
     // ============== KF config ==============
 
-    LcKfConfig kf_config;
-
+    LcKfConfig lc_kf_config;
     // Initial attitude uncertainty per axis (deg, converted to rad)
-    kf_config.init_att_unc = deg_to_rad * 1.0;
+    lc_kf_config.init_att_unc = deg_to_rad * 1.0;
     // Initial velocity uncertainty per axis (m/s)
-    kf_config.init_vel_unc = 0.1;
+    lc_kf_config.init_vel_unc = 0.1;
     // Initial position uncertainty per axis (m)
-    kf_config.init_pos_unc = 10.0;
+    lc_kf_config.init_pos_unc = 10.0;
     // Initial accelerometer bias uncertainty per instrument (micro-g, converted
     // to m/s^2)
-    kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
+    lc_kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
     // Initial gyro bias uncertainty per instrument (deg/hour, converted to rad/sec)
-    kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+    lc_kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
 
     // Gyro noise PSD (deg^2 per hour, converted to rad^2/s)                
-    kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
+    lc_kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
     // Accelerometer noise PSD (micro-g^2 per Hz, converted to m^2 s^-3)                
-    kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
+    lc_kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
     // Accelerometer bias random walk PSD (m^2 s^-5)
-    kf_config.accel_bias_PSD = 1.0E-7;
+    lc_kf_config.accel_bias_PSD = 1.0E-7;
     // Gyro bias random walk PSD (rad^2 s^-3)
-    kf_config.gyro_bias_PSD = 2.0E-12;
+    lc_kf_config.gyro_bias_PSD = 2.0E-12;
 
-    // ============
+    // ============ Declare persistent variables ============
 
+    // Navigation solutions
     // Ground truth nav solution in ned
     NavSolutionNed true_nav_ned;
     NavSolutionNed true_nav_ned_old;
-
     // Ground truth nav solution in ecef
     NavSolutionEcef true_nav_ecef;
     NavSolutionEcef true_nav_ecef_old;
-
     // Estimated nav solution in ecef
     NavSolutionEcef est_nav_ecef;
     NavSolutionEcef est_nav_ecef_old;
-
     // Estimated nav solution in ned
     NavSolutionNed est_nav_ned;
+    NavSolutionNed est_nav_ned_old;
+    // Estimated biases
+    Eigen::Vector3d est_acc_bias = Eigen::Vector3d::Zero();
+    Eigen::Vector3d est_gyro_bias = Eigen::Vector3d::Zero();
 
+    // IMU measurements
     // Ground truth imu measurements from kinematics
     ImuMeasurements true_imu_meas;
-
     // Simulated imu measurements
     ImuMeasurements imu_meas;
 
-    // Current time - last time
-    // In real use, need all sensors to be synced
-    double tor_i;
+    // Pos sensor measurements
+    PosMeasEcef pos_meas_ecef;
 
-    // Init motion profile reader & writer
-    MotionProfileReader reader(motion_profile_filename_in);
-    MotionProfileWriter writer(motion_profile_filename_out);
-    ErrorsWriter errors_writer(errors_filename_out);
+    // Error state uncertainty
+    Eigen::Matrix<double,15,15> P_matrix;
+    Eigen::Matrix<double,15,15> P_matrix_old = InitializeLcPMmatrix(lc_kf_config);
 
-    // Init both true old nav sol, and estimated old nav sol
+    // Init nav solution
     reader.readNextRow(true_nav_ned_old);
     true_nav_ecef_old = nedToEcef(true_nav_ned_old);
     est_nav_ecef_old = true_nav_ecef_old; // Should instead use gnss for this
+    est_nav_ned_old = true_nav_ned_old;
+
+    // Times
+    // Current time - last time
+    double tor_i;
+    double time_last_pos_sens = 0.0;
 
     while (reader.readNextRow(true_nav_ned)) {
 
@@ -201,21 +224,54 @@ int main(int argc, char** argv)
 
         // Get true specific force and angular rates
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
-        
         // Get imu measurements by applying IMU model
         imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        // correct imu bias using previous state estimation
+        imu_meas.f -= est_acc_bias;
+        imu_meas.omega -= est_gyro_bias;
 
         // ========== NAV EQUATIONS ==========
 
         // Predict ecef nav solution (INS)
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
-        est_nav_ned = ecefToNed(est_nav_ecef);
+
+        // ========== PROP UNCERTAINTIES ==========
+        P_matrix  = lcPropUnc(P_matrix_old, 
+                                est_nav_ecef_old,
+                                est_nav_ned_old,
+                                imu_meas,
+                                lc_kf_config,
+                                tor_i);
+        
+        // ========== INTEGRATE POS MEASUREMENTS ==========
+
+        /*
+        if(true_nav_ned.time - time_last_pos_sens > genericPosSensorConfig.epoch_interval) {
+            time_last_pos_sens = true_nav_ned.time;
+
+            // Simulate position measurement
+            pos_meas_ecef = genericPosSensModel(true_nav_ecef,  
+                                            genericPosSensorConfig.std_pos,
+                                            gen);
+
+            // KF update -> update posterior
+            // if no update, best est is prior
+            StateEstEcefLc est_state_ecef_prior;
+            est_state_ecef_prior.nav_sol = est_nav_ecef;
+            est_state_ecef_prior.acc_bias = est_acc_bias;
+            est_state_ecef_prior.gyro_bias = est_gyro_bias;
+
+            StateEstEcefLc est_state_ecef_post = lcUpdateKFPosEcef(pos_meas_ecef, 
+                                                P_matrix,
+                                                est_state_ecef_prior);
+
+            est_nav_ecef = est_state_ecef_post.nav_sol;
+        }
+        */
 
         // Compute errors
+        est_nav_ned = ecefToNed(est_nav_ecef);
         ErrorsNed errors = calculateErrorsNed(true_nav_ned, est_nav_ned);
-
-        // INTEGRATE POS MEASUREMENTS
-        // if(true_nav_ned.time - time_last_gnss> )
 
         // ========== SAVE RESULTS ==========
 
@@ -227,7 +283,9 @@ int main(int argc, char** argv)
 
         true_nav_ecef_old = true_nav_ecef;
         est_nav_ecef_old = est_nav_ecef;
+
         true_nav_ned_old = true_nav_ned;
+        est_nav_ned_old = est_nav_ned;
 
     }
 

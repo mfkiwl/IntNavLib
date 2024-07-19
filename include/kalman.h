@@ -17,6 +17,12 @@ Eigen::Matrix<double,15,15> lcPropUnc(const Eigen::Matrix<double,15,15> & P_matr
                                         const LcKfConfig & lc_kf_config,
                                         const double & tor_s);
 
+// Loosely coupled, ECEF, closed loop error-state KF update
+// Updates error state and thus navigation solution + bias estimate, integrating a position measurement
+StateEstEcefLc lcUpdateKFPosEcef (const PosMeasEcef & pos_meas, 
+                                    const Eigen::Matrix<double,15,15> & P_matrix_propagated,
+                                    const StateEstEcefLc & state_est_old);
+
 };
 
 #endif
