@@ -196,7 +196,15 @@ Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d & a) {
      -a(1),  a(0),     0.0;
 
     return S;
+}
 
+Eigen::Vector3d deSkew(const Eigen::Matrix3d & S){
+
+    Eigen::Vector3d a;
+
+    a << -S(1,2), S(0,2), -S(0,1);
+
+    return a; 
 }
 
 // Function to get the current date and time as a formatted string

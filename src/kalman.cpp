@@ -104,4 +104,56 @@ StateEstEcefLc lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
 
 }
 
+
+StateEstEcefLc lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
+                                    const Eigen::Matrix<double,15,15> & P_matrix_propagated,
+                                    const StateEstEcefLc & state_est_old) {
+
+    // A priori error state is always zero in closed loop filter
+    Eigen::Matrix<double,15,1> x_est_propagated = Eigen::Matrix<double,15,1>::Zero();
+        
+    // 5. Set-up measurement matrix using (14.115)
+    Eigen::Matrix<double,6,15> H_matrix = Eigen::Matrix<double,6,15>::Zero();
+    H_matrix.block<3,3>(0,6) = - Eigen::Matrix3d::Identity(); // Position
+    H_matrix.block<3,3>(3,0) = - Eigen::Matrix3d::Identity(); // Rotation
+
+    // 6. Set-up measurement noise covariance matrix
+    Eigen::Matrix<double, 6,6> R_matrix = pos_rot_meas.cov_mat;
+
+    // 7. Calculate Kalman gain using (3.21)
+    Eigen::Matrix<double, 15,6> K_matrix = P_matrix_propagated * H_matrix.transpose() * 
+                                (H_matrix * P_matrix_propagated * H_matrix.transpose() + R_matrix).inverse();
+
+    // 8. Formulate measurement innovations using (14.102), noting that zero
+    // lever arm is assumed here. See (14.151) for attitude int
+    Eigen::Matrix<double,6,1> delta_z;
+    delta_z.block<3,1>(0,0) = pos_rot_meas.r_eb_e - state_est_old.nav_sol.r_eb_e; // pos
+    delta_z.block<3,1>(3,0) = deSkew(pos_rot_meas.C_b_e * state_est_old.nav_sol.C_b_e.transpose() - Eigen::Matrix3d::Identity());// rot
+
+    // 9. Update error state estimates using (3.24)
+    Eigen::Matrix<double,15,1> x_est_new = x_est_propagated + K_matrix * delta_z;
+
+    // 10. Update state estimation error covariance matrix using (3.25)
+    Eigen::Matrix<double,15,15> P_matrix_new = (Eigen::Matrix<double,15,15>::Identity() 
+                                            - K_matrix * H_matrix) * P_matrix_propagated;
+
+    // CLOSED-LOOP CORRECTION
+
+    // Correct attitude, velocity, and position using (14.7-9)
+    StateEstEcefLc state_est_new;
+    state_est_new.nav_sol.time = state_est_old.nav_sol.time;
+    state_est_new.nav_sol.C_b_e = (Eigen::Matrix3d::Identity() - 
+                                skewSymmetric(x_est_new.block<3,1>(0,0))) * 
+                                state_est_old.nav_sol.C_b_e;
+    state_est_new.nav_sol.v_eb_e = state_est_old.nav_sol.v_eb_e - x_est_new.block<3,1>(3,0);
+    state_est_new.nav_sol.r_eb_e = state_est_old.nav_sol.r_eb_e - x_est_new.block<3,1>(6,0);
+
+    // Update IMU bias estimates
+    state_est_new.acc_bias += x_est_new.block<3,1>(9,0);
+    state_est_new.gyro_bias += x_est_new.block<3,1>(12,0);
+
+    return state_est_new;
+
+}
+
 };

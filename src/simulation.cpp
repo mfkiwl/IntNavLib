@@ -203,7 +203,7 @@ PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav,
 
     // add error
     pos_rot_meas.r_eb_e = true_nav.r_eb_e + pos_error;
-    pos_rot_meas.C_b_e = C_b_b * pos_rot_meas.C_b_e;
+    pos_rot_meas.C_b_e = true_nav.C_b_e * C_b_b;
     pos_rot_meas.cov_mat = cov_mat;
 
     return pos_rot_meas;

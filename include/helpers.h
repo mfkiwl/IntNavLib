@@ -31,10 +31,13 @@ namespace intnavlib {
         return rads / 0.01745329252;
     }
 
+    // Euler angles to rotation matrix
     Eigen::Matrix3d rpyToR(const Eigen::Vector3d & rpy);
 
+    // Rotation matrix to Euler angles
     Eigen::Vector3d rToRpy(const Eigen::Matrix3d & C);
 
+    // Get skew symmetric matrix from velocity vector
     Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d & a);
 
     // signum function
@@ -48,9 +51,12 @@ namespace intnavlib {
     // Get radii of curvature from latitude
     Eigen::Vector2d radiiOfCurvature(double L);
 
+    // Get position, velocity, attitude errors in local NED frame
     ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
                                 const NavSolutionNed & est_nav_sol);
 
+    // Get velocity vector from skew symmetric matrix
+    Eigen::Vector3d deSkew(const Eigen::Matrix3d & S);
 };
 
 #endif

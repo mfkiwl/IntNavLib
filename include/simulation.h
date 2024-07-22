@@ -26,7 +26,8 @@ namespace intnavlib {
     // Generic ecef pose sensor model
     PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav, 
                                         const double & pos_sigma,
-                                        const double & rot_sigma);
+                                        const double & rot_sigma,
+                                        std::mt19937 & gen);
     
 };
 

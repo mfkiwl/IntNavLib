@@ -194,7 +194,7 @@ int main(int argc, char** argv)
     ImuMeasurements imu_meas;
 
     // Pos sensor measurements
-    PosMeasEcef pos_meas_ecef;
+    PosRotMeasEcef pos_rot_meas_ecef;
 
     // Error state uncertainty
     Eigen::Matrix<double,15,15> P_matrix = InitializeLcPMmatrix(lc_kf_config);
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     // Times
     // Current time - last time
     double tor_i;
-    double time_last_pos_sens = 0.0;
+    double time_last_pos_rot_sens = 0.0;
 
     while (reader.readNextRow(true_nav_ned)) {
 
@@ -238,23 +238,24 @@ int main(int argc, char** argv)
         // But the the underlying approximation hold only
         // if dt is low enough. Therefore slower but better to put it in the prop stage.
         P_matrix  = lcPropUnc(P_matrix, 
-                                est_nav_ecef,
-                                est_nav_ned,
-                                imu_meas,
-                                lc_kf_config,
-                                tor_i);
+                            est_nav_ecef,
+                            est_nav_ned,
+                            imu_meas,
+                            lc_kf_config,
+                            tor_i);
 
-        // ========== INTEGRATE POS MEASUREMENTS ==========
+        // ========== INTEGRATE POS ROT MEASUREMENTS ==========
 
         
-        double tor_s = true_nav_ned.time - time_last_pos_sens;
-        if( tor_s >= genericPosSensorConfig.epoch_interval) {
+        double tor_s = true_nav_ned.time - time_last_pos_rot_sens;
+        if( tor_s >= genericPosRotSensorConfig.epoch_interval) {
 
-            time_last_pos_sens = true_nav_ned.time;
+            time_last_pos_rot_sens = true_nav_ned.time;
 
             // Simulate position measurement
-            pos_meas_ecef = genericPosSensModel(true_nav_ecef,  
-                                            genericPosSensorConfig.std_pos,
+            pos_rot_meas_ecef = genericPosRotSensModel(true_nav_ecef,  
+                                            genericPosRotSensorConfig.std_pos,
+                                            genericPosRotSensorConfig.std_rot,
                                             gen);
 
             // KF update -> update posterior
@@ -264,13 +265,12 @@ int main(int argc, char** argv)
             est_state_ecef_prior.acc_bias = est_acc_bias;
             est_state_ecef_prior.gyro_bias = est_gyro_bias;
 
-            StateEstEcefLc est_state_ecef_post = lcUpdateKFPosEcef(pos_meas_ecef, 
-                                                P_matrix,
-                                                est_state_ecef_prior);
+            StateEstEcefLc est_state_ecef_post = lcUpdateKFPosRotEcef(pos_rot_meas_ecef, 
+                                                                    P_matrix,
+                                                                    est_state_ecef_prior);
 
             est_nav_ecef = est_state_ecef_post.nav_sol;
         }
-        
 
         // Compute errors
         est_nav_ned = ecefToNed(est_nav_ecef);
