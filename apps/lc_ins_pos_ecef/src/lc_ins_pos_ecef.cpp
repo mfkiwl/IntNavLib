@@ -136,15 +136,15 @@ int main(int argc, char** argv)
     // ============== Position sensor config ==============
 
     GenericPosSensorConfig genericPosSensorConfig;
-    genericPosSensorConfig.std_pos = 5;
-    genericPosSensorConfig.epoch_interval = 1;
+    genericPosSensorConfig.std_pos = 2.5;
+    genericPosSensorConfig.epoch_interval = 0.5;
 
     // ============== Position + Attitude sensor config ==============
 
     GenericPosRotSensorConfig genericPosRotSensorConfig;
-    genericPosRotSensorConfig.std_pos = 5;
+    genericPosRotSensorConfig.std_pos = 2.5;
     genericPosRotSensorConfig.std_rot = 0.01;
-    genericPosRotSensorConfig.epoch_interval = 1;
+    genericPosRotSensorConfig.epoch_interval = 0.5;
 
     // ============== KF config ==============
 
@@ -181,10 +181,8 @@ int main(int argc, char** argv)
     NavSolutionEcef true_nav_ecef_old;
     // Estimated nav solution in ecef
     NavSolutionEcef est_nav_ecef;
-    NavSolutionEcef est_nav_ecef_old;
     // Estimated nav solution in ned
     NavSolutionNed est_nav_ned;
-    NavSolutionNed est_nav_ned_old;
     // Estimated biases
     Eigen::Vector3d est_acc_bias = Eigen::Vector3d::Zero();
     Eigen::Vector3d est_gyro_bias = Eigen::Vector3d::Zero();
@@ -199,14 +197,12 @@ int main(int argc, char** argv)
     PosMeasEcef pos_meas_ecef;
 
     // Error state uncertainty
-    Eigen::Matrix<double,15,15> P_matrix;
-    Eigen::Matrix<double,15,15> P_matrix_old = InitializeLcPMmatrix(lc_kf_config);
+    Eigen::Matrix<double,15,15> P_matrix = InitializeLcPMmatrix(lc_kf_config);
 
     // Init nav solution
     reader.readNextRow(true_nav_ned_old);
     true_nav_ecef_old = nedToEcef(true_nav_ned_old);
-    est_nav_ecef_old = true_nav_ecef_old; // Should instead use gnss for this
-    est_nav_ned_old = true_nav_ned_old;
+    est_nav_ecef = true_nav_ecef_old;
 
     // Times
     // Current time - last time
@@ -225,7 +221,8 @@ int main(int argc, char** argv)
         // Get true specific force and angular rates
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
         // Get imu measurements by applying IMU model
-        imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        // imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        imu_meas = true_imu_meas;
         // correct imu bias using previous state estimation
         imu_meas.f -= est_acc_bias;
         imu_meas.omega -= est_gyro_bias;
@@ -233,21 +230,30 @@ int main(int argc, char** argv)
         // ========== NAV EQUATIONS ==========
 
         // Predict ecef nav solution (INS)
-        est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
+        est_nav_ecef = navEquationsEcef(est_nav_ecef, imu_meas, tor_i);
+        est_nav_ned = ecefToNed(est_nav_ecef);
 
         // ========== PROP UNCERTAINTIES ==========
-        P_matrix  = lcPropUnc(P_matrix_old, 
-                                est_nav_ecef_old,
-                                est_nav_ned_old,
-                                imu_meas,
-                                lc_kf_config,
-                                tor_i);
+        
+        // Groves actually puts this in the update part, with a large dt. 
+        // But the the underlying approximation hold only
+        // if dt is low enough. Therefore slower but better to put it in the prop stage.
         
         // ========== INTEGRATE POS MEASUREMENTS ==========
 
-        /*
-        if(true_nav_ned.time - time_last_pos_sens > genericPosSensorConfig.epoch_interval) {
+        
+        double tor_s = true_nav_ned.time - time_last_pos_sens;
+        if( tor_s >= genericPosSensorConfig.epoch_interval) {
+
             time_last_pos_sens = true_nav_ned.time;
+
+            P_matrix  = lcPropUnc(P_matrix, 
+                                est_nav_ecef,
+                                est_nav_ned,
+                                imu_meas,
+                                lc_kf_config,
+                                tor_s);
+
 
             // Simulate position measurement
             pos_meas_ecef = genericPosSensModel(true_nav_ecef,  
@@ -267,7 +273,7 @@ int main(int argc, char** argv)
 
             est_nav_ecef = est_state_ecef_post.nav_sol;
         }
-        */
+        
 
         // Compute errors
         est_nav_ned = ecefToNed(est_nav_ecef);
@@ -282,11 +288,7 @@ int main(int argc, char** argv)
         errors_writer.writeNextRow(errors);
 
         true_nav_ecef_old = true_nav_ecef;
-        est_nav_ecef_old = est_nav_ecef;
-
         true_nav_ned_old = true_nav_ned;
-        est_nav_ned_old = est_nav_ned;
-
     }
 
     return 0;
