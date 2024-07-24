@@ -221,7 +221,8 @@ int main(int argc, char** argv)
         // Get true specific force and angular rates
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
         // Get imu measurements by applying IMU model
-        imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        // imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        imu_meas = true_imu_meas;
         // correct imu bias using previous state estimation
         imu_meas.f -= est_acc_bias;
         imu_meas.omega -= est_gyro_bias;
@@ -237,12 +238,7 @@ int main(int argc, char** argv)
         // Groves actually puts this in the update part, with a large dt. 
         // But the the underlying approximation hold only
         // if dt is low enough. Therefore slower but better to put it in the prop stage.
-        P_matrix  = lcPropUnc(P_matrix, 
-                                est_nav_ecef,
-                                est_nav_ned,
-                                imu_meas,
-                                lc_kf_config,
-                                tor_i);
+        
 
         // ========== INTEGRATE POS MEASUREMENTS ==========
 
@@ -251,6 +247,15 @@ int main(int argc, char** argv)
         if( tor_s >= genericPosSensorConfig.epoch_interval) {
 
             time_last_pos_sens = true_nav_ned.time;
+            
+            cross check with matlab! something wrong!
+            proobs w kalman gain & P
+            P_matrix  = lcPropUnc(P_matrix, 
+                                est_nav_ecef,
+                                est_nav_ned,
+                                imu_meas,
+                                lc_kf_config,
+                                tor_s);
 
             // Simulate position measurement
             pos_meas_ecef = genericPosSensModel(true_nav_ecef,  
