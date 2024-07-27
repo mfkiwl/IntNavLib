@@ -31,12 +31,12 @@ int main(int argc, char** argv)
     std::string datetime = getCurrentDateTime();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string extension = std::filesystem::path(base_filename).extension().string();
-    std::string new_base_filename = filename_without_extension + "_lc_ins_pos_ecef" /*+ "_" + datetime*/ + extension;
+    std::string new_base_filename = filename_without_extension + "_lc_ins_pos_rot_ecef" /*+ "_" + datetime*/ + extension;
     std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
 
     // Errors filename
     std::string errors_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_lc_ins_pos_ecef_errors" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_lc_ins_pos_rot_ecef_errors" /*+ "_" + datetime*/ + extension;
 
     // Init motion profile reader & writer
     MotionProfileReader reader(motion_profile_filename_in);
@@ -261,15 +261,19 @@ int main(int argc, char** argv)
             // KF update -> update posterior
             // if no update, best est is prior
             StateEstEcefLc est_state_ecef_prior;
+
+            est_state_ecef_prior.P_matrix = P_matrix;
             est_state_ecef_prior.nav_sol = est_nav_ecef;
             est_state_ecef_prior.acc_bias = est_acc_bias;
             est_state_ecef_prior.gyro_bias = est_gyro_bias;
 
             StateEstEcefLc est_state_ecef_post = lcUpdateKFPosRotEcef(pos_rot_meas_ecef, 
-                                                                    P_matrix,
                                                                     est_state_ecef_prior);
 
+            P_matrix = est_state_ecef_post.P_matrix;
             est_nav_ecef = est_state_ecef_post.nav_sol;
+            est_acc_bias = est_state_ecef_post.acc_bias;
+            est_gyro_bias = est_state_ecef_post.gyro_bias;
         }
 
         // Compute errors

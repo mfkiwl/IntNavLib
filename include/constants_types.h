@@ -87,6 +87,7 @@ struct NavSolutionEcef {
 struct StateEstEcefLc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     NavSolutionEcef nav_sol;
+    Eigen::Matrix<double,15,15> P_matrix;
     Eigen::Vector3d acc_bias;
     Eigen::Vector3d gyro_bias;
 };
@@ -97,6 +98,18 @@ struct ErrorsNed {
     Eigen::Vector3d delta_r_eb_n; // NED Position error
     Eigen::Vector3d delta_v_eb_n; // NED Velocity error
     Eigen::Vector3d delta_eul_nb_n; // NED orientation error
+};
+
+// Errors in ecef + estimated std devs
+struct ErrorsSigmasEcef {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    double time;
+    Eigen::Vector3d delta_r_eb_e; 
+    Eigen::Vector3d delta_v_eb_e; 
+    Eigen::Vector3d delta_eul_eb_e;
+    Eigen::Vector3d sigma_delta_r_eb_e; 
+    Eigen::Vector3d sigma_delta_v_eb_e; 
+    Eigen::Vector3d sigma_delta_eul_eb_e;
 };
 
 struct LcKfConfig {

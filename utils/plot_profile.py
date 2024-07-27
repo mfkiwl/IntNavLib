@@ -34,15 +34,15 @@ def plot_profile(csv_file):
     
     # Extract the relevant columns
     time = data.iloc[:, 0]
-    latitude = data.iloc[:, 1]
-    longitude = data.iloc[:, 2]
+    latitude = np.deg2rad(data.iloc[:, 1])
+    longitude = np.deg2rad(data.iloc[:, 2])
     height = data.iloc[:, 3]
     north_velocity = data.iloc[:, 4]
     east_velocity = data.iloc[:, 5]
     down_velocity = data.iloc[:, 6]
-    roll_angle = np.degrees(data.iloc[:, 7])
-    pitch_angle = np.degrees(data.iloc[:, 8])
-    yaw_angle = np.degrees(data.iloc[:, 9])
+    roll_angle = data.iloc[:, 7]
+    pitch_angle = data.iloc[:, 8]
+    yaw_angle = data.iloc[:, 9]
     
     # Calculate radii of curvature
     R_N, R_E = radii_of_curvature(latitude.iloc[0])
