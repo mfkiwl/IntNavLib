@@ -9,6 +9,7 @@
 
 #include "motion_profile_reader.h"
 #include "motion_profile_writer.h"
+#include "errors_sigmas_ecef_writer.h"
 #include "errors_writer.h"
 
 #endif
