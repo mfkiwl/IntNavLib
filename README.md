@@ -3,7 +3,9 @@
 This is my toy c++ integrated navigation library.
 The aim is to have modular pieces of c++ code that can be used in integrated navigation applications.
 
-The code is inspired by "Principles of GNSS, Inertial, and Multisensor Integrated Navigation" by Paul Groves.
+![image](media/Figure_1.png)
+
+The code is inspired by [Principles of GNSS, Inertial, and Multisensor Integrated Navigation](https://ieeexplore.ieee.org/document/9101092) by Paul Groves.
 
 Reference: 
 
@@ -44,14 +46,27 @@ make -j4
 ./ins_ecef <path_to>/data/Profile_3.csv
 ```
 
+Find Python scripts to plot results in Groves' style in the [utils](/utils/) directory. You can launch them like this:
+
+```
+python3 plot_profile.py <path_to_profile_csv> # to plot a motion profile
+python3 plot_errors.py <path_to_errors_csv> # to plot nav errors
+python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot errors + estimated uncertainty 
+
+```
+
 
 ## TODOs
 
-- Integrate GNSS (LC)
+- tic toc apps
 
-- Integrate GNSS (TC)
+- add gnss sensor model
 
-- Remove dependencies: place eigen in include dir, glog?
+- GNSS INS (LC)
+
+- GNSS INS (TC)
+
+- Remove dependencies: place eigen in include dir
 
 ## Future development
 

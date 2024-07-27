@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     std::string errors_filename_out = new_directory + "/" + 
                                     filename_without_extension + "_lc_ins_pos_rot_ecef_errors" /*+ "_" + datetime*/ + extension;
     std::string errors_sigmas_ecef_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_lc_ins_pos_ecef_errors_sigma_ecef" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_lc_ins_pos_rot_ecef_errors_sigma_ecef" /*+ "_" + datetime*/ + extension;
 
     // Init motion profile reader & writer
     MotionProfileReader reader(motion_profile_filename_in);
@@ -205,7 +205,10 @@ int main(int argc, char** argv)
     // Init nav solution
     reader.readNextRow(true_nav_ned_old);
     true_nav_ecef_old = nedToEcef(true_nav_ned_old);
+
     est_nav_ecef = true_nav_ecef_old;
+    est_nav_ecef.r_eb_e += 10 * Eigen::Vector3d::Ones();
+    est_nav_ecef.v_eb_e += 0.1 * Eigen::Vector3d::Ones();
 
     // Times
     // Current time - last time
