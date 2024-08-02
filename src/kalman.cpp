@@ -104,6 +104,55 @@ StateEstEcefLc lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
 
 }
 
+StateEstEcefLc lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
+                                    const StateEstEcefLc & state_est_prior) {
+     // A priori error state is always zero in closed loop filter
+    Eigen::Matrix<double,15,1> x_est_propagated = Eigen::Matrix<double,15,1>::Zero();
+        
+    // 5. Set-up measurement matrix using (14.115)
+    Eigen::Matrix<double,6,15> H_matrix = Eigen::Matrix<double,6,15>::Zero();
+    H_matrix.block<3,3>(0,6) = - Eigen::Matrix3d::Identity(); // Position
+    H_matrix.block<3,3>(3,3) = - Eigen::Matrix3d::Identity(); // Velocity
+
+    // 6. Set-up measurement noise covariance matrix
+    Eigen::Matrix<double,6,6> R_matrix = pos_vel_gnss_meas.cov_mat;
+
+    // 7. Calculate Kalman gain using (3.21)
+    Eigen::Matrix<double, 15,6> K_matrix = state_est_prior.P_matrix * H_matrix.transpose() * 
+                                (H_matrix * state_est_prior.P_matrix * H_matrix.transpose() + R_matrix).inverse();
+
+    // 8. Formulate measurement innovations using (14.102), noting that zero
+    // lever arm is assumed here
+    Eigen::Matrix<double,6,1> delta_z;
+    delta_z.block<3,1>(0,0) = pos_vel_gnss_meas.r_ea_e - state_est_prior.nav_sol.r_eb_e;
+    delta_z.block<3,1>(3,0) = pos_vel_gnss_meas.v_ea_e - state_est_prior.nav_sol.v_eb_e;
+
+    // 9. Update error state estimates using (3.24)
+    Eigen::Matrix<double,15,1> x_est_new = x_est_propagated + K_matrix * delta_z;
+
+    // 10. Update state estimation error covariance matrix using (3.25)
+    Eigen::Matrix<double,15,15> P_matrix_post = (Eigen::Matrix<double,15,15>::Identity() 
+                                            - K_matrix * H_matrix) * state_est_prior.P_matrix;
+
+    // CLOSED-LOOP CORRECTION
+
+    // Correct attitude, velocity, and position using (14.7-9)
+    StateEstEcefLc state_est_post;
+    state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
+    state_est_post.nav_sol.C_b_e = (Eigen::Matrix3d::Identity() - 
+                                skewSymmetric(x_est_new.block<3,1>(0,0))) * 
+                                state_est_prior.nav_sol.C_b_e;
+    state_est_post.nav_sol.v_eb_e = state_est_prior.nav_sol.v_eb_e - x_est_new.block<3,1>(3,0);
+    state_est_post.nav_sol.r_eb_e = state_est_prior.nav_sol.r_eb_e - x_est_new.block<3,1>(6,0);
+    state_est_post.P_matrix = P_matrix_post;
+
+    // Update IMU bias estimates
+    state_est_post.acc_bias = state_est_prior.acc_bias + x_est_new.block<3,1>(9,0);
+    state_est_post.gyro_bias = state_est_prior.gyro_bias + x_est_new.block<3,1>(12,0);
+
+    return state_est_post;
+}
+
 
 StateEstEcefLc lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
                                     const StateEstEcefLc & state_est_prior) {

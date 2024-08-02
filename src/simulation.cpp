@@ -90,7 +90,8 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
 }
 
 
-ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas, 
+ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas,
+                        const ImuMeasurements & old_imu_meas,
                         const ImuErrors & imu_errors,
                         const double & tor_i,
                         std::mt19937 & gen) {
@@ -126,33 +127,35 @@ ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas,
                                     + imu_errors.G_g * true_imu_meas.f 
                                     + gyro_noise;
 
-    // // Quantize accelerometer outputs
-    // if (IMU_errors.accel_quant_level > 0) {
-    //     meas_f_ib_b = IMU_errors.accel_quant_level * round((uq_f_ib_b +...
-    //         old_quant_residuals_f) / IMU_errors.accel_quant_level);
-    //     quant_residuals_f = uq_f_ib_b + old_quant_residuals_f -...
-    //         meas_f_ib_b;
-    // }
-    // else{
-    //     imu_measurements.f = uq_f_ib_b;
-    //     quant_residuals_f = [0;0;0];
-    // }
+    // Quantize accelerometer outputs
+    if (imu_errors.accel_quant_level > EPSILON) {
+        Eigen::Vector3d temp = (uq_f_ib_b + old_imu_meas.quant_residuals_f) / imu_errors.accel_quant_level;
+        for(size_t i = 0; i < 3; i++) temp(i) = round(temp(i));
+        imu_measurements.f = imu_errors.accel_quant_level * temp;
+        imu_measurements.quant_residuals_f = uq_f_ib_b + old_imu_meas.quant_residuals_f -
+            imu_measurements.f;
+    }
+    else{
+        imu_measurements.f = uq_f_ib_b;
+        imu_measurements.quant_residuals_f = Eigen::Vector3d::Zero();
+    }
 
-    // // Quantize gyro outputs
-    // if (IMU_errors.gyro_quant_level>0) {
-    //     imu_measurements.omega = IMU_errors.gyro_quant_level * round((uq_omega_ib_b +...
-    //         old_quant_residuals_omega) / IMU_errors.gyro_quant_level);
-    //     quant_residuals_omega = uq_omega_ib_b + old_quant_residuals_omega -...
-    //         imu_measurements.omega;
-    // }
-    // else {
-    //     imu_measurements.omega = uq_omega_ib_b;
-    //     quant_residuals_omega = [0;0;0];
-    // }
+    // Quantize gyro outputs
+    if (imu_errors.gyro_quant_level > EPSILON) {
+        Eigen::Vector3d temp = (uq_omega_ib_b + old_imu_meas.quant_residuals_omega) / imu_errors.gyro_quant_level;
+        for(size_t i = 0; i < 3; i++) temp(i) = round(temp(i)); 
+        imu_measurements.omega = imu_errors.gyro_quant_level * temp;
+        imu_measurements.quant_residuals_omega = uq_omega_ib_b + old_imu_meas.quant_residuals_omega -
+            imu_measurements.omega;
+    }
+    else {
+        imu_measurements.omega = uq_omega_ib_b;
+        imu_measurements.quant_residuals_omega = Eigen::Vector3d::Zero();
+    }
 
-    // No quantization
-    imu_measurements.f = uq_f_ib_b;
-    imu_measurements.omega = uq_omega_ib_b;
+    // // No quantization
+    // imu_measurements.f = uq_f_ib_b;
+    // imu_measurements.omega = uq_omega_ib_b;
 
     return imu_measurements;
 }
@@ -207,6 +210,183 @@ PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav,
     pos_rot_meas.cov_mat = cov_mat;
 
     return pos_rot_meas;
+}
+
+SatPosVel satellitePositionsAndVelocities(const double & time, 
+                                        const GnssConfig& GNSS_config) {
+
+    SatPosVel gnssPosVel;
+
+    // Convert inclination angle to radians
+    double inclination = GNSS_config.inclination * deg_to_rad; 
+
+    // Determine orbital angular rate
+    double omega_is = std::sqrt(mu / std::pow(GNSS_config.r_os, 3));
+
+    // Determine constellation time
+    double const_time = time + GNSS_config.const_delta_t;
+
+    // Resize output matrices
+    int no_sat = static_cast<int>(GNSS_config.no_sat);
+    gnssPosVel.sat_r_es_e.resize(no_sat, 3);
+    gnssPosVel.sat_v_es_e.resize(no_sat, 3);
+
+    // Loop over satellites
+    for (int j = 0; j < no_sat; ++j) {
+        // Argument of latitude
+        double u_os_o = 2 * M_PI * j / no_sat + omega_is * const_time;
+        
+        // Satellite position in the orbital frame
+        Eigen::Vector3d r_os_o;
+        r_os_o << GNSS_config.r_os * std::cos(u_os_o),
+                    GNSS_config.r_os * std::sin(u_os_o), 
+                    0;
+
+        // Longitude of the ascending node
+        double Omega = (M_PI * (j % 6) / 3 + GNSS_config.const_delta_lambda * deg_to_rad) - omega_ie * const_time;
+
+        // ECEF Satellite Position
+        gnssPosVel.sat_r_es_e(j, 0) = r_os_o(0) * std::cos(Omega) - r_os_o(1) * std::cos(inclination) * std::sin(Omega);
+        gnssPosVel.sat_r_es_e(j, 1) = r_os_o(0) * std::sin(Omega) + r_os_o(1) * std::cos(inclination) * std::cos(Omega);
+        gnssPosVel.sat_r_es_e(j, 2) = r_os_o(1) * std::sin(inclination);
+
+        // Satellite velocity in the orbital frame
+        Eigen::Vector3d v_os_o;
+        v_os_o << -GNSS_config.r_os * omega_is * std::sin(u_os_o),
+                    GNSS_config.r_os * omega_is * std::cos(u_os_o), 0;
+
+        // ECEF Satellite velocity
+        gnssPosVel.sat_v_es_e(j, 0) = v_os_o(0) * std::cos(Omega) - v_os_o(1) * std::cos(inclination) * std::sin(Omega) + omega_ie * gnssPosVel.sat_r_es_e(j, 1);
+        gnssPosVel.sat_v_es_e(j, 1) = v_os_o(0) * std::sin(Omega) + v_os_o(1) * std::cos(inclination) * std::cos(Omega) - omega_ie * gnssPosVel.sat_r_es_e(j, 0);
+        gnssPosVel.sat_v_es_e(j, 2) = v_os_o(1) * std::sin(inclination);
+    }
+
+    return gnssPosVel;
+}
+
+GnssMeasurements generateGNSSMeasurements(const double & time,
+                                        const SatPosVel & gnss_pos_vel,
+                                        const NavSolutionNed& true_nav_ned,
+                                        const NavSolutionEcef& true_nav_ecef,
+                                        const Eigen::VectorXd& GNSS_biases, 
+                                        const GnssConfig& GNSS_config,
+                                        std::mt19937 & gen) {
+
+    // nomally distributed error
+    std::normal_distribution<double> randn(0.0, 1.0);
+
+    GnssMeasurements gnssMeasurements;
+
+    // Initialize number of GNSS measurements
+    gnssMeasurements.no_GNSS_meas = 0;
+
+    // Calculate ECEF to NED coordinate transformation matrix
+    double cos_lat = std::cos(true_nav_ned.latitude);
+    double sin_lat = std::sin(true_nav_ned.latitude);
+    double cos_long = std::cos(true_nav_ned.longitude);
+    double sin_long = std::sin(true_nav_ned.longitude);
+    Eigen::Matrix3d C_e_n;
+    C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
+             -sin_long,            cos_long,        0,
+             -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
+     
+    // Skew symmetric matrix of Earth rate
+    Eigen::Matrix3d Omega_ie = skewSymmetric(Eigen::Vector3d(0, 0, omega_ie));
+       
+    // Resize the GNSS measurements matrix to accommodate the maximum possible measurements
+    gnssMeasurements.GNSS_measurements.resize(GNSS_config.no_sat, 8);
+
+    // Loop over satellites
+    for (int j = 0; j < GNSS_config.no_sat; ++j) {
+        // Determine ECEF line-of-sight vector
+        Eigen::Vector3d delta_r = gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
+        double approx_range = delta_r.norm();
+        Eigen::Vector3d u_as_e = delta_r / approx_range;
+    
+        // Convert line-of-sight vector to NED and determine elevation
+        double elevation = -std::asin(C_e_n.row(2).dot(u_as_e));
+    
+        // Determine if satellite is above the masking angle
+        if (elevation >= GNSS_config.mask_angle * deg_to_rad) {
+            // Increment number of measurements
+            gnssMeasurements.no_GNSS_meas++;
+    
+            // Calculate frame rotation during signal transit time
+            Eigen::Matrix3d C_e_I;
+            C_e_I << 1, omega_ie * approx_range / c, 0,
+                     -omega_ie * approx_range / c, 1, 0,
+                     0, 0, 1;
+
+            // Calculate range
+            delta_r = C_e_I * gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
+            double range = delta_r.norm();
+        
+            // Calculate range rate
+            double range_rate = u_as_e.dot(C_e_I * (gnss_pos_vel.sat_v_es_e.row(j).transpose() + Omega_ie * gnss_pos_vel.sat_r_es_e.row(j).transpose()) - (true_nav_ecef.v_eb_e + Omega_ie * true_nav_ecef.r_eb_e));
+    
+            // Calculate pseudo-range measurement
+            gnssMeasurements.GNSS_measurements(gnssMeasurements.no_GNSS_meas-1, 0) = range + GNSS_biases(j) + GNSS_config.rx_clock_offset + GNSS_config.rx_clock_drift * time + GNSS_config.code_track_err_SD * randn(gen);
+    
+            // Calculate pseudo-range rate measurement
+            gnssMeasurements.GNSS_measurements(gnssMeasurements.no_GNSS_meas-1, 1) = range_rate + GNSS_config.rx_clock_drift + GNSS_config.rate_track_err_SD * randn(gen);
+    
+            // Append satellite position and velocity to output data
+            gnssMeasurements.GNSS_measurements.block<1, 3>(gnssMeasurements.no_GNSS_meas-1, 2) = gnss_pos_vel.sat_r_es_e.row(j);
+            gnssMeasurements.GNSS_measurements.block<1, 3>(gnssMeasurements.no_GNSS_meas-1, 5) = gnss_pos_vel.sat_v_es_e.row(j);
+        }
+    }
+
+    // Resize the GNSS measurements matrix to the actual number of measurements
+    // Which is <= than n of satellites
+    gnssMeasurements.GNSS_measurements.conservativeResize(gnssMeasurements.no_GNSS_meas, 8);
+
+    return gnssMeasurements;
+}
+
+Eigen::VectorXd initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
+                                    const NavSolutionNed & true_nav_ned,
+                                    const SatPosVel & gnss_pos_vel,
+                                    const GnssConfig& GNSS_config,
+                                    std::mt19937 & gen) {
+
+    // nomally distributed error
+    std::normal_distribution<double> randn(0.0, 1.0);
+
+    Eigen::VectorXd GNSS_biases;
+    // Resize the GNSS biases vector to the number of satellites
+    GNSS_biases.resize(GNSS_config.no_sat);
+
+    // Calculate ECEF to NED coordinate transformation matrix
+    double cos_lat = std::cos(true_nav_ned.latitude);
+    double sin_lat = std::sin(true_nav_ned.latitude);
+    double cos_long = std::cos(true_nav_ned.longitude);
+    double sin_long = std::sin(true_nav_ned.longitude);
+    Eigen::Matrix3d C_e_n;
+    C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
+             -sin_long,            cos_long,        0,
+             -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
+
+    // Loop over satellites
+    for (int j = 0; j < GNSS_config.no_sat; ++j) {
+        // Determine ECEF line-of-sight vector
+        Eigen::Vector3d delta_r = gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
+        Eigen::Vector3d u_as_e = delta_r / delta_r.norm();
+    
+        // Convert line-of-sight vector to NED and determine elevation
+        double elevation = -std::asin(C_e_n.row(2).dot(u_as_e));
+    
+        // Limit the minimum elevation angle to the masking angle
+        elevation = std::max(elevation, GNSS_config.mask_angle * deg_to_rad);
+    
+        // Calculate ionosphere and troposphere error standard deviations
+        double iono_SD = GNSS_config.zenith_iono_err_SD / std::sqrt(1 - 0.899 * std::cos(elevation) * std::cos(elevation));
+        double trop_SD = GNSS_config.zenith_trop_err_SD / std::sqrt(1 - 0.998 * std::cos(elevation) * std::cos(elevation));
+    
+        // Determine range bias
+        GNSS_biases(j) = GNSS_config.SIS_err_SD * randn(gen) + iono_SD * randn(gen) + trop_SD * randn(gen);
+    }
+
+    return GNSS_biases;
 }
 
 

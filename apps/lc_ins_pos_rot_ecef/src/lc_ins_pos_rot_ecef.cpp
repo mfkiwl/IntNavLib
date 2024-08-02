@@ -138,16 +138,16 @@ int main(int argc, char** argv)
 
     // ============== Position sensor config ==============
 
-    GenericPosSensorConfig genericPosSensorConfig;
-    genericPosSensorConfig.std_pos = 2.5;
-    genericPosSensorConfig.epoch_interval = 0.5;
+    GenericPosSensorConfig generic_pos_sensor_config;
+    generic_pos_sensor_config.std_pos = 2.5;
+    generic_pos_sensor_config.epoch_interval = 0.5;
 
     // ============== Position + Attitude sensor config ==============
 
-    GenericPosRotSensorConfig genericPosRotSensorConfig;
-    genericPosRotSensorConfig.std_pos = 2.5;
-    genericPosRotSensorConfig.std_rot = 0.01;
-    genericPosRotSensorConfig.epoch_interval = 0.5;
+    GenericPosRotSensorConfig generic_pos_rot_sensor_config;
+    generic_pos_rot_sensor_config.std_pos = 2.5;
+    generic_pos_rot_sensor_config.std_rot = 0.01;
+    generic_pos_rot_sensor_config.epoch_interval = 0.5;
 
     // ============== KF config ==============
 
@@ -195,6 +195,10 @@ int main(int argc, char** argv)
     ImuMeasurements true_imu_meas;
     // Simulated imu measurements
     ImuMeasurements imu_meas;
+    // Old simulated imu measurements
+    ImuMeasurements imu_meas_old;
+    imu_meas_old.quant_residuals_f = Eigen::Vector3d::Zero();
+    imu_meas_old.quant_residuals_omega = Eigen::Vector3d::Zero();
 
     // Pos sensor measurements
     PosRotMeasEcef pos_rot_meas_ecef;
@@ -227,7 +231,7 @@ int main(int argc, char** argv)
         // Get true specific force and angular rates
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
         // Get imu measurements by applying IMU model
-        imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        imu_meas = imuModel(true_imu_meas, imu_meas_old, imu_errors, tor_i, gen);
         // correct imu bias using previous state estimation
         imu_meas.f -= est_acc_bias;
         imu_meas.omega -= est_gyro_bias;
@@ -254,14 +258,14 @@ int main(int argc, char** argv)
 
         
         double tor_s = true_nav_ned.time - time_last_pos_rot_sens;
-        if( tor_s >= genericPosRotSensorConfig.epoch_interval) {
+        if( tor_s >= generic_pos_rot_sensor_config.epoch_interval) {
 
             time_last_pos_rot_sens = true_nav_ned.time;
 
             // Simulate position measurement
             pos_rot_meas_ecef = genericPosRotSensModel(true_nav_ecef,  
-                                            genericPosRotSensorConfig.std_pos,
-                                            genericPosRotSensorConfig.std_rot,
+                                            generic_pos_rot_sensor_config.std_pos,
+                                            generic_pos_rot_sensor_config.std_rot,
                                             gen);
 
             // KF update -> update posterior
@@ -311,6 +315,7 @@ int main(int argc, char** argv)
 
         true_nav_ecef_old = true_nav_ecef;
         true_nav_ned_old = true_nav_ned;
+        imu_meas_old = imu_meas;
     }
 
     return 0;

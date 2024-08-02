@@ -31,15 +31,15 @@ int main(int argc, char** argv)
     std::string datetime = getCurrentDateTime();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string extension = std::filesystem::path(base_filename).extension().string();
-    std::string new_base_filename = filename_without_extension + "_lc_ins_pos_ecef" /*+ "_" + datetime*/ + extension;
+    std::string new_base_filename = filename_without_extension + "_lc_ins_gnss_ecef" /*+ "_" + datetime*/ + extension;
     std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
 
     // Errors filename
     std::string errors_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_lc_ins_pos_ecef_errors" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_lc_ins_gnss_ecef_errors" /*+ "_" + datetime*/ + extension;
     // Errors filename
     std::string errors_sigmas_ecef_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_lc_ins_pos_ecef_errors_sigma_ecef" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_lc_ins_gnss_ecef_errors_sigma_ecef" /*+ "_" + datetime*/ + extension;
 
     // Init motion profile reader & writer
     MotionProfileReader reader(motion_profile_filename_in);
@@ -101,54 +101,44 @@ int main(int argc, char** argv)
 
     // ============== GNSS config ==============
 
-    GnssConfig gnssConfig;
+    GnssConfig gnss_config;
 
     // Interval between GNSS epochs (s)
-    gnssConfig.epoch_interval = 0.5;
+    gnss_config.epoch_interval = 0.5;
 
     // Initial estimated position (m; ECEF)
-    gnssConfig.init_est_r_ea_e = Eigen::Vector3d::Zero();
+    gnss_config.init_est_r_ea_e = Eigen::Vector3d::Zero();
 
     // Number of satellites in constellation
-    gnssConfig.no_sat = 30.0;
+    gnss_config.no_sat = 30.0;
     // Orbital radius of satellites (m)
-    gnssConfig.r_os = 2.656175E7;
+    gnss_config.r_os = 2.656175E7;
     // Inclination angle of satellites (deg)
-    gnssConfig.inclination = 55.0;
+    gnss_config.inclination = 55.0;
     // Longitude offset of constellation (deg)
-    gnssConfig.const_delta_lambda = 0.0;
+    gnss_config.const_delta_lambda = 0.0;
     // Timing offset of constellation (s)
-    gnssConfig.const_delta_t = 0.0;
+    gnss_config.const_delta_t = 0.0;
 
     // Mask angle (deg)
-    gnssConfig.mask_angle = 10.0;
+    gnss_config.mask_angle = 10.0;
     // Signal in space error SD (m) *Give residual where corrections are applied
-    gnssConfig.SIS_err_SD = 1.0;
+    gnss_config.SIS_err_SD = 1.0;
     // Zenith ionosphere error SD (m) *Give residual where corrections are applied
-    gnssConfig.zenith_iono_err_SD = 2.0;
+    gnss_config.zenith_iono_err_SD = 2.0;
     // Zenith troposphere error SD (m) *Give residual where corrections are applied
-    gnssConfig.zenith_trop_err_SD = 0.2;
+    gnss_config.zenith_trop_err_SD = 0.2;
     // Code tracking error SD (m) *Can extend to account for multipath
-    gnssConfig.code_track_err_SD = 1.0;
+    gnss_config.code_track_err_SD = 1.0;
     // Range rate tracking error SD (m/s) *Can extend to account for multipath
-    gnssConfig.rate_track_err_SD = 0.02;
+    gnss_config.rate_track_err_SD = 0.02;
     // Receiver clock offset at time=0 (m);
-    gnssConfig.rx_clock_offset = 10000.0;
+    gnss_config.rx_clock_offset = 10000.0;
     // Receiver clock drift at time=0 (m/s);
-    gnssConfig.rx_clock_drift = 100.0;
-
-    // ============== Position sensor config ==============
-
-    GenericPosSensorConfig generic_pos_sensor_config;
-    generic_pos_sensor_config.std_pos = 2.5;
-    generic_pos_sensor_config.epoch_interval = 0.5;
-
-    // ============== Position + Attitude sensor config ==============
-
-    GenericPosRotSensorConfig generic_pos_rot_sensor_config;
-    generic_pos_rot_sensor_config.std_pos = 2.5;
-    generic_pos_rot_sensor_config.std_rot = 0.01;
-    generic_pos_rot_sensor_config.epoch_interval = 0.5;
+    gnss_config.rx_clock_drift = 100.0;
+    // SD for lc integration
+    gnss_config.lc_pos_sd = 2.5;
+    gnss_config.lc_vel_sd = 0.5;
 
     // ============== KF config ==============
 
@@ -215,10 +205,19 @@ int main(int argc, char** argv)
     est_nav_ecef.r_eb_e += 10 * Eigen::Vector3d::Ones();
     est_nav_ecef.v_eb_e += 0.1 * Eigen::Vector3d::Ones();
 
+    // Init GNSS range biases
+    SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned_old.time, 
+                                                            gnss_config);
+    Eigen::VectorXd gnss_biases = initializeGNSSBiases(true_nav_ecef_old,
+                                                        true_nav_ned_old,
+                                                        sat_pos_vel_0,
+                                                        gnss_config,
+                                                        gen);
+    
     // Times
     // Current time - last time
     double tor_i;
-    double time_last_pos_sens = 0.0;
+    double time_last_gnss = 0.0;
 
     while (reader.readNextRow(true_nav_ned)) {
 
@@ -258,15 +257,32 @@ int main(int argc, char** argv)
         // ========== INTEGRATE POS MEASUREMENTS ==========
 
         
-        double tor_s = true_nav_ned.time - time_last_pos_sens;
-        if( tor_s >= generic_pos_sensor_config.epoch_interval) {
+        double tor_s = true_nav_ned.time - time_last_gnss;
+        if( tor_s >= gnss_config.epoch_interval) {
 
-            time_last_pos_sens = true_nav_ned.time;
+            time_last_gnss = true_nav_ned.time;
 
-            // Simulate position measurement
-            pos_meas_ecef = genericPosSensModel(true_nav_ecef,  
-                                            generic_pos_sensor_config.std_pos,
-                                            gen);
+            // Simulate GNSS measurement
+            SatPosVel sat_pos_vel = satellitePositionsAndVelocities(true_nav_ned.time, gnss_config);
+            GnssMeasurements gnss_meas = generateGNSSMeasurements(true_nav_ned.time,
+                                                                sat_pos_vel,
+                                                                true_nav_ned,
+                                                                true_nav_ecef,
+                                                                gnss_biases, 
+                                                                gnss_config,
+                                                                gen);
+            // Estimate receiver pos + vel with NL LS
+            GnssLsPosVelClock pos_vel_clock_gnss_meas_ecef = gnssLsPositionVelocityClock(gnss_meas,
+                                                                        est_nav_ecef.r_eb_e,
+                                                                        est_nav_ecef.v_eb_e);
+            // Create meas object for integration
+            GnssPosVelMeasEcef pos_vel_gnss_meas_ecef;
+            pos_vel_gnss_meas_ecef.r_ea_e = pos_vel_clock_gnss_meas_ecef.r_ea_e;
+            pos_vel_gnss_meas_ecef.v_ea_e = pos_vel_clock_gnss_meas_ecef.v_ea_e;
+            pos_vel_gnss_meas_ecef.cov_mat = Eigen::Matrix<double,6,6>::Identity();
+            pos_vel_gnss_meas_ecef.cov_mat.block<3,3>(0,0) = pow(gnss_config.lc_pos_sd,2.0) * Eigen::Matrix3d::Identity();
+            pos_vel_gnss_meas_ecef.cov_mat.block<3,3>(3,3) = pow(gnss_config.lc_vel_sd,2.0) * Eigen::Matrix3d::Identity();
+
 
             // KF update -> update posterior
             // if no update, best est is prior
@@ -277,8 +293,8 @@ int main(int argc, char** argv)
             est_state_ecef_prior.acc_bias = est_acc_bias;
             est_state_ecef_prior.gyro_bias = est_gyro_bias;
 
-            StateEstEcefLc est_state_ecef_post = lcUpdateKFPosEcef(pos_meas_ecef, 
-                                                    est_state_ecef_prior);
+            StateEstEcefLc est_state_ecef_post = lcUpdateKFGnssEcef(pos_vel_gnss_meas_ecef, 
+                                                                    est_state_ecef_prior);
 
             P_matrix = est_state_ecef_post.P_matrix;
             est_nav_ecef = est_state_ecef_post.nav_sol;

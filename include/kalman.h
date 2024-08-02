@@ -23,6 +23,11 @@ StateEstEcefLc lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
                                     const StateEstEcefLc & state_est_old);
 
 // Loosely coupled, ECEF, closed loop error-state KF update
+// Updates error state and thus navigation solution + bias estimate, integrating a gnss position + vel measurement
+StateEstEcefLc lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
+                                    const StateEstEcefLc & state_est_old);
+
+// Loosely coupled, ECEF, closed loop error-state KF update
 // Updates error state and thus navigation solution + bias estimate, integrating a position + rotation measurement
 StateEstEcefLc lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
                                     const StateEstEcefLc & state_est_old);

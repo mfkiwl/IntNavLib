@@ -16,6 +16,7 @@ constexpr double e = 0.0818191908425; // WGS84 eccentricity
 constexpr double omega_ie = 7.292115e-5;  // Earth rotation rate
 constexpr double mu = 3.986004418e14; // WGS84 Earth gravitational constant (m^3 s^-2)
 constexpr double J_2 = 1.082627e-3; // WGS84 Earth's second gravitational constant
+constexpr double c = 299792458.0 ; // Speed of light in m/s
 
 constexpr double deg_to_rad = 0.01745329252;
 constexpr double rad_to_deg = 1.0/deg_to_rad;
@@ -46,6 +47,14 @@ struct PosRotMeasEcef {
     double time;
     Eigen::Vector3d r_eb_e;
     Eigen::Matrix3d C_b_e;
+    Eigen::Matrix<double,6,6> cov_mat;
+};
+
+// LC GNSS pos + vel meas
+struct GnssPosVelMeasEcef {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Eigen::Vector3d r_ea_e; 
+    Eigen::Vector3d v_ea_e;
     Eigen::Matrix<double,6,6> cov_mat;
 };
 
@@ -171,6 +180,37 @@ struct GnssConfig {
     double rx_clock_offset;
     // Receiver clock drift at time=0 (m/s);
     double rx_clock_drift;
+    // SDs for lc integration
+    double lc_pos_sd;
+    double lc_vel_sd;
+};
+
+// GNSS satellites positions and velocities
+// Use matrixxd instead of vector<vector3d> to enable eigen vectorization
+struct SatPosVel {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Eigen::MatrixXd sat_r_es_e; // pos in ECEF (n x 3)
+    Eigen::MatrixXd sat_v_es_e; // vel in ECEF (n x 3)
+};
+
+// GNSS_measurements     GNSS measurement data:
+//     Column 1              Pseudo-range measurements (m)
+//     Column 2              Pseudo-range rate measurements (m/s)
+//     Columns 3-5           Satellite ECEF position (m)
+//     Columns 6-8           Satellite ECEF velocity (m/s)
+struct GnssMeasurements {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Eigen::MatrixXd GNSS_measurements; 
+    int no_GNSS_meas;
+};
+
+// Processed GNSS measurements for LC integration (pos + vel + clock offset)
+// Result of LS solver
+struct GnssLsPosVelClock {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Eigen::Vector3d r_ea_e; 
+    Eigen::Vector3d v_ea_e;
+    Eigen::Vector2d clock;
 };
 
 struct GenericPosSensorConfig {

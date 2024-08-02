@@ -57,6 +57,14 @@ namespace intnavlib {
 
     // Get velocity vector from skew symmetric matrix
     Eigen::Vector3d deSkew(const Eigen::Matrix3d & S);
+
+    // Calculates position, velocity, clock offset, 
+    // and clock drift using unweighted iterated least squares. Separate
+    // calculations are implemented for position and clock offset and for
+    // velocity and clock drift
+    GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_measurements,
+                                    const Eigen::Vector3d & prior_r_ea_e,
+                                    const Eigen::Vector3d & prior_v_ea_e);
 };
 
 #endif

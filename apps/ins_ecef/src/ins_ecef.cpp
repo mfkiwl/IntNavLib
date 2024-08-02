@@ -109,9 +109,12 @@ int main(int argc, char** argv)
 
     // Ground truth imu measurements from kinematics
     ImuMeasurements true_imu_meas;
-
     // Simulated imu measurements
     ImuMeasurements imu_meas;
+    // Old simulated imu measurements
+    ImuMeasurements imu_meas_old;
+    imu_meas_old.quant_residuals_f = Eigen::Vector3d::Zero();
+    imu_meas_old.quant_residuals_omega = Eigen::Vector3d::Zero();
 
     // Current time - last time
     // In real use, need all sensors to be synced
@@ -140,7 +143,7 @@ int main(int argc, char** argv)
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
         
         // Get imu measurements by applying IMU model
-        imu_meas = imuModel(true_imu_meas, imu_errors, tor_i, gen);
+        imu_meas = imuModel(true_imu_meas, imu_meas_old, imu_errors, tor_i, gen);
         // imu_meas = true_imu_meas;
 
         // ========== NAV EQUATIONS ==========
@@ -168,6 +171,7 @@ int main(int argc, char** argv)
         true_nav_ecef_old = true_nav_ecef;
         est_nav_ecef_old = est_nav_ecef;
         true_nav_ned_old = true_nav_ned;
+        imu_meas_old = imu_meas;
 
     }
 
