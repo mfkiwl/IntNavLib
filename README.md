@@ -60,6 +60,8 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 - tic toc apps
 
+- profile code with valgrind
+
 - add gnss sensor model
 
 - GNSS INS (LC)

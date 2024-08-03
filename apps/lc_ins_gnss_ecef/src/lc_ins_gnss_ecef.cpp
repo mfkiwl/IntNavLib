@@ -3,6 +3,8 @@
 #include <random>
 #include <filesystem>
 
+#include <glog/logging.h>
+
 #include "intnavlib/intnavlib.h"
 
 // To ensure maximum precision, at the cost of speed
@@ -17,6 +19,10 @@ int main(int argc, char** argv)
     if(argc != 2) {
         throw std::runtime_error("Pass the motion profile path");
     }
+
+    google::InitGoogleLogging(argv[0]);
+    FLAGS_stderrthreshold = 0; // INFO: 0, WARNING: 1, ERROR: 2, FATAL: 3
+    FLAGS_colorlogtostderr = 1;
 
     // Input profile filename
     std::string motion_profile_filename_in(argv[1]);
@@ -221,12 +227,16 @@ int main(int argc, char** argv)
 
     while (reader.readNextRow(true_nav_ned)) {
 
+        auto start = std::chrono::high_resolution_clock::now();
+
         tor_i = true_nav_ned.time - true_nav_ned_old.time;
         
         // Get true ecef nav sol from motion profile in ned
         true_nav_ecef = nedToEcef(true_nav_ned);
 
         // ========== IMU SIMULATION ==========
+
+        auto start_imu_sim = std::chrono::high_resolution_clock::now();
 
         // Get true specific force and angular rates
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
@@ -236,13 +246,27 @@ int main(int argc, char** argv)
         imu_meas.f -= est_acc_bias;
         imu_meas.omega -= est_gyro_bias;
 
+        auto end_imu_sim = std::chrono::high_resolution_clock::now();
+
+        LOG(INFO) << "Imu sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_imu_sim - start_imu_sim).count() << "ns";
+
+
         // ========== NAV EQUATIONS ==========
+
+        auto start_nav_eqns = std::chrono::high_resolution_clock::now();
 
         // Predict ecef nav solution (INS)
         est_nav_ecef = navEquationsEcef(est_nav_ecef, imu_meas, tor_i);
         est_nav_ned = ecefToNed(est_nav_ecef);
 
+        auto end_nav_eqns = std::chrono::high_resolution_clock::now();
+
+        LOG(INFO) << "Nav equations: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_nav_eqns - start_nav_eqns).count() << "ns";
+
+
         // ========== PROP UNCERTAINTIES ==========
+
+        auto start_unc_prop = std::chrono::high_resolution_clock::now();
         
         // Groves actually puts this in the update part, with a large dt. 
         // But the the underlying approximation hold only
@@ -254,6 +278,10 @@ int main(int argc, char** argv)
                             lc_kf_config,
                             tor_i);
 
+        auto end_unc_prop = std::chrono::high_resolution_clock::now();
+
+        LOG(INFO) << "P propagation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_unc_prop - start_unc_prop).count() << "ns";
+
         // ========== INTEGRATE POS MEASUREMENTS ==========
 
         
@@ -261,6 +289,8 @@ int main(int argc, char** argv)
         if( tor_s >= gnss_config.epoch_interval) {
 
             time_last_gnss = true_nav_ned.time;
+
+            auto start_gnss_sim = std::chrono::high_resolution_clock::now();
 
             // Simulate GNSS measurement
             SatPosVel sat_pos_vel = satellitePositionsAndVelocities(true_nav_ned.time, gnss_config);
@@ -271,10 +301,22 @@ int main(int argc, char** argv)
                                                                 gnss_biases, 
                                                                 gnss_config,
                                                                 gen);
+
+            auto end_gnss_sim = std::chrono::high_resolution_clock::now();
+
+            LOG(INFO) << "GNSS sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_sim - start_gnss_sim).count() << "ns";
+
+            auto start_gnss_ls = std::chrono::high_resolution_clock::now();
+
             // Estimate receiver pos + vel with NL LS
             GnssLsPosVelClock pos_vel_clock_gnss_meas_ecef = gnssLsPositionVelocityClock(gnss_meas,
                                                                         est_nav_ecef.r_eb_e,
                                                                         est_nav_ecef.v_eb_e);
+
+            auto end_gnss_ls = std::chrono::high_resolution_clock::now();
+
+            LOG(INFO) << "GNSS LS: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_ls - start_gnss_ls).count() << "ns";
+
             // Create meas object for integration
             GnssPosVelMeasEcef pos_vel_gnss_meas_ecef;
             pos_vel_gnss_meas_ecef.r_ea_e = pos_vel_clock_gnss_meas_ecef.r_ea_e;
@@ -293,8 +335,13 @@ int main(int argc, char** argv)
             est_state_ecef_prior.acc_bias = est_acc_bias;
             est_state_ecef_prior.gyro_bias = est_gyro_bias;
 
+            auto start_kf_update = std::chrono::high_resolution_clock::now();
+
             StateEstEcefLc est_state_ecef_post = lcUpdateKFGnssEcef(pos_vel_gnss_meas_ecef, 
                                                                     est_state_ecef_prior);
+            auto end_kf_update = std::chrono::high_resolution_clock::now();
+
+            LOG(INFO) << "GNSS KF Update: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_kf_update - start_kf_update).count() << "ns";
 
             P_matrix = est_state_ecef_post.P_matrix;
             est_nav_ecef = est_state_ecef_post.nav_sol;
@@ -302,6 +349,8 @@ int main(int argc, char** argv)
             est_gyro_bias = est_state_ecef_post.gyro_bias;
 
         }
+
+        LOG(INFO) << " ============== ";
         
         // ========== COMPUTE ERRORS ==========
 
