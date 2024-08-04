@@ -1,7 +1,7 @@
 # IntNavLib
 
 This is my playground c++ integrated navigation library.
-The aim is to have modular pieces of c++ code that can be used in integrated navigation applications. I try to avoid dynamic memory usage in core modules (though not in simulation parts).
+The aim is to have modular pieces of c++ code that can be used in integrated navigation applications. I try to avoid dynamic memory use, with Eigen's MaxRowsAtCompileTime and MaxColsAtCompileTime template parameters, to keep the code embedded system-friendly.
 
 ![image](media/Figure_1.png)
 
