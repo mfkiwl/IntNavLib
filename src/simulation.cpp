@@ -268,17 +268,17 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
                                         const SatPosVel & gnss_pos_vel,
                                         const NavSolutionNed& true_nav_ned,
                                         const NavSolutionEcef& true_nav_ecef,
-                                        const Eigen::VectorXd& GNSS_biases, 
+                                        const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> & GNSS_biases, 
                                         const GnssConfig& GNSS_config,
                                         std::mt19937 & gen) {
 
     // nomally distributed error
     std::normal_distribution<double> randn(0.0, 1.0);
 
-    GnssMeasurements gnssMeasurements;
+    GnssMeasurements gnss_measurements;
 
     // Initialize number of GNSS measurements
-    gnssMeasurements.no_GNSS_meas = 0;
+    gnss_measurements.no_gnss_meas = 0;
 
     // Calculate ECEF to NED coordinate transformation matrix
     double cos_lat = std::cos(true_nav_ned.latitude);
@@ -294,7 +294,7 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
     Eigen::Matrix3d Omega_ie = skewSymmetric(Eigen::Vector3d(0, 0, omega_ie));
        
     // Resize the GNSS measurements matrix to accommodate the maximum possible measurements
-    gnssMeasurements.GNSS_measurements.resize(GNSS_config.no_sat, 8);
+    gnss_measurements.gnss_measurements.resize(GNSS_config.no_sat, 8);
 
     // Loop over satellites
     for (int j = 0; j < GNSS_config.no_sat; ++j) {
@@ -309,7 +309,7 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
         // Determine if satellite is above the masking angle
         if (elevation >= GNSS_config.mask_angle * deg_to_rad) {
             // Increment number of measurements
-            gnssMeasurements.no_GNSS_meas++;
+            gnss_measurements.no_gnss_meas++;
     
             // Calculate frame rotation during signal transit time
             Eigen::Matrix3d C_e_I;
@@ -325,25 +325,26 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
             double range_rate = u_as_e.dot(C_e_I * (gnss_pos_vel.sat_v_es_e.row(j).transpose() + Omega_ie * gnss_pos_vel.sat_r_es_e.row(j).transpose()) - (true_nav_ecef.v_eb_e + Omega_ie * true_nav_ecef.r_eb_e));
     
             // Calculate pseudo-range measurement
-            gnssMeasurements.GNSS_measurements(gnssMeasurements.no_GNSS_meas-1, 0) = range + GNSS_biases(j) + GNSS_config.rx_clock_offset + GNSS_config.rx_clock_drift * time + GNSS_config.code_track_err_SD * randn(gen);
+            gnss_measurements.gnss_measurements(gnss_measurements.no_gnss_meas-1, 0) = range + GNSS_biases(j) + GNSS_config.rx_clock_offset + GNSS_config.rx_clock_drift * time + GNSS_config.code_track_err_SD * randn(gen);
     
             // Calculate pseudo-range rate measurement
-            gnssMeasurements.GNSS_measurements(gnssMeasurements.no_GNSS_meas-1, 1) = range_rate + GNSS_config.rx_clock_drift + GNSS_config.rate_track_err_SD * randn(gen);
+            gnss_measurements.gnss_measurements(gnss_measurements.no_gnss_meas-1, 1) = range_rate + GNSS_config.rx_clock_drift + GNSS_config.rate_track_err_SD * randn(gen);
     
             // Append satellite position and velocity to output data
-            gnssMeasurements.GNSS_measurements.block<1, 3>(gnssMeasurements.no_GNSS_meas-1, 2) = gnss_pos_vel.sat_r_es_e.row(j);
-            gnssMeasurements.GNSS_measurements.block<1, 3>(gnssMeasurements.no_GNSS_meas-1, 5) = gnss_pos_vel.sat_v_es_e.row(j);
+            gnss_measurements.gnss_measurements.block<1, 3>(gnss_measurements.no_gnss_meas-1, 2) = gnss_pos_vel.sat_r_es_e.row(j);
+            gnss_measurements.gnss_measurements.block<1, 3>(gnss_measurements.no_gnss_meas-1, 5) = gnss_pos_vel.sat_v_es_e.row(j);
         }
     }
 
     // Resize the GNSS measurements matrix to the actual number of measurements
     // Which is <= than n of satellites
-    gnssMeasurements.GNSS_measurements.conservativeResize(gnssMeasurements.no_GNSS_meas, 8);
+    gnss_measurements.gnss_measurements.conservativeResize(gnss_measurements.no_gnss_meas, 8);
 
-    return gnssMeasurements;
+    return gnss_measurements;
 }
 
-Eigen::VectorXd initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
+Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES>
+initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
                                     const NavSolutionNed & true_nav_ned,
                                     const SatPosVel & gnss_pos_vel,
                                     const GnssConfig& GNSS_config,
@@ -352,7 +353,7 @@ Eigen::VectorXd initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
     // nomally distributed error
     std::normal_distribution<double> randn(0.0, 1.0);
 
-    Eigen::VectorXd GNSS_biases;
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> GNSS_biases;
     // Resize the GNSS biases vector to the number of satellites
     GNSS_biases.resize(GNSS_config.no_sat);
 

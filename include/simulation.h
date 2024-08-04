@@ -42,13 +42,14 @@ namespace intnavlib {
                                         const SatPosVel & gnss_pos_vel,
                                         const NavSolutionNed& true_nav_ned,
                                         const NavSolutionEcef& true_nav_ecef,
-                                        const Eigen::VectorXd& GNSS_biases, 
+                                        const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> & GNSS_biases, 
                                         const GnssConfig& GNSS_config,
                                         std::mt19937 & gen);
 
     // Initializes the GNSS range errors due to signal
     // in space, ionosphere and troposphere errors based on the elevation angles. 
-    Eigen::VectorXd initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES>
+    initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
                                     const NavSolutionNed & true_nav_ned,
                                     const SatPosVel & gnss_pos_vel,
                                     const GnssConfig& GNSS_config,

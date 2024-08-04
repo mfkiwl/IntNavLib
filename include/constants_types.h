@@ -6,6 +6,10 @@
 
 namespace intnavlib {
 
+// Max number of gnss satellites
+// Leaving some extra room
+constexpr int MAX_GNSS_SATELLITES = 35;
+
 // Epsilon for == 0 checks
 // Todo tune
 constexpr double EPSILON = 1.0e-100; 
@@ -186,22 +190,21 @@ struct GnssConfig {
 };
 
 // GNSS satellites positions and velocities
-// Use matrixxd instead of vector<vector3d> to enable eigen vectorization
 struct SatPosVel {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Eigen::MatrixXd sat_r_es_e; // pos in ECEF (n x 3)
-    Eigen::MatrixXd sat_v_es_e; // vel in ECEF (n x 3)
+    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES> sat_r_es_e;
+    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES> sat_v_es_e;
 };
 
-// GNSS_measurements     GNSS measurement data:
+// gnss_measurements     GNSS measurement data:
 //     Column 1              Pseudo-range measurements (m)
 //     Column 2              Pseudo-range rate measurements (m/s)
 //     Columns 3-5           Satellite ECEF position (m)
 //     Columns 6-8           Satellite ECEF velocity (m/s)
 struct GnssMeasurements {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Eigen::MatrixXd GNSS_measurements; 
-    int no_GNSS_meas;
+    Eigen::Matrix<double, Eigen::Dynamic, 8, 0, MAX_GNSS_SATELLITES> gnss_measurements; 
+    int no_gnss_meas;
 };
 
 // Processed GNSS measurements for LC integration (pos + vel + clock offset)

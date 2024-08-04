@@ -259,24 +259,26 @@ ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol,
     return errors_ned;
 }
 
-GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_measurements,
+GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_measurements,
                                     const Eigen::Vector3d & prior_r_ea_e,
                                     const Eigen::Vector3d & prior_v_ea_e) {
     
     GnssLsPosVelClock est_pos_vel;
 
     // POSITION AND CLOCK OFFSET
-    Eigen::VectorXd x_pred(4), x_est(4);
+    Eigen::Vector4d x_pred, x_est;
     x_pred.segment<3>(0) = prior_r_ea_e;
     x_pred(3) = 0;
     double test_convergence = 1.0;
 
     while (test_convergence > 0.0001) {
-        Eigen::MatrixXd H_matrix(GNSS_measurements.no_GNSS_meas, 4);
-        Eigen::VectorXd pred_meas(GNSS_measurements.no_GNSS_meas);
+        Eigen::Matrix<double, Eigen::Dynamic, 4, 0, MAX_GNSS_SATELLITES> H_matrix;
+        H_matrix.resize(gnss_measurements.no_gnss_meas, 4);
+        Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> pred_meas;
+        pred_meas.resize(gnss_measurements.no_gnss_meas);
         
-        for (int j = 0; j < GNSS_measurements.no_GNSS_meas; ++j) {
-            Eigen::Vector3d delta_r = GNSS_measurements.GNSS_measurements.block<1,3>(j,2).transpose() - x_pred.segment<3>(0);
+        for (int j = 0; j < gnss_measurements.no_gnss_meas; ++j) {
+            Eigen::Vector3d delta_r = gnss_measurements.gnss_measurements.block<1,3>(j,2).transpose() - x_pred.segment<3>(0);
             double approx_range = delta_r.norm();
 
             Eigen::Matrix3d C_e_I;
@@ -284,7 +286,7 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_meas
                      -omega_ie * approx_range / c, 1, 0,
                      0, 0, 1;
 
-            delta_r = C_e_I * GNSS_measurements.GNSS_measurements.block<1,3>(j,2).transpose() - x_pred.segment<3>(0);
+            delta_r = C_e_I * gnss_measurements.gnss_measurements.block<1,3>(j,2).transpose() - x_pred.segment<3>(0);
             double range = delta_r.norm();
             pred_meas(j) = range + x_pred(3);
             
@@ -292,7 +294,7 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_meas
             H_matrix(j,3) = 1;
         }
 
-        x_est = x_pred + (H_matrix.transpose() * H_matrix).inverse() * H_matrix.transpose() * (GNSS_measurements.GNSS_measurements.col(0).head(GNSS_measurements.no_GNSS_meas) - pred_meas.head(GNSS_measurements.no_GNSS_meas));
+        x_est = x_pred + (H_matrix.transpose() * H_matrix).inverse() * H_matrix.transpose() * (gnss_measurements.gnss_measurements.col(0).head(gnss_measurements.no_gnss_meas) - pred_meas.head(gnss_measurements.no_gnss_meas));
 
         test_convergence = (x_est - x_pred).norm();
         x_pred = x_est;
@@ -309,11 +311,13 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_meas
     test_convergence = 1.0;
 
     while (test_convergence > 0.0001) {
-        Eigen::MatrixXd H_matrix(GNSS_measurements.no_GNSS_meas, 4);
-        Eigen::VectorXd pred_meas(GNSS_measurements.no_GNSS_meas);
+        Eigen::Matrix<double, Eigen::Dynamic, 4, 0, MAX_GNSS_SATELLITES> H_matrix;
+        H_matrix.resize(gnss_measurements.no_gnss_meas, 4);
+        Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> pred_meas;
+        pred_meas.resize(gnss_measurements.no_gnss_meas);
         
-        for (int j = 0; j < GNSS_measurements.no_GNSS_meas; ++j) {
-            Eigen::Vector3d delta_r = GNSS_measurements.GNSS_measurements.block<1,3>(j,2).transpose() - est_pos_vel.r_ea_e;
+        for (int j = 0; j < gnss_measurements.no_gnss_meas; ++j) {
+            Eigen::Vector3d delta_r = gnss_measurements.gnss_measurements.block<1,3>(j,2).transpose() - est_pos_vel.r_ea_e;
             double approx_range = delta_r.norm();
 
             Eigen::Matrix3d C_e_I;
@@ -321,12 +325,12 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_meas
                      -omega_ie * approx_range / c, 1, 0,
                      0, 0, 1;
 
-            delta_r = C_e_I * GNSS_measurements.GNSS_measurements.block<1,3>(j,2).transpose() - est_pos_vel.r_ea_e;
+            delta_r = C_e_I * gnss_measurements.gnss_measurements.block<1,3>(j,2).transpose() - est_pos_vel.r_ea_e;
             double range = delta_r.norm();
             Eigen::Vector3d u_as_e = delta_r / range;
 
-            Eigen::Vector3d sat_velocity = GNSS_measurements.GNSS_measurements.block<1,3>(j,5).transpose();
-            Eigen::Vector3d sat_position = GNSS_measurements.GNSS_measurements.block<1,3>(j,2).transpose();
+            Eigen::Vector3d sat_velocity = gnss_measurements.gnss_measurements.block<1,3>(j,5).transpose();
+            Eigen::Vector3d sat_position = gnss_measurements.gnss_measurements.block<1,3>(j,2).transpose();
 
             double range_rate = u_as_e.transpose() * (C_e_I * (sat_velocity + Omega_ie * sat_position) - (x_pred.segment<3>(0) + Omega_ie * est_pos_vel.r_ea_e));
             pred_meas(j) = range_rate + x_pred(3);
@@ -335,7 +339,7 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_meas
             H_matrix(j,3) = 1;
         }
 
-        x_est = x_pred + (H_matrix.transpose() * H_matrix).inverse() * H_matrix.transpose() * (GNSS_measurements.GNSS_measurements.col(1).head(GNSS_measurements.no_GNSS_meas) - pred_meas.head(GNSS_measurements.no_GNSS_meas));
+        x_est = x_pred + (H_matrix.transpose() * H_matrix).inverse() * H_matrix.transpose() * (gnss_measurements.gnss_measurements.col(1).head(gnss_measurements.no_gnss_meas) - pred_meas.head(gnss_measurements.no_gnss_meas));
 
         test_convergence = (x_est - x_pred).norm();
         x_pred = x_est;

@@ -1,7 +1,7 @@
 # IntNavLib
 
-This is my toy c++ integrated navigation library.
-The aim is to have modular pieces of c++ code that can be used in integrated navigation applications.
+This is my playground c++ integrated navigation library.
+The aim is to have modular pieces of c++ code that can be used in integrated navigation applications. I try to avoid dynamic memory usage in core modules (though not in simulation parts).
 
 ![image](media/Figure_1.png)
 
@@ -66,7 +66,7 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 - GNSS INS (LC)
 
-- GNSS INS (TC)
+- GNSS INS (TC) - Try to avoid dynamic memory use
 
 - Remove dependencies: place eigen in include dir
 
@@ -77,3 +77,7 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 - Fuse Lidar
 
 - Fuse CVN
+
+- Fuse Visual Odometry
+
+- Add Integrity check

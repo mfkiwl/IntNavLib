@@ -214,7 +214,8 @@ int main(int argc, char** argv)
     // Init GNSS range biases
     SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned_old.time, 
                                                             gnss_config);
-    Eigen::VectorXd gnss_biases = initializeGNSSBiases(true_nav_ecef_old,
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> gnss_biases = 
+                                    initializeGNSSBiases(true_nav_ecef_old,
                                                         true_nav_ned_old,
                                                         sat_pos_vel_0,
                                                         gnss_config,
