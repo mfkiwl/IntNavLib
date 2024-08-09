@@ -1,7 +1,12 @@
 # IntNavLib
 
 This is my playground c++ integrated navigation library.
-The aim is to have modular pieces of c++ code that can be used in integrated navigation applications. I try to avoid dynamic memory use, with Eigen's MaxRowsAtCompileTime and MaxColsAtCompileTime template parameters, to keep the code embedded system-friendly.
+The aim is to have modular pieces of c++ code that can be used in integrated navigation applications. 
+
+**Disclaimer**: If you are interested in embedded systems applications, you probably don't like dynamic memory allocation.
+Dynamic memory allocation is tedious and painstakingly hard to avoid in Eigen and this library is my fun place. 
+Have a look [here](https://github.com/stulp/eigenrealtime) if you're interested in making this code malloc-free.
+Nevertheless, while there will e some heap use, dynamic matrices in IntNavLib always have dimension bounds.
 
 ![image](media/Figure_1.png)
 
@@ -56,17 +61,15 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 ```
 
 
-## TODOs
+## TODOs 
 
-- tic toc apps
+- debug tc gnss ins
+
+- refactor to improve readability. review input arguments, comment headers google-style
+
+- Write an app with an interface class to have cleaner demo code. This way you isolate core from file ops.
 
 - profile code with valgrind
-
-- add gnss sensor model
-
-- GNSS INS (LC)
-
-- GNSS INS (TC) - Try to avoid dynamic memory use
 
 - Remove dependencies: place eigen in include dir
 

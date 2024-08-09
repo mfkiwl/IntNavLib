@@ -100,9 +100,20 @@ struct NavSolutionEcef {
 struct StateEstEcefLc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     NavSolutionEcef nav_sol;
-    Eigen::Matrix<double,15,15> P_matrix;
     Eigen::Vector3d acc_bias;
     Eigen::Vector3d gyro_bias;
+    Eigen::Matrix<double,15,15> P_matrix;
+};
+
+// State estimation after KF update
+struct StateEstEcefTc {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    NavSolutionEcef nav_sol;
+    Eigen::Vector3d acc_bias;
+    Eigen::Vector3d gyro_bias;
+    double clock_offset;
+    double clock_drift;
+    Eigen::Matrix<double,17,17> P_matrix;
 };
 
 struct ErrorsNed {
@@ -125,7 +136,7 @@ struct ErrorsSigmasEcef {
     Eigen::Vector3d sigma_delta_eul_eb_e;
 };
 
-struct LcKfConfig {
+struct KfConfig {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Initial attitude uncertainty per axis (deg, converted to rad)
     double init_att_unc;
@@ -138,6 +149,10 @@ struct LcKfConfig {
     double init_b_a_unc;
     // Initial gyro bias uncertainty per instrument (deg/hour, converted to rad/sec)
     double init_b_g_unc;
+    // Initial clock offset uncertainty per axis (m)
+    double init_clock_offset_unc;
+    // Initial clock drift uncertainty per axis (m/s)
+    double init_clock_drift_unc;
 
     // Gyro noise PSD (deg^2 per hour, converted to rad^2/s)                
     double gyro_noise_PSD;
@@ -147,6 +162,11 @@ struct LcKfConfig {
     double accel_bias_PSD;
     // Gyro bias random walk PSD (rad^2 s^-3)
     double gyro_bias_PSD;
+
+    // Receiver clock frequency-drift PSD (m^2/s^3)
+    double clock_freq_PSD;
+    // Receiver clock phase-drift PSD (m^2/s)
+    double clock_phase_PSD;
 
 };
 
@@ -158,7 +178,7 @@ struct GnssConfig {
     Eigen::Vector3d init_est_r_ea_e;
 
     // Number of satellites in constellation
-    double no_sat;
+    int no_sat;
     // Orbital radius of satellites (m)
     double r_os;
     // Inclination angle of satellites (deg)
@@ -184,16 +204,21 @@ struct GnssConfig {
     double rx_clock_offset;
     // Receiver clock drift at time=0 (m/s);
     double rx_clock_drift;
+
     // SDs for lc integration
     double lc_pos_sd;
     double lc_vel_sd;
+
+    // SDs for tc integration
+    double pseudo_range_sd;
+    double range_rate_sd;
 };
 
 // GNSS satellites positions and velocities
 struct SatPosVel {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES> sat_r_es_e;
-    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES> sat_v_es_e;
+    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES, 3> sat_r_es_e;
+    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES, 3> sat_v_es_e;
 };
 
 // gnss_measurements     GNSS measurement data:
@@ -203,8 +228,9 @@ struct SatPosVel {
 //     Columns 6-8           Satellite ECEF velocity (m/s)
 struct GnssMeasurements {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Eigen::Matrix<double, Eigen::Dynamic, 8, 0, MAX_GNSS_SATELLITES> gnss_measurements; 
-    int no_gnss_meas;
+    Eigen::Matrix<double, Eigen::Dynamic, 8, 0, MAX_GNSS_SATELLITES, 8> meas; 
+    int no_meas;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* MAX_GNSS_SATELLITES, 2* MAX_GNSS_SATELLITES> cov_mat;
 };
 
 // Processed GNSS measurements for LC integration (pos + vel + clock offset)

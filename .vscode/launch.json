@@ -1,0 +1,127 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch ins",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/apps/ins_ecef/build/ins_ecef",
+            "args": ["${workspaceFolder}/data/Profile_3.csv"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+        "name": "(gdb) Launch lc pos",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/apps/lc_ins_pos_ecef/build/lc_ins_pos_ecef",
+        "args": ["${workspaceFolder}/data/Profile_3.csv"],
+        "stopAtEntry": false,
+        "cwd": "${fileDirname}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "(gdb) Launch lc gnss",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/apps/lc_ins_gnss_ecef/build/lc_ins_gnss_ecef",
+        "args": ["${workspaceFolder}/data/Profile_3.csv"],
+        "stopAtEntry": false,
+        "cwd": "${fileDirname}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "(gdb) Launch tc gnss",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/apps/tc_ins_gnss_ecef/build/tc_ins_gnss_ecef",
+        "args": ["${workspaceFolder}/data/Profile_3.csv"],
+        "stopAtEntry": false,
+        "cwd": "${fileDirname}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "(gdb) Launch lc pos rot",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/apps/lc_ins_pos_rot_ecef/build/lc_ins_pos_rot_ecef",
+        "args": ["${workspaceFolder}/data/Profile_3.csv"],
+        "stopAtEntry": false,
+        "cwd": "${fileDirname}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ]
+    }]
+}

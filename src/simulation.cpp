@@ -228,8 +228,9 @@ SatPosVel satellitePositionsAndVelocities(const double & time,
 
     // Resize output matrices
     int no_sat = static_cast<int>(GNSS_config.no_sat);
-    gnssPosVel.sat_r_es_e.resize(no_sat, 3);
-    gnssPosVel.sat_v_es_e.resize(no_sat, 3);
+
+    gnssPosVel.sat_r_es_e = Eigen::MatrixXd(no_sat, 3);
+    gnssPosVel.sat_v_es_e = Eigen::MatrixXd(no_sat, 3);
 
     // Loop over satellites
     for (int j = 0; j < no_sat; ++j) {
@@ -268,7 +269,7 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
                                         const SatPosVel & gnss_pos_vel,
                                         const NavSolutionNed& true_nav_ned,
                                         const NavSolutionEcef& true_nav_ecef,
-                                        const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> & GNSS_biases, 
+                                        const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES, 1> & GNSS_biases, 
                                         const GnssConfig& GNSS_config,
                                         std::mt19937 & gen) {
 
@@ -278,7 +279,7 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
     GnssMeasurements gnss_measurements;
 
     // Initialize number of GNSS measurements
-    gnss_measurements.no_gnss_meas = 0;
+    gnss_measurements.no_meas = 0;
 
     // Calculate ECEF to NED coordinate transformation matrix
     double cos_lat = std::cos(true_nav_ned.latitude);
@@ -294,7 +295,7 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
     Eigen::Matrix3d Omega_ie = skewSymmetric(Eigen::Vector3d(0, 0, omega_ie));
        
     // Resize the GNSS measurements matrix to accommodate the maximum possible measurements
-    gnss_measurements.gnss_measurements.resize(GNSS_config.no_sat, 8);
+    gnss_measurements.meas = Eigen::MatrixXd(GNSS_config.no_sat, 8);
 
     // Loop over satellites
     for (int j = 0; j < GNSS_config.no_sat; ++j) {
@@ -309,7 +310,7 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
         // Determine if satellite is above the masking angle
         if (elevation >= GNSS_config.mask_angle * deg_to_rad) {
             // Increment number of measurements
-            gnss_measurements.no_gnss_meas++;
+            gnss_measurements.no_meas++;
     
             // Calculate frame rotation during signal transit time
             Eigen::Matrix3d C_e_I;
@@ -325,25 +326,37 @@ GnssMeasurements generateGNSSMeasurements(const double & time,
             double range_rate = u_as_e.dot(C_e_I * (gnss_pos_vel.sat_v_es_e.row(j).transpose() + Omega_ie * gnss_pos_vel.sat_r_es_e.row(j).transpose()) - (true_nav_ecef.v_eb_e + Omega_ie * true_nav_ecef.r_eb_e));
     
             // Calculate pseudo-range measurement
-            gnss_measurements.gnss_measurements(gnss_measurements.no_gnss_meas-1, 0) = range + GNSS_biases(j) + GNSS_config.rx_clock_offset + GNSS_config.rx_clock_drift * time + GNSS_config.code_track_err_SD * randn(gen);
+            gnss_measurements.meas(gnss_measurements.no_meas-1, 0) = range + GNSS_biases(j) + GNSS_config.rx_clock_offset + GNSS_config.rx_clock_drift * time + GNSS_config.code_track_err_SD * randn(gen);
     
             // Calculate pseudo-range rate measurement
-            gnss_measurements.gnss_measurements(gnss_measurements.no_gnss_meas-1, 1) = range_rate + GNSS_config.rx_clock_drift + GNSS_config.rate_track_err_SD * randn(gen);
+            gnss_measurements.meas(gnss_measurements.no_meas-1, 1) = range_rate + GNSS_config.rx_clock_drift + GNSS_config.rate_track_err_SD * randn(gen);
     
             // Append satellite position and velocity to output data
-            gnss_measurements.gnss_measurements.block<1, 3>(gnss_measurements.no_gnss_meas-1, 2) = gnss_pos_vel.sat_r_es_e.row(j);
-            gnss_measurements.gnss_measurements.block<1, 3>(gnss_measurements.no_gnss_meas-1, 5) = gnss_pos_vel.sat_v_es_e.row(j);
+            gnss_measurements.meas.block<1, 3>(gnss_measurements.no_meas-1, 2) = gnss_pos_vel.sat_r_es_e.row(j);
+            gnss_measurements.meas.block<1, 3>(gnss_measurements.no_meas-1, 5) = gnss_pos_vel.sat_v_es_e.row(j);
         }
     }
 
     // Resize the GNSS measurements matrix to the actual number of measurements
     // Which is <= than n of satellites
-    gnss_measurements.gnss_measurements.conservativeResize(gnss_measurements.no_gnss_meas, 8);
+    gnss_measurements.meas.conservativeResize(gnss_measurements.no_meas, 8);
+
+    // 6. Set-up measurement noise covariance matrix assuming all measurements
+    // are independent and have equal variance for a given measurement type.
+    gnss_measurements.cov_mat =
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* MAX_GNSS_SATELLITES, 2* MAX_GNSS_SATELLITES>::Identity(2*gnss_measurements.no_meas, 2*gnss_measurements.no_meas);
+
+    // Ranges
+    gnss_measurements.cov_mat.block(0,0,gnss_measurements.no_meas,gnss_measurements.no_meas) 
+                *= pow(GNSS_config.pseudo_range_sd,2.0);
+    // Range rates
+    gnss_measurements.cov_mat.block(gnss_measurements.no_meas,gnss_measurements.no_meas,gnss_measurements.no_meas,gnss_measurements.no_meas)
+                *= pow(GNSS_config.range_rate_sd,2.0);
 
     return gnss_measurements;
 }
 
-Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES>
+Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES, 1>
 initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
                                     const NavSolutionNed & true_nav_ned,
                                     const SatPosVel & gnss_pos_vel,
@@ -353,9 +366,7 @@ initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
     // nomally distributed error
     std::normal_distribution<double> randn(0.0, 1.0);
 
-    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> GNSS_biases;
-    // Resize the GNSS biases vector to the number of satellites
-    GNSS_biases.resize(GNSS_config.no_sat);
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES, 1> GNSS_biases(GNSS_config.no_sat);
 
     // Calculate ECEF to NED coordinate transformation matrix
     double cos_lat = std::cos(true_nav_ned.latitude);

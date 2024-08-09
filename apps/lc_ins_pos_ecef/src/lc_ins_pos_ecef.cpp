@@ -152,7 +152,7 @@ int main(int argc, char** argv)
 
     // ============== KF config ==============
 
-    LcKfConfig lc_kf_config;
+    KfConfig lc_kf_config;
     // Initial attitude uncertainty per axis (deg, converted to rad)
     lc_kf_config.init_att_unc = deg_to_rad * 1.0;
     // Initial velocity uncertainty per axis (m/s)

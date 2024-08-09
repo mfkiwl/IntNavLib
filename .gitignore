@@ -1,5 +1,4 @@
 /build
-/.vscode
 /apps/*/results
 /apps/*/build
 /results

@@ -37,15 +37,15 @@ int main(int argc, char** argv)
     std::string datetime = getCurrentDateTime();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string extension = std::filesystem::path(base_filename).extension().string();
-    std::string new_base_filename = filename_without_extension + "_lc_ins_gnss_ecef" /*+ "_" + datetime*/ + extension;
+    std::string new_base_filename = filename_without_extension + "_tc_ins_gnss_ecef" /*+ "_" + datetime*/ + extension;
     std::string motion_profile_filename_out = new_directory + "/" + new_base_filename;
 
     // Errors filename
     std::string errors_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_lc_ins_gnss_ecef_errors" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_tc_ins_gnss_ecef_errors" /*+ "_" + datetime*/ + extension;
     // Errors filename
     std::string errors_sigmas_ecef_filename_out = new_directory + "/" + 
-                                    filename_without_extension + "_lc_ins_gnss_ecef_errors_sigma_ecef" /*+ "_" + datetime*/ + extension;
+                                    filename_without_extension + "_tc_ins_gnss_ecef_errors_sigma_ecef" /*+ "_" + datetime*/ + extension;
 
     // Init motion profile reader & writer
     MotionProfileReader reader(motion_profile_filename_in);
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     gnss_config.const_delta_t = 0.0;
 
     // Mask angle (deg)
-    gnss_config.mask_angle = 10.0;
+    gnss_config.mask_angle = 0.0; //10.0;
     // Signal in space error SD (m) *Give residual where corrections are applied
     gnss_config.SIS_err_SD = 1.0;
     // Zenith ionosphere error SD (m) *Give residual where corrections are applied
@@ -142,33 +142,41 @@ int main(int argc, char** argv)
     gnss_config.rx_clock_offset = 10000.0;
     // Receiver clock drift at time=0 (m/s);
     gnss_config.rx_clock_drift = 100.0;
+
     // SD for lc integration
     gnss_config.lc_pos_sd = 2.5;
-    gnss_config.lc_vel_sd = 0.5;
+    gnss_config.lc_vel_sd = 0.1;
+    // SDs for tc integration
+    gnss_config.pseudo_range_sd = 2.5;
+    gnss_config.range_rate_sd = 0.1;
 
     // ============== KF config ==============
 
-    KfConfig lc_kf_config;
+    KfConfig tc_kf_config;
     // Initial attitude uncertainty per axis (deg, converted to rad)
-    lc_kf_config.init_att_unc = deg_to_rad * 1.0;
+    tc_kf_config.init_att_unc = deg_to_rad * 1.0;
     // Initial velocity uncertainty per axis (m/s)
-    lc_kf_config.init_vel_unc = 0.1;
+    tc_kf_config.init_vel_unc = 0.1;
     // Initial position uncertainty per axis (m)
-    lc_kf_config.init_pos_unc = 10.0;
+    tc_kf_config.init_pos_unc = 10.0;
     // Initial accelerometer bias uncertainty per instrument (micro-g, converted
     // to m/s^2)
-    lc_kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
+    tc_kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
     // Initial gyro bias uncertainty per instrument (deg/hour, converted to rad/sec)
-    lc_kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+    tc_kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
 
     // Gyro noise PSD (deg^2 per hour, converted to rad^2/s)                
-    lc_kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
+    tc_kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
     // Accelerometer noise PSD (micro-g^2 per Hz, converted to m^2 s^-3)                
-    lc_kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
+    tc_kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
     // Accelerometer bias random walk PSD (m^2 s^-5)
-    lc_kf_config.accel_bias_PSD = 1.0E-7;
+    tc_kf_config.accel_bias_PSD = 1.0E-7;
     // Gyro bias random walk PSD (rad^2 s^-3)
-    lc_kf_config.gyro_bias_PSD = 2.0E-12;
+    tc_kf_config.gyro_bias_PSD = 2.0E-12;
+    // Receiver clock frequency-drift PSD (m^2/s^3)
+    tc_kf_config.clock_freq_PSD =1;
+    // Receiver clock phase-drift PSD (m^2/s)
+    tc_kf_config.clock_phase_PSD = 1;
 
     // ============ Declare persistent variables ============
 
@@ -186,6 +194,9 @@ int main(int argc, char** argv)
     // Estimated biases
     Eigen::Vector3d est_acc_bias = Eigen::Vector3d::Zero();
     Eigen::Vector3d est_gyro_bias = Eigen::Vector3d::Zero();
+    // Estimated clock offset + drift
+    double est_clock_offset = 0;
+    double est_clock_drift = 0;
 
     // IMU measurements
     // Ground truth imu measurements from kinematics
@@ -201,7 +212,7 @@ int main(int argc, char** argv)
     PosMeasEcef pos_meas_ecef;
 
     // Error state uncertainty
-    Eigen::Matrix<double,15,15> P_matrix = InitializeLcPMmatrix(lc_kf_config);
+    Eigen::Matrix<double,17,17> P_matrix = InitializeTcPMmatrix(tc_kf_config);
 
     // Init nav solution
     reader.readNextRow(true_nav_ned_old);
@@ -221,6 +232,21 @@ int main(int argc, char** argv)
                                                         gnss_config,
                                                         gen);
     
+    // Estimate initial range biases
+    GnssMeasurements gnss_meas_0 = generateGNSSMeasurements(true_nav_ned_old.time,
+                                                                sat_pos_vel_0,
+                                                                true_nav_ned_old,
+                                                                true_nav_ecef_old,
+                                                                gnss_biases, 
+                                                                gnss_config,
+                                                                gen);
+
+    GnssLsPosVelClock gnss_pos_vel_clock_est_0 = gnssLsPositionVelocityClock(gnss_meas_0,
+                                                                        est_nav_ecef.r_eb_e,
+                                                                        est_nav_ecef.v_eb_e);
+    est_clock_offset = gnss_pos_vel_clock_est_0.clock(0);
+    est_clock_drift = gnss_pos_vel_clock_est_0.clock(1);
+
     // Times
     // Current time - last time
     double tor_i;
@@ -268,15 +294,15 @@ int main(int argc, char** argv)
         // ========== PROP UNCERTAINTIES ==========
 
         auto start_unc_prop = std::chrono::high_resolution_clock::now();
-        
+            
         // Groves actually puts this in the update part, with a large dt. 
         // But the the underlying approximation hold only
         // if dt is low enough. Therefore slower but better to put it in the prop stage.
-        P_matrix  = lcPropUnc(P_matrix, 
+        P_matrix  = tcPropUnc(P_matrix, 
                             est_nav_ecef,
                             est_nav_ned,
                             imu_meas,
-                            lc_kf_config,
+                            tc_kf_config,
                             tor_i);
 
         auto end_unc_prop = std::chrono::high_resolution_clock::now();
@@ -307,39 +333,23 @@ int main(int argc, char** argv)
 
             LOG(INFO) << "GNSS sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_sim - start_gnss_sim).count() << "ns";
 
-            auto start_gnss_ls = std::chrono::high_resolution_clock::now();
-
-            // Estimate receiver pos + vel with NL LS
-            GnssLsPosVelClock pos_vel_clock_gnss_meas_ecef = gnssLsPositionVelocityClock(gnss_meas,
-                                                                        est_nav_ecef.r_eb_e,
-                                                                        est_nav_ecef.v_eb_e);
-
-            auto end_gnss_ls = std::chrono::high_resolution_clock::now();
-
-            LOG(INFO) << "GNSS LS: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_ls - start_gnss_ls).count() << "ns";
-
-            // Create meas object for integration
-            GnssPosVelMeasEcef pos_vel_gnss_meas_ecef;
-            pos_vel_gnss_meas_ecef.r_ea_e = pos_vel_clock_gnss_meas_ecef.r_ea_e;
-            pos_vel_gnss_meas_ecef.v_ea_e = pos_vel_clock_gnss_meas_ecef.v_ea_e;
-            pos_vel_gnss_meas_ecef.cov_mat = Eigen::Matrix<double,6,6>::Identity();
-            pos_vel_gnss_meas_ecef.cov_mat.block<3,3>(0,0) = pow(gnss_config.lc_pos_sd,2.0) * Eigen::Matrix3d::Identity();
-            pos_vel_gnss_meas_ecef.cov_mat.block<3,3>(3,3) = pow(gnss_config.lc_vel_sd,2.0) * Eigen::Matrix3d::Identity();
-
-
             // KF update -> update posterior
             // if no update, best est is prior
-            StateEstEcefLc est_state_ecef_prior;
+            StateEstEcefTc est_state_ecef_prior;
 
             est_state_ecef_prior.P_matrix = P_matrix;
             est_state_ecef_prior.nav_sol = est_nav_ecef;
             est_state_ecef_prior.acc_bias = est_acc_bias;
             est_state_ecef_prior.gyro_bias = est_gyro_bias;
+            est_state_ecef_prior.clock_offset = est_clock_offset;
+            est_state_ecef_prior.clock_drift = est_clock_drift;
 
             auto start_kf_update = std::chrono::high_resolution_clock::now();
 
-            StateEstEcefLc est_state_ecef_post = lcUpdateKFGnssEcef(pos_vel_gnss_meas_ecef, 
-                                                                    est_state_ecef_prior);
+            StateEstEcefTc est_state_ecef_post = tcUpdateKFGnssEcef(gnss_meas, 
+                                                                    est_state_ecef_prior,
+                                                                    tor_s);
+
             auto end_kf_update = std::chrono::high_resolution_clock::now();
 
             LOG(INFO) << "GNSS KF Update: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_kf_update - start_kf_update).count() << "ns";
@@ -348,6 +358,8 @@ int main(int argc, char** argv)
             est_nav_ecef = est_state_ecef_post.nav_sol;
             est_acc_bias = est_state_ecef_post.acc_bias;
             est_gyro_bias = est_state_ecef_post.gyro_bias;
+            est_clock_offset = est_state_ecef_post.clock_offset;
+            est_clock_drift = est_state_ecef_post.clock_drift;
 
         }
 
