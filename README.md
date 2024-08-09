@@ -62,9 +62,7 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 ## TODOs
 
-- problem on P: velocity quadratic, position linear?
-
-- debug tc gnss ins
+- no malloc?
 
 - refactor to improve readability. review input arguments, comment headers google-style
 
