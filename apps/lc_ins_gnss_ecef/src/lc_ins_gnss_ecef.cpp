@@ -144,7 +144,7 @@ int main(int argc, char** argv)
     gnss_config.rx_clock_drift = 100.0;
     // SD for lc integration
     gnss_config.lc_pos_sd = 2.5;
-    gnss_config.lc_vel_sd = 0.5;
+    gnss_config.lc_vel_sd = 0.1;
 
     // ============== KF config ==============
 

@@ -4,9 +4,8 @@ This is my playground c++ integrated navigation library.
 The aim is to have modular pieces of c++ code that can be used in integrated navigation applications. 
 
 **Disclaimer**: If you are interested in embedded systems applications, you probably don't like dynamic memory allocation.
-Dynamic memory allocation is tedious and painstakingly hard to avoid in Eigen and this library is my fun place. 
+Avoiding dynamic memory allocation is tedious and painstakingly hard when using Eigen.
 Have a look [here](https://github.com/stulp/eigenrealtime) if you're interested in making this code malloc-free.
-Nevertheless, while there will e some heap use, dynamic matrices in IntNavLib always have dimension bounds.
 
 ![image](media/Figure_1.png)
 
@@ -61,7 +60,9 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 ```
 
 
-## TODOs 
+## TODOs
+
+- problem on P: velocity quadratic, position linear?
 
 - debug tc gnss ins
 
