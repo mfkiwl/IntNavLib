@@ -164,6 +164,10 @@ int main(int argc, char** argv)
     tc_kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
     // Initial gyro bias uncertainty per instrument (deg/hour, converted to rad/sec)
     tc_kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+    // Initial clock offset uncertainty per axis (m)
+    tc_kf_config.init_clock_offset_unc = 10;
+    // Initial clock drift uncertainty per axis (m/s)
+    tc_kf_config.init_clock_drift_unc = 0.1;
 
     // Gyro noise PSD (deg^2 per hour, converted to rad^2/s)                
     tc_kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
