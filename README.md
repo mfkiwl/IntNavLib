@@ -56,7 +56,22 @@ To write a ROS2 bag with ground truth data and sensor measurements, instead:
 cd apps/ros2_bag_writer
 colcon build
 source install/setup.bash
-ros2 run ros2_bag_writer ros2_bag_writer_node ../../data/Profile_3.csv
+ros2 run ros2_bag_writer ros2_bag_writer ../../data/Profile_3.csv
+```
+
+To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation:
+
+```
+cd apps/ros2_lc_ins_gnss_ecef
+colcon build
+source install/setup.bash
+ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py
+```
+
+To play the bag and start integrated navigation:
+```
+cd cd apps/ros2_bag_writer/output
+ros2 bag play Profile.bag
 ```
 
 Find Python scripts to plot results in Groves' style in the [utils](/utils/) directory. You can launch them like this:

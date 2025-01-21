@@ -133,9 +133,9 @@ int main(int argc, char** argv)
     // Initialize ROS 2 bag writer
     auto bag_writer = std::make_shared<rosbag2_cpp::Writer>();
     std::string bag_directory = "output/Profile.bag";
-    if (!std::filesystem::exists("output/")) {
-        std::filesystem::create_directory("output/");
-    }
+    if (!std::filesystem::exists("output/"))
+        std::filesystem::remove_all("output/");
+    std::filesystem::create_directory("output/");
     bag_writer->open(bag_directory);
 
     // Declare message objects
@@ -206,6 +206,7 @@ int main(int argc, char** argv)
 
         // Populate Pose message
         gt_pose_msg.header.stamp = imu_clean_msg.header.stamp;
+        gt_pose_msg.header.frame_id = "world";
         gt_pose_msg.pose.position.x = true_nav_ecef.r_eb_e[0];
         gt_pose_msg.pose.position.y = true_nav_ecef.r_eb_e[1];
         gt_pose_msg.pose.position.z = true_nav_ecef.r_eb_e[2];

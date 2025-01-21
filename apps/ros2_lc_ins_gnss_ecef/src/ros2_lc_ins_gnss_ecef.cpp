@@ -15,7 +15,7 @@ using namespace intnavlib;
 
 class InsGnssNode : public rclcpp::Node {
 public:
-    InsGnssNode() : Node("ins_gnss_node"), current_time_(0.0) {
+    InsGnssNode() : Node("ins_gnss_node"){
 
         // Initialize variables from ROS2 parameters
         init();
@@ -63,10 +63,30 @@ private:
     // EKF config
     KfConfig lc_kf_config_;
 
-    double current_time_;
     std::thread processing_thread_;
 
     void init() {
+
+        // Declare params and set default values
+
+        // Declare parameters with default values
+        declare_parameter<std::string>("imu_topic", "/imu/data");
+        declare_parameter<std::string>("gnss_topic", "/gnss/data");
+
+        declare_parameter<double>("kf_config.init_att_unc", 0.0174533);  // Default: 1.0 deg in radians
+        declare_parameter<double>("kf_config.init_vel_unc", 0.1);
+        declare_parameter<double>("kf_config.init_pos_unc", 10.0);
+        declare_parameter<double>("kf_config.init_b_a_unc", 0.00980665);
+        declare_parameter<double>("kf_config.init_b_g_unc", 4.84814e-6);
+        declare_parameter<double>("kf_config.gyro_noise_PSD", 1.21847e-9);
+        declare_parameter<double>("kf_config.accel_noise_PSD", 3.844e-6);
+        declare_parameter<double>("kf_config.accel_bias_PSD", 1.0E-7);
+        declare_parameter<double>("kf_config.gyro_bias_PSD", 2.0E-12);
+
+        declare_parameter<std::vector<double>>("init_r_eb_e", {0.0, 0.0, 0.0});  // Default initial position (ECEF)
+        declare_parameter<std::vector<double>>("init_v_eb_e", {0.0, 0.0, 0.0});  // Default initial velocity (ECEF)
+        declare_parameter<std::vector<double>>("init_rpy_b_e_", {0.0, 0.0, 0.0}); // Default initial roll, pitch, yaw
+
 
         // Topics 
         imu_topic_ = get_parameter("imu_topic").as_string();
@@ -106,17 +126,20 @@ private:
     }
 
     void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg) {
+        //  Threadsafe push to buffer
         std::lock_guard<std::mutex> lock(buffer_mutex_);
         imu_buffer_.push(msg);
     }
 
     void gnssCallback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) {
+        //  Threadsafe push to buffer
         std::lock_guard<std::mutex> lock(buffer_mutex_);
         gnss_buffer_.push(msg);
     }
 
     void processData() {
         while (rclcpp::ok()) {
+
             sensor_msgs::msg::Imu::SharedPtr imu_msg;
             sensor_msgs::msg::NavSatFix::SharedPtr gnss_msg;
 
@@ -125,18 +148,19 @@ private:
                 std::lock_guard<std::mutex> lock(buffer_mutex_);
 
                 if (!imu_buffer_.empty()) {
-                    if(imu_buffer_.front()->header.stamp.sec > current_time_)
+                    if(imu_buffer_.front()->header.stamp.sec > est_nav_ecef_.time)
                         imu_msg = imu_buffer_.front();
                     imu_buffer_.pop();
                 }
 
-                if (!gnss_buffer_.empty() {
-                    if(gnss_buffer_.front()->header.stamp.sec > current_time_)
+                if (!gnss_buffer_.empty()) {
+                    if(gnss_buffer_.front()->header.stamp.sec > est_nav_ecef_.time)
                         gnss_msg = gnss_buffer_.front();
                     gnss_buffer_.pop();
                 }
             }
 
+            // If IMU
             if (imu_msg) {
 
                 ImuMeasurements imu_meas;
@@ -148,48 +172,43 @@ private:
                     imu_msg->angular_velocity.x,
                     imu_msg->angular_velocity.y,
                     imu_msg->angular_velocity.z);
-                imu_meas.time = imu_msg->
+                imu_meas.time = imu_msg->header.stamp.sec + imu_msg->header.stamp.nanosec / 1e9;
 
-                double tor_i = 
+                double tor_i = imu_meas.time - est_nav_ecef_.time;
 
                 // Apply bias corrections
                 imu_meas.f -= est_acc_bias_;
                 imu_meas.omega -= est_gyro_bias_;
 
-                // Predict navigation state
-                double dt = 0.01; // Example time step
+                // Predict
                 est_nav_ecef_ = navEquationsEcef(est_nav_ecef_, imu_meas, tor_i);
 
                 // Propagate uncertainties
                 NavSolutionNed est_nav_ned = ecefToNed(est_nav_ecef_);
                 P_matrix_ = lcPropUnc(P_matrix_, est_nav_ecef_, est_nav_ned, imu_meas, lc_kf_config_, tor_i);
+            
+
+                // If gnss
+                if (gnss_msg) {
+                    PosMeasEcef gnss_meas;
+                    gnss_meas.r_eb_e = nedToEcef(NavSolutionNed{0,gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude, Eigen::Vector3d::Zero(), Eigen::Matrix3d::Identity()}).r_eb_e;
+                    gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * 5.0; // Covariance matrix
+
+                    // Update navigation state using GNSS
+                    StateEstEcefLc est_state_ecef_prior{est_nav_ecef_, est_acc_bias_, est_gyro_bias_, P_matrix_};
+                    StateEstEcefLc est_state_ecef_post = lcUpdateKFPosEcef(gnss_meas, est_state_ecef_prior);
+
+                    // Update state variables
+                    est_nav_ecef_ = est_state_ecef_post.nav_sol;
+                    est_acc_bias_ = est_state_ecef_post.acc_bias;
+                    est_gyro_bias_ = est_state_ecef_post.gyro_bias;
+                    P_matrix_ = est_state_ecef_post.P_matrix;
+                }
+            
+            publishPose();
+            
             }
 
-            if (gnss_msg) {
-                GnssPosVelMeasEcef gnss_meas;
-                gnss_meas.r_ea_e = nedToEcef({gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude}).r_eb_e;
-                gnss_meas.v_ea_e = Eigen::Vector3d::Zero(); // Populate with realistic velocity if available
-                gnss_meas.cov_mat = Eigen::Matrix<double, 6, 6>::Identity(); // Covariance matrix
-                gnss_meas.
-
-                // Update navigation state using GNSS
-                StateEstEcefLc est_state_ecef_prior{est_nav_ecef_, P_matrix_, est_acc_bias_, est_gyro_bias_};
-                auto est_state_ecef_post = lcUpdateKFGnssEcef(gnss_meas, est_state_ecef_prior);
-
-                // Update state variables
-                est_nav_ecef_ = est_state_ecef_post.nav_sol;
-                est_acc_bias_ = est_state_ecef_post.acc_bias;
-                est_gyro_bias_ = est_state_ecef_post.gyro_bias;
-                P_matrix_ = est_state_ecef_post.P_matrix;
-            }
-
-            if (imu_msg || gnss_msg) {
-                current_time_ = std::max(current_time_, (imu_msg ? imu_msg->header.stamp.sec : 0.0));
-                current_time_ = std::max(current_time_, (gnss_msg ? gnss_msg->header.stamp.sec : 0.0));
-                publishPose();
-            }
-
-            std::this_thread::sleep_for(1ms); // Sleep to prevent busy-waiting
         }
     }
 

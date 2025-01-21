@@ -26,7 +26,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(tf2 REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
@@ -57,20 +56,15 @@ ament_target_dependencies(ros2_lc_ins_gnss_ecef
                             visualization_msgs
                             tf2)
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-                            \"msg/GnssPosVelMeasEcef.msg\"
-                            DEPENDENCIES geometry_msgs
-                          )
-
 ############### install ##############
 
 # This puts include files, libs and launch files in the install dir in the ros ws
 
-# # Install launch files.
-# install(DIRECTORY
-#   launch
-#   DESTINATION share/${PROJECT_NAME}/
-# )
+# Install launch files.
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 # Install libraries
 install(TARGETS ros2_lc_ins_gnss_ecef
