@@ -251,7 +251,6 @@ int main(int argc, char** argv)
 
         LOG(INFO) << "Imu sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_imu_sim - start_imu_sim).count() << "ns";
 
-
         // ========== NAV EQUATIONS ==========
 
         auto start_nav_eqns = std::chrono::high_resolution_clock::now();

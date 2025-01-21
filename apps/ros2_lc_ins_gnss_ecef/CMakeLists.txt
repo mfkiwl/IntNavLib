@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(tc_ins_gnss_ecef)
+project(ros2_lc_ins_gnss_ecef)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,34 +26,41 @@ find_package(sensor_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(glog REQUIRED)
 
 find_package(intnavlib REQUIRED)
 
-add_executable(tc_ins_gnss_ecef 
-                    src/tc_ins_gnss_ecef.cpp
+add_executable(ros2_lc_ins_gnss_ecef 
+                    src/ros2_lc_ins_gnss_ecef.cpp
                     )
 
-target_include_directories(tc_ins_gnss_ecef 
+target_include_directories(ros2_lc_ins_gnss_ecef 
                                     PRIVATE 
                                         ${INTNAVLIB_INCLUDE_DIRS})
 
-target_link_libraries(tc_ins_gnss_ecef  
+target_link_libraries(ros2_lc_ins_gnss_ecef  
                                         ${OPENTHREADS_LIBRARY}
                                         Eigen3::Eigen
                                         glog::glog
                                         ${INTNAVLIB_LIBRARIES}
                                         )
 
-ament_target_dependencies(tc_ins_gnss_ecef 
+ament_target_dependencies(ros2_lc_ins_gnss_ecef 
                             rclcpp 
                             std_msgs 
                             sensor_msgs 
                             message_filters
                             visualization_msgs
                             tf2)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+                            \"msg/GnssPosVelMeasEcef.msg\"
+                            DEPENDENCIES geometry_msgs
+                          )
 
 ############### install ##############
 
@@ -66,7 +73,7 @@ ament_target_dependencies(tc_ins_gnss_ecef
 # )
 
 # Install libraries
-install(TARGETS tc_ins_gnss_ecef
+install(TARGETS ros2_lc_ins_gnss_ecef
   DESTINATION lib/${PROJECT_NAME}/
 )
 

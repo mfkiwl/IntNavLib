@@ -57,6 +57,7 @@ struct PosRotMeasEcef {
 // LC GNSS pos + vel meas
 struct GnssPosVelMeasEcef {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    double time;
     Eigen::Vector3d r_ea_e; 
     Eigen::Vector3d v_ea_e;
     Eigen::Matrix<double,6,6> cov_mat;

@@ -47,7 +47,16 @@ cd apps/ins_ecef
 mkdir build && cd build
 cmake ..
 make -j4
-./ins_ecef <path_to>/data/Profile_3.csv
+./ins_ecef ../../data/Profile_3.csv
+```
+
+To write a ROS2 bag with ground truth data and sensor measurements, instead:
+
+```
+cd apps/ros2_bag_writer
+colcon build
+source install/setup.bash
+ros2 run ros2_bag_writer ros2_bag_writer_node ../../data/Profile_3.csv
 ```
 
 Find Python scripts to plot results in Groves' style in the [utils](/utils/) directory. You can launch them like this:
@@ -61,6 +70,8 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 
 ## TODOs
+
+- write test bash script to run all demos. launch it at each commit
 
 - no malloc?
 
