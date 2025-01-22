@@ -38,4 +38,5 @@ ament_target_dependencies(ros2_bag_writer
 install(TARGETS ros2_bag_writer
   DESTINATION lib/${PROJECT_NAME})
 
+
 ament_package()

@@ -68,10 +68,30 @@ source install/setup.bash
 ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py
 ```
 
+To debug it:
+
+```
+cd apps/ros2_lc_ins_gnss_ecef
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug
+source install/setup.bash;
+ros2 run --prefix 'gdbserver localhost:3000' ros2_lc_ins_gnss_ecef ros2_lc_ins_gnss_ecef --ros-args --params-file config/Profile_3_config.yaml
+# Now launch gdb server
+```
+
 To play the bag and start integrated navigation:
+
 ```
 cd cd apps/ros2_bag_writer/output
 ros2 bag play Profile.bag
+```
+
+To visualize in rviz:
+```
+ros2 run rviz2 rviz2 -d ............
+```
+
+```
+ros2 run ros2_lc_ins_gnss_ecef ros2_relative_pose_publisher
 ```
 
 Find Python scripts to plot results in Groves' style in the [utils](/utils/) directory. You can launch them like this:
@@ -85,6 +105,8 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 
 ## TODOs
+
+- ros2 app: handle queue sizes (drop if full). log result to file for starters, to verify
 
 - write test bash script to run all demos. launch it at each commit
 

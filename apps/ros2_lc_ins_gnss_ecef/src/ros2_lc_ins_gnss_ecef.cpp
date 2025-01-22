@@ -52,7 +52,7 @@ private:
     // Init params
     std::vector<double> init_r_eb_e;
     std::vector<double> init_v_eb_e;
-    std::vector<double> init_rpy_b_e_;
+    std::vector<double> init_C_b_e;
 
     // Navigation state
     NavSolutionEcef est_nav_ecef_;
@@ -67,30 +67,30 @@ private:
 
     void init() {
 
-        // Declare params and set default values
-
         // Declare parameters with default values
         declare_parameter<std::string>("imu_topic", "/imu/data");
         declare_parameter<std::string>("gnss_topic", "/gnss/data");
+        declare_parameter<std::string>("output_topic", "/nav_sol/ecef");
 
-        declare_parameter<double>("kf_config.init_att_unc", 0.0174533);  // Default: 1.0 deg in radians
-        declare_parameter<double>("kf_config.init_vel_unc", 0.1);
-        declare_parameter<double>("kf_config.init_pos_unc", 10.0);
-        declare_parameter<double>("kf_config.init_b_a_unc", 0.00980665);
-        declare_parameter<double>("kf_config.init_b_g_unc", 4.84814e-6);
-        declare_parameter<double>("kf_config.gyro_noise_PSD", 1.21847e-9);
-        declare_parameter<double>("kf_config.accel_noise_PSD", 3.844e-6);
-        declare_parameter<double>("kf_config.accel_bias_PSD", 1.0E-7);
-        declare_parameter<double>("kf_config.gyro_bias_PSD", 2.0E-12);
+        declare_parameter<double>("kf_config.init_att_unc");
+        declare_parameter<double>("kf_config.init_vel_unc");
+        declare_parameter<double>("kf_config.init_pos_unc");
+        declare_parameter<double>("kf_config.init_b_a_unc");
+        declare_parameter<double>("kf_config.init_b_g_unc");
+        declare_parameter<double>("kf_config.gyro_noise_PSD");
+        declare_parameter<double>("kf_config.accel_noise_PSD");
+        declare_parameter<double>("kf_config.accel_bias_PSD");
+        declare_parameter<double>("kf_config.gyro_bias_PSD");
 
-        declare_parameter<std::vector<double>>("init_r_eb_e", {0.0, 0.0, 0.0});  // Default initial position (ECEF)
-        declare_parameter<std::vector<double>>("init_v_eb_e", {0.0, 0.0, 0.0});  // Default initial velocity (ECEF)
-        declare_parameter<std::vector<double>>("init_rpy_b_e_", {0.0, 0.0, 0.0}); // Default initial roll, pitch, yaw
+        declare_parameter<std::vector<double>>("init_r_eb_e");
+        declare_parameter<std::vector<double>>("init_v_eb_e");
+        declare_parameter<std::vector<double>>("init_C_b_e");
 
 
         // Topics 
         imu_topic_ = get_parameter("imu_topic").as_string();
         gnss_topic_ = get_parameter("gnss_topic").as_string();
+        output_topic_ = get_parameter("output_topic").as_string();
 
         // Load KF Config
         lc_kf_config_.init_att_unc = get_parameter("kf_config.init_att_unc").as_double();
@@ -106,23 +106,31 @@ private:
         // Initialize navigation state
         init_r_eb_e = get_parameter("init_r_eb_e").as_double_array();
         init_v_eb_e = get_parameter("init_v_eb_e").as_double_array();
-        init_rpy_b_e_ = get_parameter("init_rpy_b_e_").as_double_array();
+        init_C_b_e = get_parameter("init_C_b_e").as_double_array();
         est_nav_ecef_.r_eb_e << init_r_eb_e[0], init_r_eb_e[1], init_r_eb_e[2];
         est_nav_ecef_.v_eb_e << init_v_eb_e[0], init_v_eb_e[1], init_v_eb_e[2];
-        est_nav_ecef_.C_b_e << rpyToR(Eigen::Vector3d(init_rpy_b_e_[0], init_rpy_b_e_[1], init_rpy_b_e_[2]));
+        est_nav_ecef_.C_b_e << init_C_b_e[0], init_C_b_e[3], init_C_b_e[6],
+                                            init_C_b_e[1], init_C_b_e[4], init_C_b_e[7],
+                                            init_C_b_e[2], init_C_b_e[5], init_C_b_e[8];
         est_acc_bias_ = Eigen::Vector3d::Zero();
         est_gyro_bias_ = Eigen::Vector3d::Zero();
         P_matrix_ = InitializeLcPMmatrix(lc_kf_config_);
 
         // Log loaded parameters for debugging
-        RCLCPP_INFO(this->get_logger(), "Loaded initial position: [%f, %f, %f]",
+        RCLCPP_INFO(this->get_logger(), "Loaded initial r_eb_e: [%f, %f, %f]",
                     init_r_eb_e[0], init_r_eb_e[1], init_r_eb_e[2]);
-        RCLCPP_INFO(this->get_logger(), "Loaded initial attitude: [%f, %f, %f, %f]",
-                    init_rpy_b_e_[0], init_rpy_b_e_[1], init_rpy_b_e_[2], init_rpy_b_e_[3]);
+        RCLCPP_INFO(this->get_logger(), "Loaded initial v_eb_e: [%f, %f, %f]",
+                    init_v_eb_e[0], init_v_eb_e[1], init_v_eb_e[2]);
+        RCLCPP_INFO(this->get_logger(), "Loaded initial C_b_e: [%f, %f, %f, %f, %f, %f, %f, %f, %f]",
+                        init_C_b_e[0], init_C_b_e[1], init_C_b_e[2],
+                        init_C_b_e[3], init_C_b_e[4], init_C_b_e[5],
+                        init_C_b_e[6], init_C_b_e[7], init_C_b_e[8]);
         RCLCPP_INFO(this->get_logger(), "IMU topic: %s", imu_topic_.c_str());
         RCLCPP_INFO(this->get_logger(), "GNSS topic: %s", gnss_topic_.c_str());
         RCLCPP_INFO(this->get_logger(), "KF Config: init_att_unc = %f, init_vel_unc = %f",
                     lc_kf_config_.init_att_unc, lc_kf_config_.init_vel_unc);
+
+        RCLCPP_INFO(this->get_logger(), "Initialized! Waiting on measurements...");
     }
 
     void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg) {
@@ -148,20 +156,28 @@ private:
                 std::lock_guard<std::mutex> lock(buffer_mutex_);
 
                 if (!imu_buffer_.empty()) {
-                    if(imu_buffer_.front()->header.stamp.sec > est_nav_ecef_.time)
+                    rclcpp::Time imu_stamp(imu_buffer_.front()->header.stamp);
+                    RCLCPP_INFO(this->get_logger(), "Received IMU: %f", imu_stamp.seconds());
+                    if (imu_stamp.seconds() > est_nav_ecef_.time) {
                         imu_msg = imu_buffer_.front();
+                    }
                     imu_buffer_.pop();
                 }
 
                 if (!gnss_buffer_.empty()) {
-                    if(gnss_buffer_.front()->header.stamp.sec > est_nav_ecef_.time)
+                    rclcpp::Time gnss_stamp(gnss_buffer_.front()->header.stamp);
+                    RCLCPP_INFO(this->get_logger(), "Received GNSS: %f", gnss_stamp.seconds());
+                    if (gnss_stamp.seconds() > est_nav_ecef_.time) {
                         gnss_msg = gnss_buffer_.front();
+                    }
                     gnss_buffer_.pop();
                 }
             }
 
             // If IMU
             if (imu_msg) {
+
+                RCLCPP_INFO(this->get_logger(), "Processing IMU");
 
                 ImuMeasurements imu_meas;
                 imu_meas.f = Eigen::Vector3d(
@@ -190,6 +206,9 @@ private:
 
                 // If gnss
                 if (gnss_msg) {
+
+                    RCLCPP_INFO(this->get_logger(), "Processing GNSS");
+
                     PosMeasEcef gnss_meas;
                     gnss_meas.r_eb_e = nedToEcef(NavSolutionNed{0,gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude, Eigen::Vector3d::Zero(), Eigen::Matrix3d::Identity()}).r_eb_e;
                     gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * 5.0; // Covariance matrix

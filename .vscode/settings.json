@@ -69,6 +69,11 @@
         "core": "cpp",
         "codecvt": "cpp",
         "filesystem": "cpp",
-        "block": "cpp"
+        "block": "cpp",
+        "mixinvector": "cpp",
+        "polytope": "cpp",
+        "vertexarraystate": "cpp",
+        "buffered_value": "cpp",
+        "fast_back_stack": "cpp"
     }
 }

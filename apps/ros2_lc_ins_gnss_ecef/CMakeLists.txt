@@ -82,4 +82,16 @@ install(TARGETS ros2_lc_ins_gnss_ecef
 #   DESTINATION lib/${PROJECT_NAME}
 # )
 
+## Relative pose publisher for visualization
+
+add_executable(ros2_relative_pose_publisher src/ros2_relative_pose_publisher.cpp)
+
+ament_target_dependencies(ros2_relative_pose_publisher
+  rclcpp
+  geometry_msgs
+)
+
+install(TARGETS ros2_relative_pose_publisher
+  DESTINATION lib/${PROJECT_NAME})
+
 ament_package()
