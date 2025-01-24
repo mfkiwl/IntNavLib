@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     // Initialize ROS 2 bag writer
     auto bag_writer = std::make_shared<rosbag2_cpp::Writer>();
     std::string bag_directory = "output/Profile.bag";
-    if (!std::filesystem::exists("output/"))
+    if (std::filesystem::exists("output/"))
         std::filesystem::remove_all("output/");
     std::filesystem::create_directory("output/");
     bag_writer->open(bag_directory);
@@ -169,6 +169,8 @@ int main(int argc, char** argv)
                                                         sat_pos_vel_0,
                                                         gnss_config,
                                                         gen);
+
+    gnss_biases *= 0;
 
     while (reader.readNextRow(true_nav_ned)) {
 
@@ -222,6 +224,8 @@ int main(int argc, char** argv)
         double tor_s = true_nav_ned.time - time_last_gnss;
         if( tor_s >= gnss_config.epoch_interval) {
 
+            LOG(INFO) << "Writing GNSS";
+
             time_last_gnss = true_nav_ned.time;
 
             auto start_gnss_sim = std::chrono::high_resolution_clock::now();
@@ -246,8 +250,8 @@ int main(int argc, char** argv)
 
             // Populate GNSS message
             gnss_msg.header.stamp = imu_clean_msg.header.stamp;
-            gnss_msg.latitude = rad_to_deg * lla_gnss_meas.latitude;
-            gnss_msg.longitude = rad_to_deg * lla_gnss_meas.longitude;
+            gnss_msg.latitude = lla_gnss_meas.latitude;
+            gnss_msg.longitude = lla_gnss_meas.longitude;
             gnss_msg.altitude = lla_gnss_meas.height;
             bag_writer->write(gnss_msg, "gnss/fix", imu_clean_msg.header.stamp);
 

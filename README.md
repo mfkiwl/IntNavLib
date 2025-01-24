@@ -50,15 +50,6 @@ make -j4
 ./ins_ecef ../../data/Profile_3.csv
 ```
 
-To write a ROS2 bag with ground truth data and sensor measurements, instead:
-
-```
-cd apps/ros2_bag_writer
-colcon build
-source install/setup.bash
-ros2 run ros2_bag_writer ros2_bag_writer ../../data/Profile_3.csv
-```
-
 To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation:
 
 ```
@@ -78,19 +69,30 @@ ros2 run --prefix 'gdbserver localhost:3000' ros2_lc_ins_gnss_ecef ros2_lc_ins_g
 # Now launch gdb server
 ```
 
+To write a ROS2 bag with ground truth data and sensor measurements, instead:
+
+```
+cd apps/ros2_bag_writer
+colcon build
+source install/setup.bash
+ros2 run ros2_bag_writer ros2_bag_writer ../../data/Profile_3.csv
+```
+
 To play the bag and start integrated navigation:
 
 ```
-cd cd apps/ros2_bag_writer/output
+cd apps/ros2_bag_writer/output
 ros2 bag play Profile.bag
 ```
 
 To visualize in rviz:
 ```
-ros2 run rviz2 rviz2 -d ............
+ros2 run rviz2 rviz2
 ```
 
 ```
+cd apps/ros2_lc_ins_gnss_ecef
+source install/setup.bash
 ros2 run ros2_lc_ins_gnss_ecef ros2_relative_pose_publisher
 ```
 
@@ -103,10 +105,11 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 ```
 
-
 ## TODOs
 
-- ros2 app: handle queue sizes (drop if full). log result to file for starters, to verify
+- write error plot script from 2 profiles, so that we can evaluate perfo of ros node
+
+- ros2 app: handle queue sizes (drop if full). log result to file for starters, to verify. use cond variables in waits. do data lag compensation (add delays in bag writer)
 
 - write test bash script to run all demos. launch it at each commit
 

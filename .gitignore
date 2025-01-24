@@ -1,4 +1,6 @@
 /build
+/install
+/log
 /apps/*/results
 /apps/*/build
 /results
