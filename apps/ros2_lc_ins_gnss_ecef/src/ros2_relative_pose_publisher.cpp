@@ -9,10 +9,10 @@ public:
     RelativePoseNode() : Node("relative_pose_node")
     {
         estimated_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-            "/nav_sol/ecef", 10, std::bind(&RelativePoseNode::estimatedPoseCallback, this, std::placeholders::_1));
+            "/nav_sol/ecef", 1, std::bind(&RelativePoseNode::estimatedPoseCallback, this, std::placeholders::_1));
 
         ground_truth_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-            "/ground_truth/pose", 10, std::bind(&RelativePoseNode::groundTruthPoseCallback, this, std::placeholders::_1));
+            "/ground_truth/pose", 1, std::bind(&RelativePoseNode::groundTruthPoseCallback, this, std::placeholders::_1));
 
         relative_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/relative_pose", 10);
     }
@@ -80,7 +80,7 @@ private:
 
         relative_pose_pub_->publish(relative_pose_msg);
 
-        RCLCPP_INFO(this->get_logger(), "Published relative pose");
+        // RCLCPP_INFO(this->get_logger(), "Published relative pose");
     }
 
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr estimated_pose_sub_;

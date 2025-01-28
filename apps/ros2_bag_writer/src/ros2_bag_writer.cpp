@@ -170,7 +170,7 @@ int main(int argc, char** argv)
                                                         gnss_config,
                                                         gen);
 
-    gnss_biases *= 0;
+    // gnss_biases *= 0;
 
     while (reader.readNextRow(true_nav_ned)) {
 

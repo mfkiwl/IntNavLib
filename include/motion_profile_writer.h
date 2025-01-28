@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <iomanip>
 
 #include "helpers.h"
 
@@ -14,7 +15,7 @@ namespace intnavlib {
 
 // Column 1: time (sec)
 // Column 2: latitude (deg)
-// Column 3: longitude (deg)
+// Column 3: longitude (deg) 
 // Column 4: height (m)
 // Column 5: north velocity (m/s)
 // Column 6: east velocity (m/s)
@@ -31,6 +32,9 @@ public:
             return;
         }
 
+        // Since we will use this csv file to compute errors between profiles, its important to set precision
+        file << std::fixed << std::setprecision(20);
+
         // Write header
         // file << "time,latitude,longitude,height,vx,vy,vz,roll,pitch,yaw\n";
         ok = true;
@@ -43,6 +47,7 @@ public:
         // Convert latitude and longitude from radians to degrees
         double latitude = radToDeg(row.latitude);
         double longitude = radToDeg(row.longitude);
+        double height = row.height;
 
         // Extract velocity components
         Eigen::Vector3d v_eb_n = row.v_eb_n;
@@ -59,7 +64,7 @@ public:
         file << row.time << ","
              << latitude << ","
              << longitude << ","
-             << row.height << ","
+             << height << ","
              << v_eb_n[0] << ","
              << v_eb_n[1] << ","
              << v_eb_n[2] << ","

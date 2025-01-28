@@ -1,6 +1,5 @@
-/build
-/install
-/log
-/apps/*/results
-/apps/*/build
-/results
+**/build
+**/install
+**/log
+**/results
+**/output

@@ -28,9 +28,9 @@ public:
 
         // Initialize subscribers and publisher
         imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-            imu_topic_, 1, std::bind(&InsGnssNode::imuCallback, this, std::placeholders::_1));
+            imu_topic_, 100, std::bind(&InsGnssNode::imuCallback, this, std::placeholders::_1));
         gnss_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-            gnss_topic_, 1, std::bind(&InsGnssNode::gnssCallback, this, std::placeholders::_1));
+            gnss_topic_, 10, std::bind(&InsGnssNode::gnssCallback, this, std::placeholders::_1));
         pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(output_topic_, 10);
 
         // Start processing thread
@@ -55,6 +55,7 @@ private:
     std::queue<sensor_msgs::msg::Imu::SharedPtr> imu_buffer_;
     std::queue<sensor_msgs::msg::NavSatFix::SharedPtr> gnss_buffer_;
     std::mutex imu_buffer_mutex_;
+    std::condition_variable imu_cv;
     std::mutex gnss_buffer_mutex_;
 
     // Init params
@@ -149,8 +150,11 @@ private:
                         init_C_b_e[6], init_C_b_e[7], init_C_b_e[8]);
         RCLCPP_INFO(this->get_logger(), "IMU topic: %s", imu_topic_.c_str());
         RCLCPP_INFO(this->get_logger(), "GNSS topic: %s", gnss_topic_.c_str());
-        RCLCPP_INFO(this->get_logger(), "KF Config: init_att_unc = %f, init_vel_unc = %f",
-                    lc_kf_config_.init_att_unc, lc_kf_config_.init_vel_unc);
+        RCLCPP_INFO(this->get_logger(), "KF Config: init_att_unc = %f, init_vel_unc = %f, init_pos_unc = %f",
+                                        lc_kf_config_.init_att_unc, 
+                                        lc_kf_config_.init_vel_unc,
+                                        lc_kf_config_.init_pos_unc
+                                        );
 
         RCLCPP_INFO(this->get_logger(), "Initialized! Waiting on measurements...");
     }
@@ -158,8 +162,10 @@ private:
     void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg) {
         //  Threadsafe push to buffer
         std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
-        if(imu_buffer_.size() < MAX_BUFFER_SIZE_IMU)
+        if(imu_buffer_.size() < MAX_BUFFER_SIZE_IMU) {
             imu_buffer_.push(msg);
+            imu_cv.notify_one();
+        }
         else RCLCPP_WARN(this->get_logger(), "IMU buffer full: dropping!");
     }
 
@@ -179,37 +185,27 @@ private:
 
             // Threadsafe read from message buffers
             // Want to get oldest IMU measurement (front)
+            double imu_time = 0;
+            {   
+                // Wait on IMU buffer
+                std::unique_lock<std::mutex> lock(imu_buffer_mutex_);
+                imu_cv.wait(lock, [this] { return !imu_buffer_.empty();});
 
-            {
-                std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
-
-                if (!imu_buffer_.empty()) {
-                    rclcpp::Time imu_stamp(imu_buffer_.front()->header.stamp);
-                    if (imu_stamp.seconds() > est_nav_ecef_.time) {
-                        imu_msg = imu_buffer_.front();
-                    }
-                    imu_buffer_.pop();
-                }
+                // Get measurement timestamp
+                rclcpp::Time imu_stamp(imu_buffer_.front()->header.stamp);
+                imu_time = imu_stamp.seconds();
+                
+                // If new, use measurement, else just pop
+                if (imu_time > est_nav_ecef_.time)
+                    imu_msg = imu_buffer_.front();
+                imu_buffer_.pop();
+                
             }
 
+            // If msg not good, continue
             if(!imu_msg) continue;
 
-            rclcpp::Time imu_stamp(imu_msg->header.stamp);
-            double imu_time = imu_stamp.seconds();
-
-            {
-                std::lock_guard<std::mutex> lock(gnss_buffer_mutex_);
-
-                if (!gnss_buffer_.empty()) {
-                    rclcpp::Time gnss_stamp(gnss_buffer_.front()->header.stamp);
-                    RCLCPP_INFO(this->get_logger(), "GNSS time %f", gnss_stamp.seconds());
-                    RCLCPP_INFO(this->get_logger(), "IMU time %f", imu_time);
-                    if (abs(gnss_stamp.seconds() - imu_time) < TIME_EPSILON_S) {
-                        gnss_msg = gnss_buffer_.front();
-                    }
-                    gnss_buffer_.pop();
-                }
-            }
+            // We received a new IMU measurement: do propagation
 
             RCLCPP_INFO(this->get_logger(), "Processing IMU: %f", imu_time);
 
@@ -234,12 +230,30 @@ private:
             est_nav_ecef_ = navEquationsEcef(est_nav_ecef_, imu_meas, tor_i);
 
             // Propagate uncertainties
+            // Consider doing this at GNSS rate, if need to speed up
             {
                 NavSolutionNed est_nav_ned = ecefToNed(est_nav_ecef_);
                 P_matrix_ = lcPropUnc(P_matrix_, est_nav_ecef_, est_nav_ned, imu_meas, lc_kf_config_, tor_i);
             }
 
-            // If gnss
+            // Now, see if we also have a new GNSS measurement
+
+            {
+                std::lock_guard<std::mutex> lock(gnss_buffer_mutex_);
+
+                if (!gnss_buffer_.empty()) {
+                    rclcpp::Time gnss_stamp(gnss_buffer_.front()->header.stamp);
+                    // RCLCPP_INFO(this->get_logger(), "GNSS time %f", gnss_stamp.seconds());
+                    // RCLCPP_INFO(this->get_logger(), "IMU time %f", imu_time);
+                    if (abs(gnss_stamp.seconds() - imu_time) < TIME_EPSILON_S)
+                        gnss_msg = gnss_buffer_.front();
+                    gnss_buffer_.pop();
+                    
+                }
+            }
+
+            // If new GNSS, do update
+
             if (gnss_msg) {
 
                 rclcpp::Time gnss_stamp(gnss_msg->header.stamp);
@@ -249,7 +263,7 @@ private:
                 PosMeasEcef gnss_meas;
                 gnss_meas.time = gnss_time;
                 gnss_meas.r_eb_e = nedToEcef(NavSolutionNed{0,gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude, Eigen::Vector3d::Zero(), Eigen::Matrix3d::Identity()}).r_eb_e;
-                gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * 5.0; // Covariance matrix
+                gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * std::pow(2.5,2); // Covariance matrix
 
                 // Update navigation state using GNSS
                 StateEstEcefLc est_state_ecef_prior{est_nav_ecef_, est_acc_bias_, est_gyro_bias_, P_matrix_};
