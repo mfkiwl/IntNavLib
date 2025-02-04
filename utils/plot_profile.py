@@ -1,41 +1,34 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import contextily as ctx
+import geopandas as gpd
+from shapely.geometry import Point
 
-# Column 1: time (sec)
-# Column 2: latitude (deg)
-# Column 3: longitude (deg)
-# Column 4: height (m)
-# Column 5: north velocity (m/s)
-# Column 6: east velocity (m/s)
-# Column 7: down velocity (m/s)
-# Column 8: roll angle of body w.r.t NED (deg)
-# Column 9: pitch angle of body w.r.t NED (deg)
-# Column 10: yaw angle of body w.r.t NED (deg)
+# // Column 1: time (sec)
+# // Column 2: latitude (deg)
+# // Column 3: longitude (deg)
+# // Column 4: height (m)
+# // Column 5: north velocity (m/s)
+# // Column 6: east velocity (m/s)
+# // Column 7: down velocity (m/s)
+# // Column 8: roll angle of body w.r.t NED (deg)
+# // Column 9: pitch angle of body w.r.t NED (deg)
+# // Column 10: yaw angle of body w.r.t NED (deg)
 
 def radii_of_curvature(L):
-
-    # Parameters
     R_0 = 6378137  # WGS84 Equatorial radius in meters
     e = 0.0818191908425  # WGS84 eccentricity
-    
-    # Calculate meridian radius of curvature
     temp = 1 - (e * np.sin(L))**2
     R_N = R_0 * (1 - e**2) / temp**1.5
-    
-    # Calculate transverse radius of curvature
     R_E = R_0 / np.sqrt(temp)
-    
     return R_N, R_E
 
 def plot_profile(csv_file):
-    # Read the CSV file into a DataFrame
     data = pd.read_csv(csv_file)
-    
-    # Extract the relevant columns
     time = data.iloc[:, 0]
-    latitude = np.deg2rad(data.iloc[:, 1])
-    longitude = np.deg2rad(data.iloc[:, 2])
+    latitude = data.iloc[:, 1]
+    longitude = data.iloc[:, 2]
     height = data.iloc[:, 3]
     north_velocity = data.iloc[:, 4]
     east_velocity = data.iloc[:, 5]
@@ -44,19 +37,14 @@ def plot_profile(csv_file):
     pitch_angle = data.iloc[:, 8]
     yaw_angle = data.iloc[:, 9]
     
-    # Calculate radii of curvature
-    R_N, R_E = radii_of_curvature(latitude.iloc[0])
-    
-    # Calculate displacements
-    north_displacement = (latitude - latitude.iloc[0]) * (R_N + height)
-    east_displacement = (longitude - longitude.iloc[0]) * (R_N + height) * np.cos(np.radians(latitude.iloc[0]))
+    R_N, R_E = radii_of_curvature(np.deg2rad(latitude.iloc[0]))
+    north_displacement = (np.deg2rad(latitude) - np.deg2rad(latitude.iloc[0])) * (R_N + height)
+    east_displacement = (np.deg2rad(longitude) - np.deg2rad(longitude.iloc[0])) * (R_N + height) * np.cos(np.radians(latitude.iloc[0]))
     down_displacement = height.iloc[0] - height
     
-    # Create a 3x3 grid of subplots
-    fig, axs = plt.subplots(3, 3, figsize=(15, 10))
+    fig, axs = plt.subplots(4, 3, figsize=(15, 14))
     fig.tight_layout(pad=5.0)
     
-    # Plot each profile on the appropriate subplot
     axs[0, 0].plot(time, north_displacement, color=[0.9, 0.45, 0], linewidth=1.5)
     axs[0, 0].set_title('North displacement, m')
     
@@ -87,7 +75,29 @@ def plot_profile(csv_file):
     axs[2, 2].set_title('Heading, deg')
     axs[2, 2].set_xlabel('Time, s')
     
-    # Display the plot
+    # Flattened flight path (latitude vs longitude) with basemap
+    geometry = [Point(xy) for xy in zip(longitude, latitude)]
+    gdf = gpd.GeoDataFrame(geometry=geometry, crs="EPSG:4326")
+    gdf_mercator = gdf.to_crs(epsg=3857)
+    
+    axs[3, 0].scatter(gdf_mercator.geometry.x, gdf_mercator.geometry.y, color='b', s=5)
+    axs[3, 0].set_title('Flattened Flight Path')
+    ctx.add_basemap(axs[3, 0], source=ctx.providers.Esri.WorldImagery)
+    
+    # Convert back to lat/lon for tick labels
+    axs[3, 0].set_xticks(gdf_mercator.geome
+try.y[::len(gdf_mercator)//5])
+    axs[3, 0].set_yticklabels([f'{lat:.2f}' for lat in latitude[::len(latitude)//5]])
+    axs[3, 0].set_xlabel('Longitude (deg)')
+    axs[3, 0].set_ylabel('Latitude (deg)')
+    
+    # Altitude profile (height vs time)
+    axs[3, 1].plot(time, height, color='g', linewidth=1.5)
+    axs[3, 1].set_title('Altitude Profile')
+    axs[3, 1].set_xlabel('Time (s)')
+    axs[3, 1].set_ylabel('Height (m)')
+    axs[3, 1].grid()
+    
     plt.show()
 
 def main():

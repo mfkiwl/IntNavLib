@@ -8,6 +8,8 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2_msgs/msg/tf_message.hpp>
 #include <rosbag2_cpp/writer.hpp>
 #include <rosbag2_cpp/writer_interfaces/base_writer_interface.hpp>
 
@@ -37,8 +39,8 @@ int main(int argc, char** argv)
 
     ImuErrors imu_errors;
 
-    // Accelerometer biases (micro-g, converted to m/s^2; body axes)gnss_msg
-    imu_errors.b_a << 900.0,-1300.0,800.0;
+    // Accelerometer biases (micro-g, converted to m/s^2; body axes)
+    imu_errors.b_a << 900.0, -1300.0, 800.0;
     imu_errors.b_a = imu_errors.b_a * micro_g_to_meters_per_second_squared;
 
     // Gyro biases (deg/hour, converted to rad/sec; body axes)
@@ -48,21 +50,21 @@ int main(int argc, char** argv)
     // Accelerometer scale factor and cross coupling errors (ppm, converted to
     // unitless; body axes)
     imu_errors.M_a << 500.0, -300.0, 200.0,
-                    -150.0, -600.0, 250.0,
-                    -250.0,  100.0, 450.0;
+                      -150.0, -600.0, 250.0,
+                      -250.0,  100.0, 450.0;
     imu_errors.M_a = imu_errors.M_a * 1.0e-6;
 
     // Gyro scale factor and cross coupling errors (ppm, converted to unitless;
     // body axes)
-    imu_errors.M_g << 400.0, -300.0,  250.0,
-                        0.0, -300.0, -150.0,
-                        0.0,    0.0, -350.0; 
+    imu_errors.M_g << 400.0, -300.0, 250.0,
+                      0.0, -300.0, -150.0,
+                      0.0,    0.0, -350.0; 
     imu_errors.M_g = imu_errors.M_g * 1.0e-6;
 
     // Gyro g-dependent biases (deg/hour/g, converted to rad-sec/m; body axes)
     imu_errors.G_g << 0.9, -1.1, -0.6,
-                    -0.5,  1.9, -1.6,
-                    0.3,  1.1, -1.3;
+                     -0.5,  1.9, -1.6,
+                      0.3,  1.1, -1.3;
     imu_errors.G_g = imu_errors.G_g * deg_to_rad / (3600.0 * 9.80665);  
 
     // Accelerometer noise root PSD (micro-g per root Hz, converted to m s^-1.5)                
@@ -142,7 +144,7 @@ int main(int argc, char** argv)
     sensor_msgs::msg::Imu imu_clean_msg;
     sensor_msgs::msg::Imu imu_dirty_msg;
     sensor_msgs::msg::NavSatFix gnss_msg;
-    geometry_msgs::msg::PoseStamped gt_pose_msg;
+    geometry_msgs::msg::TransformStamped gt_tf_msg;
 
     // Persistent variables
     NavSolutionNed true_nav_ned;
@@ -184,7 +186,7 @@ int main(int argc, char** argv)
         // Generate true IMU measurements
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
 
-        // Populate IMU message
+        // Populate IMU message (clean measurements)
         imu_clean_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(true_nav_ned.time * 1e9));
         imu_clean_msg.linear_acceleration.x = true_imu_meas.f[0];
         imu_clean_msg.linear_acceleration.y = true_imu_meas.f[1];
@@ -194,9 +196,8 @@ int main(int argc, char** argv)
         imu_clean_msg.angular_velocity.z = true_imu_meas.omega[2];
         bag_writer->write(imu_clean_msg, "imu_clean/data", imu_clean_msg.header.stamp);
 
-        // Get imu measurements by applying IMU model
+        // Get IMU measurements by applying IMU model (dirty measurements)
         imu_meas = imuModel(true_imu_meas, imu_meas_old, imu_errors, tor_i, gen);
-        // Populate IMU message
         imu_dirty_msg.header.stamp = imu_clean_msg.header.stamp;
         imu_dirty_msg.linear_acceleration.x = imu_meas.f[0];
         imu_dirty_msg.linear_acceleration.y = imu_meas.f[1];
@@ -206,21 +207,29 @@ int main(int argc, char** argv)
         imu_dirty_msg.angular_velocity.z = imu_meas.omega[2];
         bag_writer->write(imu_dirty_msg, "imu_dirty/data", imu_clean_msg.header.stamp);
 
-        // Populate Pose message
-        gt_pose_msg.header.stamp = imu_clean_msg.header.stamp;
-        gt_pose_msg.header.frame_id = "world";
-        gt_pose_msg.pose.position.x = true_nav_ecef.r_eb_e[0];
-        gt_pose_msg.pose.position.y = true_nav_ecef.r_eb_e[1];
-        gt_pose_msg.pose.position.z = true_nav_ecef.r_eb_e[2];
+        // Populate TransformStamped message for ground truth TF
+        gt_tf_msg.header.stamp = imu_clean_msg.header.stamp;
+        // The transform is expressed from the parent frame "world" to the child frame "gt_base"
+        gt_tf_msg.header.frame_id = "world";
+        gt_tf_msg.child_frame_id = "gt_base";
+        gt_tf_msg.transform.translation.x = true_nav_ecef.r_eb_e[0];
+        gt_tf_msg.transform.translation.y = true_nav_ecef.r_eb_e[1];
+        gt_tf_msg.transform.translation.z = true_nav_ecef.r_eb_e[2];
 
         Eigen::Quaterniond q(true_nav_ecef.C_b_e);
-        gt_pose_msg.pose.orientation.x = q.x();
-        gt_pose_msg.pose.orientation.y = q.y();
-        gt_pose_msg.pose.orientation.z = q.z();
-        gt_pose_msg.pose.orientation.w = q.w();
-        bag_writer->write(gt_pose_msg, "ground_truth/pose", imu_clean_msg.header.stamp);
+        gt_tf_msg.transform.rotation.x = q.x();
+        gt_tf_msg.transform.rotation.y = q.y();
+        gt_tf_msg.transform.rotation.z = q.z();
+        gt_tf_msg.transform.rotation.w = q.w();
 
-        // Every n secs, write gnss msg
+        // Now wrap the TransformStamped in a TFMessage
+        tf2_msgs::msg::TFMessage gt_tf_msg_wrap;
+        gt_tf_msg_wrap.transforms.push_back(gt_tf_msg);
+
+        // Write the TFMessage to the bag on the /tf topic
+        bag_writer->write(gt_tf_msg_wrap, "/tf", imu_clean_msg.header.stamp);
+
+        // Every n secs, write GNSS msg
         double tor_s = true_nav_ned.time - time_last_gnss;
         if( tor_s >= gnss_config.epoch_interval) {
 
@@ -246,7 +255,10 @@ int main(int argc, char** argv)
                                                                         true_nav_ecef.v_eb_e);
 
             // Convert position to LLA
-            NavSolutionNed lla_gnss_meas = ecefToNed(NavSolutionEcef{0,pos_vel_clock_gnss_meas_ecef.r_ea_e, Eigen::Vector3d::Zero(), Eigen::Matrix3d::Identity()});
+            NavSolutionNed lla_gnss_meas = ecefToNed(NavSolutionEcef{0,
+                                                                       pos_vel_clock_gnss_meas_ecef.r_ea_e,
+                                                                       Eigen::Vector3d::Zero(),
+                                                                       Eigen::Matrix3d::Identity()});
 
             // Populate GNSS message
             gnss_msg.header.stamp = imu_clean_msg.header.stamp;

@@ -7,12 +7,12 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "intnavlib/intnavlib.h"
 
 #define MAX_BUFFER_SIZE_IMU 200
 #define MAX_BUFFER_SIZE_GNSS 50
-#define TIME_EPSILON_S 0.02
+#define TIME_EPSILON_S 0.01
 
 using namespace std::chrono_literals;
 using namespace intnavlib;
@@ -31,7 +31,7 @@ public:
             imu_topic_, 100, std::bind(&InsGnssNode::imuCallback, this, std::placeholders::_1));
         gnss_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
             gnss_topic_, 10, std::bind(&InsGnssNode::gnssCallback, this, std::placeholders::_1));
-        pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(output_topic_, 10);
+        pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(output_topic_, 10);
 
         // Start processing thread
         processing_thread_ = std::thread(&InsGnssNode::processData, this);
@@ -49,7 +49,7 @@ private:
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
 
     // Buffers
     std::queue<sensor_msgs::msg::Imu::SharedPtr> imu_buffer_;
@@ -81,13 +81,17 @@ private:
     void init() {
 
         // Declare parameters
+
+        // Topics
         declare_parameter<std::string>("imu_topic");
         declare_parameter<std::string>("gnss_topic");
         declare_parameter<std::string>("output_topic");
 
+        // Logging
         declare_parameter<bool>("write_log");
         declare_parameter<std::string>("log_path");
 
+        // EKF config
         declare_parameter<double>("kf_config.init_att_unc");
         declare_parameter<double>("kf_config.init_vel_unc");
         declare_parameter<double>("kf_config.init_pos_unc");
@@ -98,24 +102,26 @@ private:
         declare_parameter<double>("kf_config.accel_bias_PSD");
         declare_parameter<double>("kf_config.gyro_bias_PSD");
 
+        // Init 
         declare_parameter<std::vector<double>>("init_r_eb_e");
         declare_parameter<std::vector<double>>("init_v_eb_e");
         declare_parameter<std::vector<double>>("init_C_b_e");
 
+        // Get parameters
 
         // Topics 
         imu_topic_ = get_parameter("imu_topic").as_string();
         gnss_topic_ = get_parameter("gnss_topic").as_string();
         output_topic_ = get_parameter("output_topic").as_string();
 
-        // Register log path
+        // Logging
         write_log_ = get_parameter("write_log").as_bool();
         std::string log_path = get_parameter("log_path").as_string();
         if(write_log_){
             log_writer_ = std::make_unique<MotionProfileWriter>(log_path);
         }
 
-        // Load KF Config
+        // EKF config
         lc_kf_config_.init_att_unc = get_parameter("kf_config.init_att_unc").as_double();
         lc_kf_config_.init_vel_unc = get_parameter("kf_config.init_vel_unc").as_double();
         lc_kf_config_.init_pos_unc = get_parameter("kf_config.init_pos_unc").as_double();
@@ -126,7 +132,7 @@ private:
         lc_kf_config_.accel_bias_PSD = get_parameter("kf_config.accel_bias_PSD").as_double();
         lc_kf_config_.gyro_bias_PSD = get_parameter("kf_config.gyro_bias_PSD").as_double();
 
-        // Initialize navigation state
+        // Init
         init_r_eb_e = get_parameter("init_r_eb_e").as_double_array();
         init_v_eb_e = get_parameter("init_v_eb_e").as_double_array();
         init_C_b_e = get_parameter("init_C_b_e").as_double_array();
@@ -150,17 +156,15 @@ private:
                         init_C_b_e[6], init_C_b_e[7], init_C_b_e[8]);
         RCLCPP_INFO(this->get_logger(), "IMU topic: %s", imu_topic_.c_str());
         RCLCPP_INFO(this->get_logger(), "GNSS topic: %s", gnss_topic_.c_str());
-        RCLCPP_INFO(this->get_logger(), "KF Config: init_att_unc = %f, init_vel_unc = %f, init_pos_unc = %f",
-                                        lc_kf_config_.init_att_unc, 
-                                        lc_kf_config_.init_vel_unc,
-                                        lc_kf_config_.init_pos_unc
-                                        );
+        RCLCPP_INFO(this->get_logger(), "Init_att_unc = %f", lc_kf_config_.init_att_unc);
+        RCLCPP_INFO(this->get_logger(), "Init_vel_unc = %f", lc_kf_config_.init_vel_unc);
+        RCLCPP_INFO(this->get_logger(), "Init_pos_unc = %f", lc_kf_config_.init_pos_unc);
 
-        RCLCPP_INFO(this->get_logger(), "Initialized! Waiting on measurements...");
+        RCLCPP_INFO(this->get_logger(), "Nav Filter Initialized! Waiting on measurements...");
     }
 
     void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg) {
-        //  Threadsafe push to buffer
+        //  Threadsafe push to buffer, notify condition variable
         std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
         if(imu_buffer_.size() < MAX_BUFFER_SIZE_IMU) {
             imu_buffer_.push(msg);
@@ -202,12 +206,12 @@ private:
                 
             }
 
-            // If msg not good, continue
+            // If msg received but not good (old), continue
             if(!imu_msg) continue;
 
             // We received a new IMU measurement: do propagation
 
-            RCLCPP_INFO(this->get_logger(), "Processing IMU: %f", imu_time);
+            RCLCPP_INFO(this->get_logger(), "Predict: %f", imu_time);
 
             ImuMeasurements imu_meas;
             imu_meas.f = Eigen::Vector3d(
@@ -258,7 +262,7 @@ private:
 
                 rclcpp::Time gnss_stamp(gnss_msg->header.stamp);
                 double gnss_time = gnss_stamp.seconds();
-                RCLCPP_INFO(this->get_logger(), "Processing GNSS: %f", gnss_time);
+                RCLCPP_INFO(this->get_logger(), "GNSS Update: %f", gnss_time);
 
                 PosMeasEcef gnss_meas;
                 gnss_meas.time = gnss_time;
@@ -288,19 +292,51 @@ private:
     }
 
     void publishPose() {
-        auto pose_msg = geometry_msgs::msg::PoseStamped();
-        pose_msg.header.stamp = this->now();
+        // Create a PoseWithCovarianceStamped message
+        auto pose_msg = geometry_msgs::msg::PoseWithCovarianceStamped();
+        pose_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(est_nav_ecef_.time * 1e9));
         pose_msg.header.frame_id = "world";
 
-        pose_msg.pose.position.x = est_nav_ecef_.r_eb_e[0];
-        pose_msg.pose.position.y = est_nav_ecef_.r_eb_e[1];
-        pose_msg.pose.position.z = est_nav_ecef_.r_eb_e[2];
+        // Fill in position
+        pose_msg.pose.pose.position.x = est_nav_ecef_.r_eb_e[0];
+        pose_msg.pose.pose.position.y = est_nav_ecef_.r_eb_e[1];
+        pose_msg.pose.pose.position.z = est_nav_ecef_.r_eb_e[2];
 
+        // Fill in orientation (convert rotation matrix to quaternion)
         Eigen::Quaterniond q(est_nav_ecef_.C_b_e);
-        pose_msg.pose.orientation.x = q.x();
-        pose_msg.pose.orientation.y = q.y();
-        pose_msg.pose.orientation.z = q.z();
-        pose_msg.pose.orientation.w = q.w();
+        pose_msg.pose.pose.orientation.x = q.x();
+        pose_msg.pose.pose.orientation.y = q.y();
+        pose_msg.pose.pose.orientation.z = q.z();
+        pose_msg.pose.pose.orientation.w = q.w();
+
+        // Fill in the 6x6 covariance.
+        // We assume that the 15x15 state covariance P_matrix_ is ordered as:
+        // [0-2]: attitude (roll, pitch, yaw),
+        // [3-5]: velocity,
+        // [6-8]: position,
+        // [9-11]: accelerometer bias,
+        // [12-14]: gyro bias.
+        // We publish a 6x6 covariance matrix for the pose (position and orientation).
+        // Pose covariance ordering (row-major):
+        // [ x, y, z, roll, pitch, yaw ]
+        //
+        // We extract:
+        // - Position covariance: from indices 6-8 of P_matrix_
+        // - Orientation covariance: from indices 0-2 of P_matrix_
+        // - Cross-covariance between position and orientation accordingly.
+
+        Eigen::Matrix<double, 6, 6> pose_cov;
+        pose_cov.block<3,3>(0,0) = P_matrix_.block<3,3>(6,6);  // position covariance
+        pose_cov.block<3,3>(0,3) = P_matrix_.block<3,3>(6,0);  // cross-covariance
+        pose_cov.block<3,3>(3,0) = P_matrix_.block<3,3>(0,6);  // cross-covariance
+        pose_cov.block<3,3>(3,3) = P_matrix_.block<3,3>(0,0);  // attitude covariance
+
+        // Copy the 6x6 matrix into the covariance array (which is in row-major order)
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < 6; j++) {
+                pose_msg.pose.covariance[i * 6 + j] = pose_cov(i, j);
+            }
+        }
 
         pose_pub_->publish(pose_msg);
     }
