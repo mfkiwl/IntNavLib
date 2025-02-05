@@ -2,12 +2,12 @@ ros2_lc_ins_gnss_ecef:
   ros__parameters:
     imu_topic: "/imu_dirty/data"
     gnss_topic: "/gnss/fix"
-    output_topic: "/nav_sol/ecef"
-    write_log: true
+    out_pose_topic: "/nav_sol/pose"
+    write_log: false
     log_path: "/home/tommaso/myLibs/IntNavLib/apps/ros2_lc_ins_gnss_ecef/results/Profile_3_lc_ins_gnss_ecef_ros2.csv"
-    init_r_eb_e : [4069880.0, -255758.0, 4900749.0] # m
-    init_v_eb_e: [12.54, 199.60, 0.0] # m/s
-    init_C_b_e: [0.062717940369297245,0.99803129207246466,-1.1444404716259914e-10,0.76927383516154302,-0.048342442744500683,-0.63708772925347235,-0.63583348959588804,0.039956830125291457,-0.77079129810517077] # column-major
+    init_lla : [50.425,-3.595805199,10000.0] # deg, m
+    init_v_eb_n: [0.0,199.998794,0.0] # m/s
+    init_rpy_b_n: [0.0,0.0,90.01] # deg
     kf_config.init_att_unc: 0.0174533 # rad, deg_to_rad * 1.0;
     kf_config.init_vel_unc: 0.1 # m/s
     kf_config.init_pos_unc: 10.0 # m

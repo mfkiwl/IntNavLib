@@ -172,7 +172,7 @@ int main(int argc, char** argv)
                                                         gnss_config,
                                                         gen);
 
-    // gnss_biases *= 0;
+    gnss_biases *= 0;
 
     while (reader.readNextRow(true_nav_ned)) {
 
@@ -209,9 +209,8 @@ int main(int argc, char** argv)
 
         // Populate TransformStamped message for ground truth TF
         gt_tf_msg.header.stamp = imu_clean_msg.header.stamp;
-        // The transform is expressed from the parent frame "world" to the child frame "gt_base"
-        gt_tf_msg.header.frame_id = "world";
-        gt_tf_msg.child_frame_id = "gt_base";
+        gt_tf_msg.header.frame_id = "ecef";
+        gt_tf_msg.child_frame_id = "base_gt";
         gt_tf_msg.transform.translation.x = true_nav_ecef.r_eb_e[0];
         gt_tf_msg.transform.translation.y = true_nav_ecef.r_eb_e[1];
         gt_tf_msg.transform.translation.z = true_nav_ecef.r_eb_e[2];
@@ -254,17 +253,20 @@ int main(int argc, char** argv)
                                                                         true_nav_ecef.r_eb_e,
                                                                         true_nav_ecef.v_eb_e);
 
+            // LOG(WARNING) << "GNSS pos error " << (pos_vel_clock_gnss_meas_ecef.r_ea_e - true_nav_ecef.r_eb_e).norm();
+
             // Convert position to LLA
-            NavSolutionNed lla_gnss_meas = ecefToNed(NavSolutionEcef{0,
-                                                                       pos_vel_clock_gnss_meas_ecef.r_ea_e,
-                                                                       Eigen::Vector3d::Zero(),
-                                                                       Eigen::Matrix3d::Identity()});
+            NavSolutionEcef ecef_gnss_pos = NavSolutionEcef{0,
+                                                            pos_vel_clock_gnss_meas_ecef.r_ea_e,
+                                                            Eigen::Vector3d::Zero(),
+                                                            Eigen::Matrix3d::Identity()};
+            NavSolutionNed lla_gnss_pos = ecefToNed(ecef_gnss_pos);
 
             // Populate GNSS message
             gnss_msg.header.stamp = imu_clean_msg.header.stamp;
-            gnss_msg.latitude = lla_gnss_meas.latitude;
-            gnss_msg.longitude = lla_gnss_meas.longitude;
-            gnss_msg.altitude = lla_gnss_meas.height;
+            gnss_msg.latitude = lla_gnss_pos.latitude;
+            gnss_msg.longitude = lla_gnss_pos.longitude;
+            gnss_msg.altitude = lla_gnss_pos.height;
             bag_writer->write(gnss_msg, "gnss/fix", imu_clean_msg.header.stamp);
 
         }

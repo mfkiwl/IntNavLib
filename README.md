@@ -106,7 +106,9 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 ## TODOs
 
-- ros2 app: handle queue sizes (drop if full). log result to file for starters, to verify. use cond variables in waits. do data lag compensation (add delays in bag writer). Huge apparent biases werre due to profile logging to file problems. viz position uncertainty as ellipsoid
+- profile generator in NED, converting from MATLAB's GeoTrajectory
+
+- ros2 app: handle queue sizes (drop if full). log result to file for starters, to verify. use cond variables in waits. do data lag compensation (add delays in bag writer). in config, pass euler angles not DCM. publish path, belocity. fix bad exit stuck wait cv
 
 - write test bash script to run all demos. launch it at each commit to check for bugs
 

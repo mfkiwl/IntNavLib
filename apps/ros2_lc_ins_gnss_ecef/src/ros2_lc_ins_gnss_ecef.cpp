@@ -31,7 +31,7 @@ public:
             imu_topic_, 100, std::bind(&InsGnssNode::imuCallback, this, std::placeholders::_1));
         gnss_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
             gnss_topic_, 10, std::bind(&InsGnssNode::gnssCallback, this, std::placeholders::_1));
-        pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(output_topic_, 10);
+        pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(out_pose_topic_, 100);
 
         // Start processing thread
         processing_thread_ = std::thread(&InsGnssNode::processData, this);
@@ -45,7 +45,7 @@ private:
 
     std::string imu_topic_;
     std::string gnss_topic_;
-    std::string output_topic_;
+    std::string out_pose_topic_;
 
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;
@@ -59,9 +59,9 @@ private:
     std::mutex gnss_buffer_mutex_;
 
     // Init params
-    std::vector<double> init_r_eb_e;
-    std::vector<double> init_v_eb_e;
-    std::vector<double> init_C_b_e;
+    std::vector<double> init_lla_;
+    std::vector<double> init_rpy_b_n_;
+    std::vector<double> init_v_eb_n_;
 
     // Navigation state
     NavSolutionEcef est_nav_ecef_;
@@ -85,7 +85,7 @@ private:
         // Topics
         declare_parameter<std::string>("imu_topic");
         declare_parameter<std::string>("gnss_topic");
-        declare_parameter<std::string>("output_topic");
+        declare_parameter<std::string>("out_pose_topic");
 
         // Logging
         declare_parameter<bool>("write_log");
@@ -103,16 +103,16 @@ private:
         declare_parameter<double>("kf_config.gyro_bias_PSD");
 
         // Init 
-        declare_parameter<std::vector<double>>("init_r_eb_e");
-        declare_parameter<std::vector<double>>("init_v_eb_e");
-        declare_parameter<std::vector<double>>("init_C_b_e");
+        declare_parameter<std::vector<double>>("init_lla");
+        declare_parameter<std::vector<double>>("init_v_eb_n");
+        declare_parameter<std::vector<double>>("init_rpy_b_n");
 
         // Get parameters
 
         // Topics 
         imu_topic_ = get_parameter("imu_topic").as_string();
         gnss_topic_ = get_parameter("gnss_topic").as_string();
-        output_topic_ = get_parameter("output_topic").as_string();
+        out_pose_topic_ = get_parameter("out_pose_topic").as_string();
 
         // Logging
         write_log_ = get_parameter("write_log").as_bool();
@@ -132,30 +132,32 @@ private:
         lc_kf_config_.accel_bias_PSD = get_parameter("kf_config.accel_bias_PSD").as_double();
         lc_kf_config_.gyro_bias_PSD = get_parameter("kf_config.gyro_bias_PSD").as_double();
 
-        // Init
-        init_r_eb_e = get_parameter("init_r_eb_e").as_double_array();
-        init_v_eb_e = get_parameter("init_v_eb_e").as_double_array();
-        init_C_b_e = get_parameter("init_C_b_e").as_double_array();
-        est_nav_ecef_.r_eb_e << init_r_eb_e[0], init_r_eb_e[1], init_r_eb_e[2];
-        est_nav_ecef_.v_eb_e << init_v_eb_e[0], init_v_eb_e[1], init_v_eb_e[2];
-        est_nav_ecef_.C_b_e << init_C_b_e[0], init_C_b_e[3], init_C_b_e[6],
-                                            init_C_b_e[1], init_C_b_e[4], init_C_b_e[7],
-                                            init_C_b_e[2], init_C_b_e[5], init_C_b_e[8];
+        // Init nav solution
+        init_lla_ = get_parameter("init_lla").as_double_array();
+        init_v_eb_n_ = get_parameter("init_v_eb_n").as_double_array();
+        init_rpy_b_n_ = get_parameter("init_rpy_b_n").as_double_array();
+
+        NavSolutionNed est_nav_ned = NavSolutionNed{0.0,
+                                                    deg_to_rad * init_lla_[0], 
+                                                    deg_to_rad * init_lla_[1], 
+                                                    init_lla_[2], 
+                                                    Eigen::Vector3d(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
+                                                    rpyToR(deg_to_rad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2])).transpose()};
+        est_nav_ecef_ = nedToEcef(est_nav_ned);
+
         est_acc_bias_ = Eigen::Vector3d::Zero();
         est_gyro_bias_ = Eigen::Vector3d::Zero();
         P_matrix_ = InitializeLcPMmatrix(lc_kf_config_);
 
         // Log loaded parameters for debugging
-        RCLCPP_INFO(this->get_logger(), "Loaded initial r_eb_e: [%f, %f, %f]",
-                    init_r_eb_e[0], init_r_eb_e[1], init_r_eb_e[2]);
-        RCLCPP_INFO(this->get_logger(), "Loaded initial v_eb_e: [%f, %f, %f]",
-                    init_v_eb_e[0], init_v_eb_e[1], init_v_eb_e[2]);
-        RCLCPP_INFO(this->get_logger(), "Loaded initial C_b_e: [%f, %f, %f, %f, %f, %f, %f, %f, %f]",
-                        init_C_b_e[0], init_C_b_e[1], init_C_b_e[2],
-                        init_C_b_e[3], init_C_b_e[4], init_C_b_e[5],
-                        init_C_b_e[6], init_C_b_e[7], init_C_b_e[8]);
+        
         RCLCPP_INFO(this->get_logger(), "IMU topic: %s", imu_topic_.c_str());
         RCLCPP_INFO(this->get_logger(), "GNSS topic: %s", gnss_topic_.c_str());
+
+        RCLCPP_INFO(this->get_logger(), "Init_lla = %f %f %f", init_lla_[0], init_lla_[1], init_lla_[2]);
+        RCLCPP_INFO(this->get_logger(), "Init_v_eb_n = %f %f %f", init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]);
+        RCLCPP_INFO(this->get_logger(), "Init_rpy_b_n = %f %f %f", init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]);
+
         RCLCPP_INFO(this->get_logger(), "Init_att_unc = %f", lc_kf_config_.init_att_unc);
         RCLCPP_INFO(this->get_logger(), "Init_vel_unc = %f", lc_kf_config_.init_vel_unc);
         RCLCPP_INFO(this->get_logger(), "Init_pos_unc = %f", lc_kf_config_.init_pos_unc);
@@ -295,7 +297,7 @@ private:
         // Create a PoseWithCovarianceStamped message
         auto pose_msg = geometry_msgs::msg::PoseWithCovarianceStamped();
         pose_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(est_nav_ecef_.time * 1e9));
-        pose_msg.header.frame_id = "world";
+        pose_msg.header.frame_id = "ecef";
 
         // Fill in position
         pose_msg.pose.pose.position.x = est_nav_ecef_.r_eb_e[0];
@@ -308,22 +310,6 @@ private:
         pose_msg.pose.pose.orientation.y = q.y();
         pose_msg.pose.pose.orientation.z = q.z();
         pose_msg.pose.pose.orientation.w = q.w();
-
-        // Fill in the 6x6 covariance.
-        // We assume that the 15x15 state covariance P_matrix_ is ordered as:
-        // [0-2]: attitude (roll, pitch, yaw),
-        // [3-5]: velocity,
-        // [6-8]: position,
-        // [9-11]: accelerometer bias,
-        // [12-14]: gyro bias.
-        // We publish a 6x6 covariance matrix for the pose (position and orientation).
-        // Pose covariance ordering (row-major):
-        // [ x, y, z, roll, pitch, yaw ]
-        //
-        // We extract:
-        // - Position covariance: from indices 6-8 of P_matrix_
-        // - Orientation covariance: from indices 0-2 of P_matrix_
-        // - Cross-covariance between position and orientation accordingly.
 
         Eigen::Matrix<double, 6, 6> pose_cov;
         pose_cov.block<3,3>(0,0) = P_matrix_.block<3,3>(6,6);  // position covariance
