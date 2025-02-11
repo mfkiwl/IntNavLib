@@ -18,16 +18,16 @@ def plot_errors(csv_file):
     data = pd.read_csv(csv_file)
     
     # Extract the relevant columns
-    time = data.iloc[:, 0]
-    north_pos_error = data.iloc[:, 1]
-    east_pos_error = data.iloc[:, 2]
-    down_pos_error = data.iloc[:, 3]
-    north_vel_error = data.iloc[:, 4]
-    east_vel_error = data.iloc[:, 5]
-    down_vel_error = data.iloc[:, 6]
-    roll_error = data.iloc[:, 7]
-    pitch_error = data.iloc[:, 8]
-    yaw_error = data.iloc[:, 9]
+    time = data.iloc[:, 0].to_numpy()
+    north_pos_error = data.iloc[:, 1].to_numpy()
+    east_pos_error = data.iloc[:, 2].to_numpy()
+    down_pos_error = data.iloc[:, 3].to_numpy()
+    north_vel_error = data.iloc[:, 4].to_numpy()
+    east_vel_error = data.iloc[:, 5].to_numpy()
+    down_vel_error = data.iloc[:, 6].to_numpy()
+    roll_error = data.iloc[:, 7].to_numpy()
+    pitch_error = data.iloc[:, 8].to_numpy()
+    yaw_error = data.iloc[:, 9].to_numpy()
     
     # Create a 3x3 grid of subplots
     fig, axs = plt.subplots(3, 3, figsize=(15, 10))

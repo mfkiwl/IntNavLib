@@ -7,27 +7,27 @@ def plot_errors(csv_file):
     data = pd.read_csv(csv_file)
     
     # Extract the relevant columns
-    time = data.iloc[:, 0]
+    time = data.iloc[:, 0].to_numpy()
 
-    x_pos_error = abs(data.iloc[:, 1])
-    y_pos_error = abs(data.iloc[:, 2])
-    z_pos_error = abs(data.iloc[:, 3])
-    x_vel_error = abs(data.iloc[:, 4])
-    y_vel_error = abs(data.iloc[:, 5])
-    z_vel_error = abs(data.iloc[:, 6])
-    roll_error = abs(data.iloc[:, 7])
-    pitch_error = abs(data.iloc[:, 8])
-    yaw_error = abs(data.iloc[:, 9])
+    x_pos_error = abs(data.iloc[:, 1].to_numpy())
+    y_pos_error = abs(data.iloc[:, 2].to_numpy())
+    z_pos_error = abs(data.iloc[:, 3].to_numpy())
+    x_vel_error = abs(data.iloc[:, 4].to_numpy())
+    y_vel_error = abs(data.iloc[:, 5].to_numpy())
+    z_vel_error = abs(data.iloc[:, 6].to_numpy())
+    roll_error = abs(data.iloc[:, 7].to_numpy())
+    pitch_error = abs(data.iloc[:, 8].to_numpy())
+    yaw_error = abs(data.iloc[:, 9].to_numpy())
 
-    x_pos_error_sigma = data.iloc[:, 10] * 3
-    y_pos_error_sigma = data.iloc[:, 11] * 3
-    z_pos_error_sigma = data.iloc[:, 12] * 3
-    x_vel_error_sigma = data.iloc[:, 13] * 3
-    y_vel_error_sigma = data.iloc[:, 14] * 3
-    z_vel_error_sigma = data.iloc[:, 15] * 3
-    roll_error_sigma = data.iloc[:, 16] * 3
-    pitch_error_sigma = data.iloc[:, 17] * 3
-    yaw_error_sigma = data.iloc[:, 18] * 3
+    x_pos_error_sigma = data.iloc[:, 10].to_numpy() * 3
+    y_pos_error_sigma = data.iloc[:, 11].to_numpy() * 3
+    z_pos_error_sigma = data.iloc[:, 12].to_numpy() * 3
+    x_vel_error_sigma = data.iloc[:, 13].to_numpy() * 3
+    y_vel_error_sigma = data.iloc[:, 14].to_numpy() * 3
+    z_vel_error_sigma = data.iloc[:, 15].to_numpy() * 3
+    roll_error_sigma = data.iloc[:, 16].to_numpy() * 3
+    pitch_error_sigma = data.iloc[:, 17].to_numpy() * 3
+    yaw_error_sigma = data.iloc[:, 18].to_numpy() * 3
 
     # Create a 3x3 grid of subplots
     fig, axs = plt.subplots(3, 3, figsize=(15, 10))

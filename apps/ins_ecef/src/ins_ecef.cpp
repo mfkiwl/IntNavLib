@@ -175,6 +175,7 @@ int main(int argc, char** argv)
         
         // Get imu measurements by applying IMU model
         imu_meas = imuModel(true_imu_meas, imu_meas_old, imu_errors, tor_i, gen);
+        // imu_meas = true_imu_meas;
 
         // ========== NAV EQUATIONS ==========
 

@@ -26,16 +26,16 @@ def radii_of_curvature(L):
 
 def plot_profile(csv_file):
     data = pd.read_csv(csv_file)
-    time = data.iloc[:, 0]
-    latitude = data.iloc[:, 1]
-    longitude = data.iloc[:, 2]
-    height = data.iloc[:, 3]
-    north_velocity = data.iloc[:, 4]
-    east_velocity = data.iloc[:, 5]
-    down_velocity = data.iloc[:, 6]
-    roll_angle = data.iloc[:, 7]
-    pitch_angle = data.iloc[:, 8]
-    yaw_angle = data.iloc[:, 9]
+    time = data.iloc[:, 0].to_numpy()
+    latitude = data.iloc[:, 1].to_numpy()
+    longitude = data.iloc[:, 2].to_numpy()
+    height = data.iloc[:, 3].to_numpy()
+    north_velocity = data.iloc[:, 4].to_numpy()
+    east_velocity = data.iloc[:, 5].to_numpy()
+    down_velocity = data.iloc[:, 6].to_numpy()
+    roll_angle = data.iloc[:, 7].to_numpy()
+    pitch_angle = data.iloc[:, 8].to_numpy()
+    yaw_angle = data.iloc[:, 9].to_numpy()
     
     R_N, R_E = radii_of_curvature(np.deg2rad(latitude.iloc[0]))
     north_displacement = (np.deg2rad(latitude) - np.deg2rad(latitude.iloc[0])) * (R_N + height)

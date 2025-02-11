@@ -74,6 +74,11 @@
         "polytope": "cpp",
         "vertexarraystate": "cpp",
         "buffered_value": "cpp",
-        "fast_back_stack": "cpp"
+        "fast_back_stack": "cpp",
+        "earthmanipulator": "cpp",
+        "notify": "cpp",
+        "readfile": "cpp",
+        "view": "cpp",
+        "exampleresources": "cpp"
     }
 }

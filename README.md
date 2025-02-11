@@ -52,7 +52,7 @@ make -j4
 ./ins_ecef ../../data/Profile_3.csv
 ```
 
-### ROS 2 Apps
+### ROS 2 App
 
 This library also comes with an example of how to use it in a ROS2 project.
 To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation, first install ROS2, then run:
@@ -64,33 +64,8 @@ source install/setup.bash
 ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py
 ```
 
-To debug the ROS2 node, in case you wish to edit something:
-
-```
-cd apps/ros2_lc_ins_gnss_ecef
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug
-source install/setup.bash;
-ros2 run --prefix 'gdbserver localhost:3000' ros2_lc_ins_gnss_ecef ros2_lc_ins_gnss_ecef --ros-args --params-file config/Profile_3_config.yaml
-# Now launch gdb server
-```
-
-To write a ROS2 bag with ground truth data and sensor measurements, instead:
-
-```
-cd apps/ros2_bag_writer
-colcon build
-source install/setup.bash
-ros2 run ros2_bag_writer ros2_bag_writer ../../data/Profile_3.csv
-```
-
-To play the bag and start integrated navigation:
-
-```
-cd apps/ros2_bag_writer/output
-ros2 bag play Profile.bag
-```
-
 To visualize in rviz:
+
 ```
 rviz2 -d apps/ros2_lc_ins_gnss_ecef/config/config.rviz
 ```

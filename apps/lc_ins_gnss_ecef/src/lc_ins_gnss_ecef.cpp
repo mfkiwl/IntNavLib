@@ -249,7 +249,7 @@ int main(int argc, char** argv)
 
         auto end_imu_sim = std::chrono::high_resolution_clock::now();
 
-        LOG(INFO) << "Imu sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_imu_sim - start_imu_sim).count() << "ns";
+        // LOG(INFO) << "Imu sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_imu_sim - start_imu_sim).count() << "ns";
 
         // ========== NAV EQUATIONS ==========
 
@@ -261,7 +261,7 @@ int main(int argc, char** argv)
 
         auto end_nav_eqns = std::chrono::high_resolution_clock::now();
 
-        LOG(INFO) << "Nav equations: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_nav_eqns - start_nav_eqns).count() << "ns";
+        // LOG(INFO) << "Nav equations: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_nav_eqns - start_nav_eqns).count() << "ns";
 
 
         // ========== PROP UNCERTAINTIES ==========
@@ -280,7 +280,7 @@ int main(int argc, char** argv)
 
         auto end_unc_prop = std::chrono::high_resolution_clock::now();
 
-        LOG(INFO) << "P propagation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_unc_prop - start_unc_prop).count() << "ns";
+        // LOG(INFO) << "P propagation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_unc_prop - start_unc_prop).count() << "ns";
 
         // ========== INTEGRATE POS MEASUREMENTS ==========
 
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
 
             auto end_gnss_sim = std::chrono::high_resolution_clock::now();
 
-            LOG(INFO) << "GNSS sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_sim - start_gnss_sim).count() << "ns";
+            // LOG(INFO) << "GNSS sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_sim - start_gnss_sim).count() << "ns";
 
             auto start_gnss_ls = std::chrono::high_resolution_clock::now();
 
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
 
             auto end_gnss_ls = std::chrono::high_resolution_clock::now();
 
-            LOG(INFO) << "GNSS LS: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_ls - start_gnss_ls).count() << "ns";
+            // LOG(INFO) << "GNSS LS: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_ls - start_gnss_ls).count() << "ns";
 
             // Create meas object for integration
             GnssPosVelMeasEcef pos_vel_gnss_meas_ecef;
@@ -341,7 +341,7 @@ int main(int argc, char** argv)
                                                                     est_state_ecef_prior);
             auto end_kf_update = std::chrono::high_resolution_clock::now();
 
-            LOG(INFO) << "GNSS KF Update: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_kf_update - start_kf_update).count() << "ns";
+            // LOG(INFO) << "GNSS KF Update: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_kf_update - start_kf_update).count() << "ns";
 
             P_matrix = est_state_ecef_post.P_matrix;
             est_nav_ecef = est_state_ecef_post.nav_sol;
@@ -350,7 +350,7 @@ int main(int argc, char** argv)
 
         }
 
-        LOG(INFO) << " ============== ";
+        // LOG(INFO) << " ============== ";
         
         // ========== COMPUTE ERRORS ==========
 
