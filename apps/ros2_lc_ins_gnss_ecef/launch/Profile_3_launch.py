@@ -9,4 +9,13 @@ def generate_launch_description():
         output='screen',
         parameters=['config/Profile_3_config.yaml'],  # Load parameters from YAML
     )
-    return LaunchDescription([main_node])
+
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', 'config/config.rviz'],
+        output='screen'
+    )
+
+    return LaunchDescription([main_node, rviz_node])

@@ -26,6 +26,8 @@ public:
         // Initialize variables from ROS2 parameters
         init();
 
+        done = false;
+
         // Initialize subscribers and publisher
         imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
             imu_topic_, 100, std::bind(&InsGnssNode::imuCallback, this, std::placeholders::_1));
@@ -38,10 +40,17 @@ public:
     }
 
     ~InsGnssNode() {
+        done = true;
+        imu_cv.notify_all();
         processing_thread_.join();
+        if (processing_thread_.joinable()) {
+            processing_thread_.join();
+        }
     }
 
 private:
+
+    bool done;
 
     std::string imu_topic_;
     std::string gnss_topic_;
@@ -172,7 +181,7 @@ private:
             imu_buffer_.push(msg);
             imu_cv.notify_one();
         }
-        else RCLCPP_WARN(this->get_logger(), "IMU buffer full: dropping!");
+        else RCLCPP_ERROR(this->get_logger(), "IMU buffer full: dropping!");
     }
 
     void gnssCallback(const sensor_msgs::msg::NavSatFix::SharedPtr msg) {
@@ -180,11 +189,11 @@ private:
         std::lock_guard<std::mutex> lock(gnss_buffer_mutex_);
         if(gnss_buffer_.size() < MAX_BUFFER_SIZE_GNSS)
             gnss_buffer_.push(msg);
-        else RCLCPP_WARN(this->get_logger(), "GNSS buffer full: dropping!");
+        else RCLCPP_ERROR(this->get_logger(), "GNSS buffer full: dropping!");
     }
 
     void processData() {
-        while (rclcpp::ok()) {
+        while (rclcpp::ok() && !done) {
 
             sensor_msgs::msg::Imu::SharedPtr imu_msg;
             sensor_msgs::msg::NavSatFix::SharedPtr gnss_msg;
@@ -195,7 +204,10 @@ private:
             {   
                 // Wait on IMU buffer
                 std::unique_lock<std::mutex> lock(imu_buffer_mutex_);
-                imu_cv.wait(lock, [this] { return !imu_buffer_.empty();});
+                // If exceed wait time, retry loop
+                if (!imu_cv.wait_for(lock, 5s, [this] { return !imu_buffer_.empty();})) {
+                    continue;  // No data received, retry loop
+                }
 
                 // Get measurement timestamp
                 rclcpp::Time imu_stamp(imu_buffer_.front()->header.stamp);
