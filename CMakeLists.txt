@@ -33,6 +33,7 @@ target_include_directories(intnavlib
 set_target_properties(intnavlib PROPERTIES
                         VERSION ${PROJECT_VERSION}
                         SOVERSION ${PROJECT_VERSION_MAJOR}
+                        POSITION_INDEPENDENT_CODE ON
                         LINKER_LANGUAGE CXX 
                         PUBLIC_HEADER "${PUBLIC_HEADERS}")
 
