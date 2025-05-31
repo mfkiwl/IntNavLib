@@ -79,6 +79,7 @@
         "notify": "cpp",
         "readfile": "cpp",
         "view": "cpp",
-        "exampleresources": "cpp"
+        "exampleresources": "cpp",
+        "spatialreference": "cpp"
     }
 }

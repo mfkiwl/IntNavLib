@@ -8,6 +8,10 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include <tf2_ros/transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include "intnavlib/intnavlib.h"
 
 #define MAX_BUFFER_SIZE_IMU 200
@@ -34,6 +38,10 @@ public:
         gnss_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
             gnss_topic_, 10, std::bind(&InsGnssNode::gnssCallback, this, std::placeholders::_1));
         pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(out_pose_topic_, 100);
+        path_pub_ = this->create_publisher<nav_msgs::msg::Path>(out_pose_topic_ + "_path", 10);
+        path_msg_.header.frame_id = "ecef";
+        path_counter = 0;
+        tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
         // Start processing thread
         processing_thread_ = std::thread(&InsGnssNode::processData, this);
@@ -52,13 +60,19 @@ private:
 
     bool done;
 
+    // ROS2 Topics
     std::string imu_topic_;
     std::string gnss_topic_;
     std::string out_pose_topic_;
 
+    // Pubs & Subs
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
+    unsigned int path_counter;
+    nav_msgs::msg::Path path_msg_;
+    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
     // Buffers
     std::queue<sensor_msgs::msg::Imu::SharedPtr> imu_buffer_;
@@ -306,7 +320,9 @@ private:
     }
 
     void publishPose() {
-        // Create a PoseWithCovarianceStamped message
+
+        // ===== Pose + Cov stamped =====
+
         auto pose_msg = geometry_msgs::msg::PoseWithCovarianceStamped();
         pose_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(est_nav_ecef_.time * 1e9));
         pose_msg.header.frame_id = "ecef";
@@ -337,6 +353,42 @@ private:
         }
 
         pose_pub_->publish(pose_msg);
+
+        // ====== TF =======
+
+        geometry_msgs::msg::TransformStamped tf_msg;
+        tf_msg.header.stamp = pose_msg.header.stamp;
+        tf_msg.header.frame_id = "ecef";  // Parent frame
+        tf_msg.child_frame_id = "base";  // or whatever child frame makes sense
+
+        tf_msg.transform.translation.x = est_nav_ecef_.r_eb_e[0];
+        tf_msg.transform.translation.y = est_nav_ecef_.r_eb_e[1];
+        tf_msg.transform.translation.z = est_nav_ecef_.r_eb_e[2];
+        tf_msg.transform.rotation.x = q.x();
+        tf_msg.transform.rotation.y = q.y();
+        tf_msg.transform.rotation.z = q.z();
+        tf_msg.transform.rotation.w = q.w();
+
+        tf_broadcaster_->sendTransform(tf_msg);
+
+        // ====== Path ======
+
+        // Erase oldest pose if array too big
+        if (path_msg_.poses.size() > 1000) {
+            path_msg_.poses.erase(path_msg_.poses.begin());
+        }
+
+        // Publish only every nth pose
+        path_counter ++;
+        if (path_counter >= 100) {
+            path_counter = 0;
+            geometry_msgs::msg::PoseStamped pose_stamped;
+            pose_stamped.header = pose_msg.header;
+            pose_stamped.pose = pose_msg.pose.pose;
+            path_msg_.header = pose_msg.header;
+            path_msg_.poses.push_back(pose_stamped);
+            path_pub_->publish(path_msg_);
+        }
     }
 };
 

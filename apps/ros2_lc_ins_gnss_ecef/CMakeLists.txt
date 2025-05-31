@@ -25,7 +25,9 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
@@ -51,10 +53,13 @@ target_link_libraries(ros2_lc_ins_gnss_ecef
 ament_target_dependencies(ros2_lc_ins_gnss_ecef 
                             rclcpp 
                             std_msgs 
-                            sensor_msgs 
+                            sensor_msgs
+                            nav_msgs
+                            geometry_msgs
                             message_filters
                             visualization_msgs
-                            tf2)
+                            tf2
+                            tf2_ros)
 
 ############### install ##############
 

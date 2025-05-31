@@ -61,7 +61,7 @@ To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation,
 cd apps/ros2_lc_ins_gnss_ecef
 colcon build
 source install/setup.bash
-ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py
+ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py log_level:=ERROR
 ```
 
 To visualize in rviz:
@@ -85,7 +85,7 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 - profile generator in NED, converting from MATLAB's GeoTrajectory
 
-- ros2 app: handle queue sizes (drop if full). log result to file for starters, to verify. use cond variables in waits. do data lag compensation (add delays in bag writer). in config, pass euler angles not DCM. publish path, belocity. fix bad exit stuck wait cv
+- ros2 app: publish path, tf. fix bad exit stuck wait cv. do fast imu prop so state is not delayed.
 
 - write test bash script to run all demos. launch it at each commit to check for bugs
 
