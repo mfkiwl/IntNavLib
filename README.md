@@ -15,10 +15,6 @@ Reference:
   }
 ```
 
-**Disclaimer**: If you are interested in embedded systems applications, you probably don't like dynamic memory allocation.
-Avoiding dynamic memory allocation is tedious and painstakingly hard when using Eigen.
-Have a look [here](https://github.com/stulp/eigenrealtime) if you're interested in making this code malloc-free.
-
 ![image](media/Figure_1.png)
 
 
@@ -35,7 +31,14 @@ cd intnavlib
 mkdir build
 cd build
 cmake ..
-make install
+sudo make install
+```
+
+If you need to uninstall the library, you can run this command in the build folder:
+
+```
+cd intnavlib/build
+sudo xargs rm < install_manifest.txt
 ```
 
 ## Using IntNavLib
@@ -54,20 +57,16 @@ make -j4
 
 ### ROS 2 App
 
+![image](media/Figure_2.png)
+
 This library also comes with an example of how to use it in a ROS2 project.
-To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation, first install ROS2, then run:
+To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation, first install ROS2 (Humble supported, other releases might require minor refactoring), then run for example:
 
 ```
 cd apps/ros2_lc_ins_gnss_ecef
 colcon build
 source install/setup.bash
 ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py log_level:=ERROR
-```
-
-To visualize in rviz:
-
-```
-rviz2 -d apps/ros2_lc_ins_gnss_ecef/config/config.rviz
 ```
 
 Find Python scripts to plot results in Groves' style in the [utils](/utils/) directory. You can launch them like this:
@@ -81,11 +80,7 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 ## TODOs
 
-- solve ros app getting stuck on wait
-
-- profile generator in NED, converting from MATLAB's GeoTrajectory
-
-- ros2 app: publish path, tf. fix bad exit stuck wait cv. do fast imu prop so state is not delayed.
+- ros2 app: do fast imu prop so state is not delayed.
 
 - write test bash script to run all demos. launch it at each commit to check for bugs
 
@@ -97,14 +92,6 @@ python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot er
 
 ## Future development
 
-- write profile generator, navcam simulator
+- Fuse Visual Odometry (simplified groves style)
 
-- Fuse map matching
-
-- Fuse Lidar
-
-- Fuse CVN
-
-- Fuse Visual Odometry
-
-- Add Integrity check
+- Add X2 Integrity check
