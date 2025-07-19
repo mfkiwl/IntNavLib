@@ -3,7 +3,7 @@
 #include <random>
 #include <filesystem>
 
-#include "intnavlib/intnavlib.h"
+#include "intnavlib.h"
 
 // To ensure maximum precision, at the cost of speed
 // #define EIGEN_DONT_VECTORIZE
@@ -204,7 +204,7 @@ int main(int argc, char** argv)
     PosRotMeasEcef pos_rot_meas_ecef;
 
     // Error state uncertainty
-    Eigen::Matrix<double,15,15> P_matrix = InitializeLcPMmatrix(lc_kf_config);
+    Eigen::Matrix<double,15,15> P_matrix = initializeLcPMmatrix(lc_kf_config);
 
     // Init nav solution
     reader.readNextRow(true_nav_ned_old);

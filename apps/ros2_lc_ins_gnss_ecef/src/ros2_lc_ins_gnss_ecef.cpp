@@ -12,7 +12,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include "intnavlib/intnavlib.h"
+#include "intnavlib.h"
 
 #define MAX_BUFFER_SIZE_IMU 200
 #define MAX_BUFFER_SIZE_GNSS 50
@@ -170,7 +170,7 @@ private:
 
         est_acc_bias_ = Eigen::Vector3d::Zero();
         est_gyro_bias_ = Eigen::Vector3d::Zero();
-        P_matrix_ = InitializeLcPMmatrix(lc_kf_config_);
+        P_matrix_ = initializeLcPMmatrix(lc_kf_config_);
 
         // Log loaded parameters for debugging
         

@@ -3,7 +3,7 @@
 #include <random>
 #include <filesystem>
 
-#include "intnavlib/intnavlib.h"
+#include "intnavlib.h"
 
 // To ensure full precisiion
 // #define EIGEN_DONT_VECTORIZE
@@ -154,7 +154,7 @@ int main(int argc, char** argv)
     ErrorsSigmasEcefWriter errors_sigmas_ecef_writer(errors_sigmas_ecef_filename_out);
 
     // Error state uncertainty
-    Eigen::Matrix<double,15,15> P_matrix = InitializeLcPMmatrix(lc_kf_config);
+    Eigen::Matrix<double,15,15> P_matrix = initializeLcPMmatrix(lc_kf_config);
 
     // Init both true old nav sol, and estimated old nav sol
     reader.readNextRow(true_nav_ned_old);

@@ -2,6 +2,7 @@
 
 namespace intnavlib {
 
+
 NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
 
     // Extract the inputs

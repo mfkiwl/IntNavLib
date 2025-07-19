@@ -5,7 +5,7 @@
 
 #include <glog/logging.h>
 
-#include "intnavlib/intnavlib.h"
+#include "intnavlib.h"
 
 // To ensure maximum precision, at the cost of speed
 // #define EIGEN_DONT_VECTORIZE
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
     PosMeasEcef pos_meas_ecef;
 
     // Error state uncertainty
-    Eigen::Matrix<double,17,17> P_matrix = InitializeTcPMmatrix(tc_kf_config);
+    Eigen::Matrix<double,17,17> P_matrix = initializeTcPMmatrix(tc_kf_config);
 
     // Init nav solution
     reader.readNextRow(true_nav_ned_old);

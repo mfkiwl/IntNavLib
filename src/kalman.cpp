@@ -2,7 +2,7 @@
 
 namespace intnavlib {
 
-Eigen::Matrix<double,15,15> InitializeLcPMmatrix(const KfConfig & lc_kf_config) {
+Eigen::Matrix<double,15,15> initializeLcPMmatrix(const KfConfig & lc_kf_config) {
 
     Eigen::Matrix<double,15,15> P_matrix;
 
@@ -17,7 +17,7 @@ Eigen::Matrix<double,15,15> InitializeLcPMmatrix(const KfConfig & lc_kf_config) 
     return P_matrix;
 }
 
-Eigen::Matrix<double,17,17> InitializeTcPMmatrix(const KfConfig & tc_kf_config) {
+Eigen::Matrix<double,17,17> initializeTcPMmatrix(const KfConfig & tc_kf_config) {
 
     Eigen::Matrix<double,17,17> P_matrix;
 

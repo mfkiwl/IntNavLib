@@ -16,8 +16,6 @@ else()
   add_compile_options(-O3) # Optimize
 endif()
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 # ROS2 dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -39,15 +37,11 @@ add_executable(ros2_lc_ins_gnss_ecef
                     src/ros2_lc_ins_gnss_ecef.cpp
                     )
 
-target_include_directories(ros2_lc_ins_gnss_ecef 
-                                    PRIVATE 
-                                        ${INTNAVLIB_INCLUDE_DIRS})
-
 target_link_libraries(ros2_lc_ins_gnss_ecef  
                                         ${OPENTHREADS_LIBRARY}
                                         Eigen3::Eigen
                                         glog::glog
-                                        ${INTNAVLIB_LIBRARIES}
+                                        intnavlib::intnavlib
                                         )
 
 ament_target_dependencies(ros2_lc_ins_gnss_ecef 

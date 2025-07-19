@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Export compile commands for clang tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Eigen3 REQUIRED)
 
 # Create static library
@@ -26,7 +29,8 @@ target_sources(intnavlib
 # Add headers. We choose to keep them all public
 target_include_directories(intnavlib
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include/intnavlib>
 )
 
 # Set properties
@@ -47,5 +51,34 @@ target_link_libraries( intnavlib
 # Install instructions
 include(GNUInstallDirs)
 install(TARGETS intnavlib
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/intnavlib
+    EXPORT intnavlibTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/intnavlib)
+
+# Export targets
+install(EXPORT intnavlibTargets
+    FILE intnavlibTargets.cmake
+    NAMESPACE intnavlib::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/intnavlib
+)
+
+# Config files
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/intnavlibConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/intnavlibConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/intnavlibConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/intnavlib
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/intnavlibConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/intnavlibConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/intnavlib
+)
