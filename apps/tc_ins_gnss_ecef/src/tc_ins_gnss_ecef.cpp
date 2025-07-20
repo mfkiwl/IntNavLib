@@ -7,9 +7,8 @@
 
 #include "intnavlib.h"
 
-// To ensure maximum precision, at the cost of speed
-// #define EIGEN_DONT_VECTORIZE
-// #define EIGEN_FAST_MATH 0
+/// @example lc_ins_pos_ecef.cpp
+/// Tightly-coupled INS/Pose example in ECEF frame
 
 using namespace intnavlib;
 

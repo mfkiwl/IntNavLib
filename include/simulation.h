@@ -8,6 +8,10 @@
 
 namespace intnavlib {
 
+    /// \defgroup simulation Simulation
+    /// IMU, GNSS, and generic position / pose sensor behavioral models and utilities.
+    /// @{
+
     /// \brief Calculates true IMU measurements (specific force and angular velocity) from kinematic states.
     /// This function determines the IMU outputs that would be observed given the change in navigation states.
     /// \param[in] new_nav The navigation solution at the current time step.
@@ -88,6 +92,8 @@ namespace intnavlib {
                                     const SatPosVel & gnss_pos_vel,
                                     const GnssConfig& GNSS_config,
                                     std::mt19937 & gen);
+    
+    /// @}
 
 };
 

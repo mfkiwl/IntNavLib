@@ -80,6 +80,8 @@
         "readfile": "cpp",
         "view": "cpp",
         "exampleresources": "cpp",
-        "spatialreference": "cpp"
+        "spatialreference": "cpp",
+        "ranges": "cpp",
+        "span": "cpp"
     }
 }

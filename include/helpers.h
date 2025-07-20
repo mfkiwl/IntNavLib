@@ -11,6 +11,9 @@
 #include "constants_types.h"
 
 namespace intnavlib {
+
+    /// \defgroup Helpers
+    /// @{
     
     /// \brief Gets gravity vector at given ECEF position, in ECEF frame.
     /// \param[in] r_eb_e Position vector in ECEF frame.
@@ -107,6 +110,10 @@ namespace intnavlib {
     GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_measurements,
                                     const Eigen::Vector3d & prior_r_ea_e,
                                     const Eigen::Vector3d & prior_v_ea_e);
+                                
+                                
+    /// @}                      
+                                
 };
 
 #endif

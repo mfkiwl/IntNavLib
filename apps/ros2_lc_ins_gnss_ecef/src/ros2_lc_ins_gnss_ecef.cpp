@@ -18,6 +18,9 @@
 #define MAX_BUFFER_SIZE_GNSS 50
 #define TIME_EPSILON_S 0.01
 
+/// @example ros2_lc_ins_gnss_ecef.cpp
+/// ROS2 Loosely-coupled INS/GNSS example in ECEF frame
+
 using namespace std::chrono_literals;
 using namespace intnavlib;
 

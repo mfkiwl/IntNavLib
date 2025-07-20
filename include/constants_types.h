@@ -6,12 +6,14 @@
 
 namespace intnavlib {
 
+/// \defgroup constants_types Constants and Types
+/// @{
+
 /// Max number of GNSS satellites.
 /// Leaving some extra room for future expansion.
 constexpr int MAX_GNSS_SATELLITES = 35;
 
 /// Epsilon for checking if a value is approximately zero.
-/// @todo Tune this value for optimal performance.
 constexpr double EPSILON = 1.0e-100; 
 
 /// WGS84 Equatorial radius in meters.
@@ -335,6 +337,8 @@ struct GenericPosRotSensorConfig {
     double epoch_interval;
 };
 
-}
+/// @}
+
+};
 
 #endif

@@ -5,9 +5,8 @@
 
 #include "intnavlib.h"
 
-// To ensure full precisiion
-// #define EIGEN_DONT_VECTORIZE
-// #define EIGEN_FAST_MATH 0
+/// @example ins_ecef.cpp
+/// Inertial navigation example in ECEF frame
 
 using namespace intnavlib;
 
