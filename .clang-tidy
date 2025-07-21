@@ -1,5 +1,5 @@
-Checks: 'clang-analyzer-*,bugprone-*,modernize-*,performance-*, readability-identifier-naming'
-# Possible checks: 'clang-analyzer-*,bugprone-*,modernize-*,performance-*', readability-*,cppcoreguidelines-*,misc-unused-parameters,hicpp-*,readability-identifier-naming
+Checks: 'clang-analyzer-*,bugprone-*,performance-*'
+# Possible checks: clang-diagnostic-*, clang-analyzer-*,bugprone-*,modernize-*,performance-*, readability-*,cppcoreguidelines-*,misc-unused-parameters,hicpp-*,readability-identifier-naming
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
 AnalyzeTemporaryDtors: true

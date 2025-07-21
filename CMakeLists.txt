@@ -48,6 +48,49 @@ target_link_libraries( intnavlib
             Eigen3::Eigen
         )
 
+# ================= Tests =================
+
+# https://github.com/google/googletest/tree/main/googletest#incorporating-into-an-existing-cmake-project
+
+find_package(glog REQUIRED)
+
+option(BUILD_TESTING "Enable testing" ON)
+if(BUILD_TESTING)
+    include(CTest)
+    enable_testing()
+
+    # Fetch GoogleTest
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
+    )
+
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    # Get all test sources
+    file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
+
+    # Creeate tests
+    foreach(test_file ${TEST_SOURCES})
+        get_filename_component(test_name ${test_file} NAME_WE)
+        add_executable(${test_name} ${test_file})
+        target_link_libraries(${test_name}
+            PRIVATE
+                gtest
+                gtest_main
+                ${OPENTHREADS_LIBRARY}
+                Eigen3::Eigen
+                glog::glog
+                intnavlib
+        )
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach()
+endif()
+
+# ================= Install =================
+
 # Install instructions
 include(GNUInstallDirs)
 install(TARGETS intnavlib

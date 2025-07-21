@@ -1,7 +1,7 @@
 # IntNavLib
 
-This is my playground c++ integrated navigation library.
-The aim is to have a modular C++ API that can be used in integrated navigation applications. Integrated navigation applications using the IntNavLib API, including ROS2 nodes, are in the [apps](/apps/) folder.
+IntNavLib is a C++ integrated navigation library with a focus on readability, modularity, and documentation.
+Integrated navigation example applications using the IntNavLib API, including a ROS2 app, are in the [apps](/apps/) folder.
 
 The code is inspired by [Principles of GNSS, Inertial, and Multisensor Integrated Navigation](https://ieeexplore.ieee.org/document/9101092) by Paul Groves.
 
@@ -17,6 +17,15 @@ Reference:
 
 ![image](media/Figure_1.png)
 
+## Documentation
+
+Documentation is enabled by Doxygen-compatible comments. Use the provided Doxyfile to generate project documentation.
+
+```
+mkdir -p docs/doxygen
+doxygen Doxyfile
+firefox docs/doxygen/html/index.html
+```
 
 ## Build & install instructions
 
