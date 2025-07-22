@@ -254,7 +254,7 @@ int main(int argc, char** argv)
                             lc_kf_config,
                             tor_i);
 
-        // ========== INTEGRATE POS MEASUREMENTS ==========
+        // ========== INTEGRATE  MEASUREMENTS ==========
 
         
         double tor_s = true_nav_ned.time - time_last_pos_sens;

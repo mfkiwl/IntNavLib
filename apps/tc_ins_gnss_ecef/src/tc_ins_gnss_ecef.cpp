@@ -312,7 +312,7 @@ int main(int argc, char** argv)
 
         LOG(INFO) << "P propagation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_unc_prop - start_unc_prop).count() << "ns";
 
-        // ========== INTEGRATE POS MEASUREMENTS ==========
+        // ========== INTEGRATE  MEASUREMENTS ==========
 
         
         double tor_s = true_nav_ned.time - time_last_gnss;
