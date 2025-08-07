@@ -145,6 +145,8 @@ struct NavSolutionEcef {
 /// \brief Structure to hold the state estimation after a Loosely Coupled (LC) Kalman Filter update.
 struct StateEstEcefLc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    /// Wether update passed checks or not
+    bool valid;
     /// The estimated navigation solution in ECEF frame.
     NavSolutionEcef nav_sol;
     /// Estimated accelerometer biases.
@@ -158,6 +160,8 @@ struct StateEstEcefLc {
 /// \brief Structure to hold the state estimation after a Tightly Coupled (TC) Kalman Filter update.
 struct StateEstEcefTc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    /// Wether update passed checks or not
+    bool valid;
     /// The estimated navigation solution in ECEF frame.
     NavSolutionEcef nav_sol;
     /// Estimated accelerometer biases.
