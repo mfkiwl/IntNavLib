@@ -59,89 +59,9 @@ int main(int argc, char** argv)
 
     ImuErrors imu_errors;
 
-    // Accelerometer biases (micro-g, converted to m/s^2; body axes)
-    imu_errors.b_a << 900.0,-1300.0,800.0;
-    imu_errors.b_a = imu_errors.b_a * micro_g_to_meters_per_second_squared;
-
-    // Gyro biases (deg/hour, converted to rad/sec; body axes)
-    imu_errors.b_g << -9.0, 13.0, -8.0;
-    imu_errors.b_g = imu_errors.b_g * deg_to_rad / 3600.0;
-
-    // Accelerometer scale factor and cross coupling errors (ppm, converted to
-    // unitless; body axes)
-    imu_errors.M_a << 500.0, -300.0, 200.0,
-                    -150.0, -600.0, 250.0,
-                    -250.0,  100.0, 450.0;
-    imu_errors.M_a = imu_errors.M_a * 1.0e-6;
-
-    // Gyro scale factor and cross coupling errors (ppm, converted to unitless;
-    // body axes)
-    imu_errors.M_g << 400.0, -300.0,  250.0,
-                        0.0, -300.0, -150.0,
-                        0.0,    0.0, -350.0; 
-    imu_errors.M_g = imu_errors.M_g * 1.0e-6;
-
-    // Gyro g-dependent biases (deg/hour/g, converted to rad-sec/m; body axes)
-    imu_errors.G_g << 0.9, -1.1, -0.6,
-                    -0.5,  1.9, -1.6,
-                    0.3,  1.1, -1.3;
-    imu_errors.G_g = imu_errors.G_g * deg_to_rad / (3600.0 * 9.80665);  
-
-    // Accelerometer noise root PSD (micro-g per root Hz, converted to m s^-1.5)                
-    imu_errors.accel_noise_root_PSD = 100.0 * micro_g_to_meters_per_second_squared;
-
-    // Gyro noise root PSD (deg per root hour, converted to rad s^-0.5)                
-    imu_errors.gyro_noise_root_PSD = 0.01 * deg_to_rad / 60.0;
-
-    // Accelerometer quantization level (m/s^2)
-    imu_errors.accel_quant_level = 1.0e-2;
-
-    // Gyro quantization level (rad/s)
-    imu_errors.gyro_quant_level = 2.0e-4;
-
     // ============== GNSS config ==============
 
     GnssConfig gnssConfig;
-
-    // Interval between GNSS epochs (s)
-    gnssConfig.epoch_interval = 0.5;
-
-    // Initial estimated position (m; ECEF)
-    gnssConfig.init_est_r_ea_e = Eigen::Vector3d::Zero();
-
-    // Number of satellites in constellation
-    gnssConfig.no_sat = 30.0;
-    // Orbital radius of satellites (m)
-    gnssConfig.r_os = 2.656175E7;
-    // Inclination angle of satellites (deg)
-    gnssConfig.inclination = 55.0;
-    // Longitude offset of constellation (deg)
-    gnssConfig.const_delta_lambda = 0.0;
-    // Timing offset of constellation (s)
-    gnssConfig.const_delta_t = 0.0;
-
-    // Mask angle (deg)
-    gnssConfig.mask_angle = 10.0;
-    // Signal in space error SD (m) *Give residual where corrections are applied
-    gnssConfig.SIS_err_SD = 1.0;
-    // Zenith ionosphere error SD (m) *Give residual where corrections are applied
-    gnssConfig.zenith_iono_err_SD = 2.0;
-    // Zenith troposphere error SD (m) *Give residual where corrections are applied
-    gnssConfig.zenith_trop_err_SD = 0.2;
-    // Code tracking error SD (m) *Can extend to account for multipath
-    gnssConfig.code_track_err_SD = 1.0;
-    // Range rate tracking error SD (m/s) *Can extend to account for multipath
-    gnssConfig.rate_track_err_SD = 0.02;
-    // Receiver clock offset at time=0 (m);
-    gnssConfig.rx_clock_offset = 10000.0;
-    // Receiver clock drift at time=0 (m/s);
-    gnssConfig.rx_clock_drift = 100.0;
-
-    // ============== Position sensor config ==============
-
-    GenericPosSensorConfig generic_pos_sensor_config;
-    generic_pos_sensor_config.std_pos = 2.5;
-    generic_pos_sensor_config.epoch_interval = 0.5;
 
     // ============== Position + Attitude sensor config ==============
 
@@ -153,26 +73,6 @@ int main(int argc, char** argv)
     // ============== KF config ==============
 
     KfConfig lc_kf_config;
-    // Initial attitude uncertainty per axis (deg, converted to rad)
-    lc_kf_config.init_att_unc = deg_to_rad * 1.0;
-    // Initial velocity uncertainty per axis (m/s)
-    lc_kf_config.init_vel_unc = 0.1;
-    // Initial position uncertainty per axis (m)
-    lc_kf_config.init_pos_unc = 10.0;
-    // Initial accelerometer bias uncertainty per instrument (micro-g, converted
-    // to m/s^2)
-    lc_kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
-    // Initial gyro bias uncertainty per instrument (deg/hour, converted to rad/sec)
-    lc_kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
-
-    // Gyro noise PSD (deg^2 per hour, converted to rad^2/s)                
-    lc_kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
-    // Accelerometer noise PSD (micro-g^2 per Hz, converted to m^2 s^-3)                
-    lc_kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
-    // Accelerometer bias random walk PSD (m^2 s^-5)
-    lc_kf_config.accel_bias_PSD = 1.0E-7;
-    // Gyro bias random walk PSD (rad^2 s^-3)
-    lc_kf_config.gyro_bias_PSD = 2.0E-12;
 
     // ============ Declare persistent variables ============
 
