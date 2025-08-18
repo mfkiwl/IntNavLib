@@ -3,9 +3,11 @@
 # This script builds the IntNavLib library and all associated applications.
 #
 # Usage:
-# ./build.sh [BuildType]
+# ./build.sh [--clean] [BuildType]
 #
-# BuildType can be "Debug" or "Release". It defaults to "Release".
+# Options:
+#   --clean      Remove all build folders before building
+#   BuildType    "Debug" or "Release" (default: Release)
 #
 # The script will:
 # 1. Build IntNavLib with the specified build type.
@@ -13,47 +15,59 @@
 # 3. Build all applications in the 'apps' directory, linking against the
 #    just-installed IntNavLib.
 
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
 # --- Configuration ---
-
-# Determine build type from the first argument. Default to Release.
 BUILD_TYPE="Release"
-if [[ "$1" =~ ^([Dd]ebug)$ ]]; then
-  BUILD_TYPE="Debug"
-fi
+CLEAN_BUILD=false
 
-# Set the installation prefix for the library.
-# Using $HOME for a user-local installation.
+# Parse args
+for arg in "$@"; do
+  case "$arg" in
+    --clean)
+      CLEAN_BUILD=true
+      ;;
+    [Dd]ebug)
+      BUILD_TYPE="Debug"
+      ;;
+    [Rr]elease)
+      BUILD_TYPE="Release"
+      ;;
+  esac
+done
+
 INSTALL_PREFIX="$HOME/local_install"
-
-# Get the absolute path of the script's directory (repository root).
 REPO_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 echo "================================================="
 echo "IntNavLib Full Build Script"
 echo "================================================="
-echo "Build Type:         $BUILD_TYPE"
+echo "Build Type:           $BUILD_TYPE"
 echo "Installation Prefix:  $INSTALL_PREFIX"
 echo "Repository Root:      $REPO_ROOT"
+echo "Clean Build:          $CLEAN_BUILD"
 echo "================================================="
 
-# --- 1. Build and install IntNavLib library ---
+# --- Clean step ---
+if [ "$CLEAN_BUILD" = true ]; then
+  echo
+  echo "--> Cleaning all build directories..."
+  rm -rf "$REPO_ROOT/build"
+  find "$REPO_ROOT/apps" -type d -name build -exec rm -rf {} +
+  find "$REPO_ROOT/apps" -type d -name install -exec rm -rf {} +
+  echo "--> Clean complete."
+  echo
+fi
 
-echo
+# --- 1. Build and install IntNavLib library ---
 echo "--> Building and installing IntNavLib library..."
 echo
 
-# Create build directory for the library
 LIB_BUILD_DIR="$REPO_ROOT/build"
 mkdir -p "$LIB_BUILD_DIR"
 cd "$LIB_BUILD_DIR"
 
-# Configure with CMake
 cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"
-
-# Build and install
 make -j$(nproc)
 make install
 
@@ -62,7 +76,6 @@ echo "--> IntNavLib installed successfully to $INSTALL_PREFIX"
 echo
 
 # --- 2. Build all applications ---
-
 echo "--> Building all applications in 'apps' directory..."
 echo
 
@@ -78,7 +91,8 @@ for app_path in "$APPS_DIR"/*; do
     if [ -f "$app_path/package.xml" ]; then
       echo "--> Detected ROS 2 package. Using colcon."
       cd "$app_path"
-      colcon build --install-base "install" --cmake-args -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX"
+      colcon build --install-base "install" \
+        --cmake-args -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX"
     else
       echo "--> Detected standard CMake project."
       APP_BUILD_DIR="$app_path/build"

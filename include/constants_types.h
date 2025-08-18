@@ -110,6 +110,30 @@ struct ImuErrors {
     double accel_quant_level;
     /// Gyro quantization level (rad/s).
     double gyro_quant_level;
+    
+    /// Default constructor: tactical grade IMU
+    ImuErrors() {
+        b_a << 900.0,-1300.0,800.0;
+        b_a = b_a * micro_g_to_meters_per_second_squared;
+        b_g << -9.0, 13.0, -8.0;
+        b_g = b_g * deg_to_rad / 3600.0;
+        M_a << 500.0, -300.0, 200.0,
+                        -150.0, -600.0, 250.0,
+                        -250.0,  100.0, 450.0;
+        M_a = M_a * 1.0e-6;
+        M_g << 400.0, -300.0,  250.0,
+                            0.0, -300.0, -150.0,
+                            0.0,    0.0, -350.0; 
+        M_g = M_g * 1.0e-6;
+        G_g << 0.9, -1.1, -0.6,
+                        -0.5,  1.9, -1.6,
+                        0.3,  1.1, -1.3;
+        G_g = G_g * deg_to_rad / (3600.0 * 9.80665);  
+        accel_noise_root_PSD = 100.0 * micro_g_to_meters_per_second_squared;
+        gyro_noise_root_PSD = 0.01 * deg_to_rad / 60.0;
+        accel_quant_level = 1.0e-2;
+        gyro_quant_level = 2.0e-4;
+    }
 };
 
 /// \brief Structure to hold navigation solution in the NED (North, East, Down) frame.
@@ -236,10 +260,25 @@ struct KfConfig {
     /// Receiver clock phase-drift PSD (m^2/s)
     double clock_phase_PSD;
 
+    // Default constructor: tuned for tactical grade IMU
+    KfConfig() {
+        init_att_unc = deg_to_rad * 1.0;
+        init_vel_unc = 0.1;
+        init_pos_unc = 10.0;
+        init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
+        init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+        gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
+        accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
+        accel_bias_PSD = 1.0E-7;
+        gyro_bias_PSD = 2.0E-12;
+        clock_freq_PSD = 1;
+        clock_phase_PSD = 1;
+    }
 };
 
 /// \brief Structure to configure GNSS simulation parameters.
 struct GnssConfig {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     /// Interval between GNSS epochs (s)
     double epoch_interval;
     /// Initial estimated position (m; ECEF)
@@ -278,6 +317,27 @@ struct GnssConfig {
     /// SDs for tc integration
     double pseudo_range_sd;
     double range_rate_sd;
+
+    /// Default constructor
+    GnssConfig() {
+        epoch_interval = 0.5;
+        init_est_r_ea_e = Eigen::Vector3d::Zero();
+        no_sat = 30.0;
+        r_os = 2.656175E7;
+        inclination = 55.0;
+        const_delta_lambda = 0.0;
+        const_delta_t = 0.0;
+        mask_angle = 10.0;
+        SIS_err_SD = 1.0;
+        zenith_iono_err_SD = 2.0;
+        zenith_trop_err_SD = 0.2;
+        code_track_err_SD = 1.0;
+        rate_track_err_SD = 0.02;
+        rx_clock_offset = 10000.0;
+        rx_clock_drift = 100.0;
+        lc_pos_sd = 2.5;
+        lc_vel_sd = 0.1;
+    }
 };
 
 /// \brief Structure to hold GNSS satellite positions and velocities.
