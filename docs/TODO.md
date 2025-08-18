@@ -14,13 +14,25 @@
 
 - Particle filter
 
-- Add X2 (NIS) Integrity check
+- real time consistency check
+
+- real time whiteness check
+
+- isolate ekf update function?
+
+- random error init in apps, w gaussian dist
+
+- plot innovations
 
 - NEES evaluation
 
 - monte carlo
 
 - nav filter class
+
+- make single app, pass desired setup by arg
+
+- in-house trajectory generator
 
 ### Support & Infrastructure
 

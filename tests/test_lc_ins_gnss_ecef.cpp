@@ -4,9 +4,9 @@
 #include <random>
 #include <filesystem>
 
+#include <glog/logging.h>
 
 #include "intnavlib.h"
-#include <glog/logging.h>
 
 using namespace intnavlib;
 

@@ -126,7 +126,7 @@ int main(int argc, char** argv)
     gnss_config.const_delta_t = 0.0;
 
     // Mask angle (deg)
-    gnss_config.mask_angle = 0.0; //10.0;
+    gnss_config.mask_angle = 10.0;
     // Signal in space error SD (m) *Give residual where corrections are applied
     gnss_config.SIS_err_SD = 1.0;
     // Zenith ionosphere error SD (m) *Give residual where corrections are applied
@@ -177,7 +177,7 @@ int main(int argc, char** argv)
     // Gyro bias random walk PSD (rad^2 s^-3)
     tc_kf_config.gyro_bias_PSD = 2.0E-12;
     // Receiver clock frequency-drift PSD (m^2/s^3)
-    tc_kf_config.clock_freq_PSD =1;
+    tc_kf_config.clock_freq_PSD = 1;
     // Receiver clock phase-drift PSD (m^2/s)
     tc_kf_config.clock_phase_PSD = 1;
 
@@ -278,7 +278,7 @@ int main(int argc, char** argv)
 
         auto end_imu_sim = std::chrono::high_resolution_clock::now();
 
-        LOG(INFO) << "Imu sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_imu_sim - start_imu_sim).count() << "ns";
+        // LOG(INFO) << "Imu sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_imu_sim - start_imu_sim).count() << "ns";
 
 
         // ========== NAV EQUATIONS ==========
@@ -291,7 +291,7 @@ int main(int argc, char** argv)
 
         auto end_nav_eqns = std::chrono::high_resolution_clock::now();
 
-        LOG(INFO) << "Nav equations: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_nav_eqns - start_nav_eqns).count() << "ns";
+        // LOG(INFO) << "Nav equations: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_nav_eqns - start_nav_eqns).count() << "ns";
 
 
         // ========== PROP UNCERTAINTIES ==========
@@ -310,7 +310,7 @@ int main(int argc, char** argv)
 
         auto end_unc_prop = std::chrono::high_resolution_clock::now();
 
-        LOG(INFO) << "P propagation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_unc_prop - start_unc_prop).count() << "ns";
+        // LOG(INFO) << "P propagation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_unc_prop - start_unc_prop).count() << "ns";
 
         // ========== INTEGRATE  MEASUREMENTS ==========
 
@@ -334,7 +334,7 @@ int main(int argc, char** argv)
 
             auto end_gnss_sim = std::chrono::high_resolution_clock::now();
 
-            LOG(INFO) << "GNSS sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_sim - start_gnss_sim).count() << "ns";
+            // LOG(INFO) << "GNSS sim: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_gnss_sim - start_gnss_sim).count() << "ns";
 
             // KF update -> update posterior
             // if no update, best est is prior
@@ -366,7 +366,7 @@ int main(int argc, char** argv)
 
         }
 
-        LOG(INFO) << " ============== ";
+        // LOG(INFO) << " ============== ";
         
         // ========== COMPUTE ERRORS ==========
 

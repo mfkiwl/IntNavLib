@@ -3,6 +3,8 @@
 #include <random>
 #include <filesystem>
 
+#include <glog/logging.h>
+
 #include "intnavlib.h"
 
 /// @example lc_ins_pos_ecef.cpp
@@ -279,10 +281,14 @@ int main(int argc, char** argv)
             StateEstEcefLc est_state_ecef_post = lcUpdateKFPosRotEcef(pos_rot_meas_ecef, 
                                                                     est_state_ecef_prior);
 
-            P_matrix = est_state_ecef_post.P_matrix;
-            est_nav_ecef = est_state_ecef_post.nav_sol;
-            est_acc_bias = est_state_ecef_post.acc_bias;
-            est_gyro_bias = est_state_ecef_post.gyro_bias;
+            // If valid, update navigation solution
+            if(est_state_ecef_post.valid) {
+                P_matrix = est_state_ecef_post.P_matrix;
+                est_nav_ecef = est_state_ecef_post.nav_sol;
+                est_acc_bias = est_state_ecef_post.acc_bias;
+                est_gyro_bias = est_state_ecef_post.gyro_bias;
+            }
+            else LOG(ERROR) << "Update failed real-time consistency check at t = "<< true_nav_ned.time;
         }
 
         // ========== COMPUTE ERRORS ==========
