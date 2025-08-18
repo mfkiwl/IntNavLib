@@ -14,9 +14,13 @@ using namespace intnavlib;
 
 int main(int argc, char** argv)
 {   
+    google::InitGoogleLogging(argv[0]);
+    FLAGS_stderrthreshold = 0; // INFO: 0, WARNING: 1, ERROR: 2, FATAL: 3
+    FLAGS_colorlogtostderr = 1;
 
     if(argc != 2) {
-        throw std::runtime_error("Pass the motion profile path");
+        LOG(ERROR) << "Pass the motion profile path";
+        return 1;
     }
 
     // Input profile filename
