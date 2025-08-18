@@ -1,6 +1,8 @@
 #ifndef KALMAN_H
 #define KALMAN_H
 
+#include <boost/math/distributions/chi_squared.hpp>
+
 #include "constants_types.h"
 #include "helpers.h"
 
@@ -158,9 +160,11 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
 /// \param[in] pos_meas The position measurement in ECEF frame.
 /// \param[in] state_est_prior The prior estimated state (navigation solution and biases)
 /// and its covariance matrix.
+/// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
 StateEstEcefLc lcUpdateKFPosEcef (const PosMeasEcef & pos_meas, 
-                                    const StateEstEcefLc & state_est_old);
+                                    const StateEstEcefLc & state_est_old,
+                                    const double & p_value = 0.99);
 
 /// \brief Performs a Loosely Coupled (LC) Kalman Filter update using a GNSS position and velocity measurement.
 /// This is a closed-loop error-state KF update that corrects the navigation solution
@@ -227,11 +231,12 @@ Navigation solution update
 
 */
 /// \param[in] pos_vel_gnss_meas The GNSS position and velocity measurement in ECEF frame.
-/// \param[in] state_est_prior The prior estimated state (navigation solution and biases)
-/// and its covariance matrix.
+/// \param[in] state_est_prior The prior estimated state (navigation solution and biases) and its covariance matrix.
+/// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
 StateEstEcefLc lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
-                                    const StateEstEcefLc & state_est_old);
+                                    const StateEstEcefLc & state_est_old,
+                                    const double & p_value = 0.99);
 
 /// \brief Performs a Tightly Coupled (TC) Kalman Filter update using GNSS pseudo-range and pseudo-range rate measurements.
 /// This is a closed-loop error-state KF update that corrects the navigation solution,
@@ -300,10 +305,12 @@ Navigation solution update
 /// \param[in] state_est_prior The prior estimated state (navigation solution, biases, and clock states)
 /// and its covariance matrix.
 /// \param[in] tor_s Elapsed time since last update in seconds.
+/// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefTc structure containing the updated state estimation.
 StateEstEcefTc tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas, 
                                     const StateEstEcefTc & state_est_prior,
-                                    const double & tor_s);
+                                    const double & tor_s,
+                                    const double & p_value = 0.99);
 
 /// \brief Performs a Loosely Coupled (LC) Kalman Filter update using an ECEF position and rotation measurement.
 /// This is a closed-loop error-state KF update that corrects the navigation solution
@@ -311,9 +318,11 @@ StateEstEcefTc tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
 /// \param[in] pos_rot_meas The position and rotation measurement in ECEF frame.
 /// \param[in] state_est_prior The prior estimated state (navigation solution and biases)
 /// and its covariance matrix.
+/// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
 StateEstEcefLc lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
-                                    const StateEstEcefLc & state_est_old);
+                                    const StateEstEcefLc & state_est_old,
+                                    const double & p_value = 0.99);
 
 /// @}
 

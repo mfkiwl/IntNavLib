@@ -301,14 +301,17 @@ private:
                 gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * std::pow(2.5,2); // Covariance matrix
 
                 // Update navigation state using GNSS
-                StateEstEcefLc est_state_ecef_prior{est_nav_ecef_, est_acc_bias_, est_gyro_bias_, P_matrix_};
+                StateEstEcefLc est_state_ecef_prior{true, est_nav_ecef_, est_acc_bias_, est_gyro_bias_, P_matrix_};
                 StateEstEcefLc est_state_ecef_post = lcUpdateKFPosEcef(gnss_meas, est_state_ecef_prior);
 
-                // Update state variables
-                est_nav_ecef_ = est_state_ecef_post.nav_sol;
-                est_acc_bias_ = est_state_ecef_post.acc_bias;
-                est_gyro_bias_ = est_state_ecef_post.gyro_bias;
-                P_matrix_ = est_state_ecef_post.P_matrix;
+                // If valid, update navigation solution
+                if(est_state_ecef_post.valid) {
+                    est_nav_ecef_ = est_state_ecef_post.nav_sol;
+                    est_acc_bias_ = est_state_ecef_post.acc_bias;
+                    est_gyro_bias_ = est_state_ecef_post.gyro_bias;
+                    P_matrix_ = est_state_ecef_post.P_matrix;
+                }
+                else RCLCPP_ERROR(this->get_logger(), "Update failed real-time consistency check");
             }
 
             // Publish estimated pose

@@ -169,6 +169,8 @@ struct NavSolutionEcef {
 /// \brief Structure to hold the state estimation after a Loosely Coupled (LC) Kalman Filter update.
 struct StateEstEcefLc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    /// Wether update passed checks or not
+    bool valid;
     /// The estimated navigation solution in ECEF frame.
     NavSolutionEcef nav_sol;
     /// Estimated accelerometer biases.
@@ -182,6 +184,8 @@ struct StateEstEcefLc {
 /// \brief Structure to hold the state estimation after a Tightly Coupled (TC) Kalman Filter update.
 struct StateEstEcefTc {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    /// Wether update passed checks or not
+    bool valid;
     /// The estimated navigation solution in ECEF frame.
     NavSolutionEcef nav_sol;
     /// Estimated accelerometer biases.
@@ -267,6 +271,8 @@ struct KfConfig {
         init_pos_unc = 10.0;
         init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
         init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+        init_clock_offset_unc = 10.0;
+        init_clock_drift_unc = 0.1;
         gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
         accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
         accel_bias_PSD = 1.0E-7;
@@ -337,6 +343,8 @@ struct GnssConfig {
         rx_clock_drift = 100.0;
         lc_pos_sd = 2.5;
         lc_vel_sd = 0.1;
+        pseudo_range_sd = 2.5;
+        range_rate_sd = 0.1;
     }
 };
 

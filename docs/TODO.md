@@ -2,11 +2,37 @@
 
 ### Core Development
 
+- avoid duplication in apps, tests. write interface functions / classes to init sensors, run sim
+
+- no matrix inversions!
+
 - ros2 app: do fast imu prop so state is not delayed.
 
-- Fuse Visual Odometry (simplified groves style)
+- Visual Odometry (simplified groves/px4 style)
 
-- Add X2 Integrity check
+- Multiple hypotheses 
+
+- Particle filter
+
+- real time consistency check
+
+- real time whiteness check
+
+- isolate ekf update function?
+
+- random error init in apps, w gaussian dist
+
+- plot innovations
+
+- NEES evaluation
+
+- monte carlo
+
+- nav filter class
+
+- make single app, pass desired setup by arg
+
+- in-house trajectory generator
 
 ### Support & Infrastructure
 
