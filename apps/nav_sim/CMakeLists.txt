@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(lc_ins_pos_ecef)
+project(nav_sim)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,11 +11,11 @@ find_package(glog REQUIRED)
 
 find_package(intnavlib REQUIRED)
 
-add_executable(lc_ins_pos_ecef 
-                    src/lc_ins_pos_ecef.cpp
+add_executable(nav_sim 
+                    src/nav_sim.cpp
                     )
 
-target_link_libraries(lc_ins_pos_ecef  
+target_link_libraries(nav_sim  
                                     PRIVATE
                                         ${OPENTHREADS_LIBRARY}
                                         Eigen3::Eigen

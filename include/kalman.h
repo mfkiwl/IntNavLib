@@ -5,6 +5,7 @@
 
 #include "constants_types.h"
 #include "helpers.h"
+#include "nav_equations.h"
 
 namespace intnavlib {
 
@@ -12,18 +13,24 @@ namespace intnavlib {
 /// Navigation Kalman filter utilities.
 /// @{
 
-/// \brief Initializes the error covariance matrix for a Loosely Coupled (LC) Kalman Filter.
-/// \param[in] lc_kf_config Configuration parameters for the LC Kalman Filter,
-/// including initial uncertainties for attitude, velocity, position, and biases.
-/// \return An Eigen::Matrix<double,15,15> representing the initialized error covariance matrix.
-Eigen::Matrix<double,15,15> initializeLcPMmatrix(const KfConfig & lc_kf_config);
-
-/// \brief Initializes the error covariance matrix for a Tightly Coupled (TC) Kalman Filter.
-/// \param[in] tc_kf_config Configuration parameters for the TC Kalman Filter,
+/// \brief Initializes the error covariance matrix for a navigation Kalman Filter.
+/// \param[in] tc_kf_config Configuration parameters for the Kalman Filter,
 /// including initial uncertainties for attitude, velocity, position, biases,
 /// and clock offset/drift.
 /// \return An Eigen::Matrix<double,17,17> representing the initialized error covariance matrix.
-Eigen::Matrix<double,17,17> initializeTcPMmatrix(const KfConfig & tc_kf_config);
+Eigen::Matrix<double,17,17> initializePMmatrix(const KfConfig & tc_kf_config);
+
+/// \brief Utility to perform both state prediction and uncertainty propagation (Loose)
+StateEstEcef lcPredictKF(const StateEstEcef & state_est_old, 
+                            const ImuMeasurements & imu_meas,
+                            const KfConfig & kf_config,
+                            const double & tor_i);
+
+/// \brief Utility to perform both state prediction and uncertainty propagation (Tight)
+StateEstEcef tcPredictKF(const StateEstEcef & state_est_old, 
+                            const ImuMeasurements & imu_meas,
+                            const KfConfig & kf_config,
+                            const double & tor_i);
 
 /// \brief Propagates the error-state uncertainty for a Loosely Coupled (LC) Kalman Filter.
 /// This function updates the error covariance matrix based on the system dynamics
@@ -162,8 +169,8 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
 /// and its covariance matrix.
 /// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
-StateEstEcefLc lcUpdateKFPosEcef (const PosMeasEcef & pos_meas, 
-                                    const StateEstEcefLc & state_est_old,
+StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas, 
+                                    const StateEstEcef & state_est_old,
                                     const double & p_value = 0.99);
 
 /// \brief Performs a Loosely Coupled (LC) Kalman Filter update using a GNSS position and velocity measurement.
@@ -234,8 +241,8 @@ Navigation solution update
 /// \param[in] state_est_prior The prior estimated state (navigation solution and biases) and its covariance matrix.
 /// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
-StateEstEcefLc lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
-                                    const StateEstEcefLc & state_est_old,
+StateEstEcef lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
+                                    const StateEstEcef & state_est_old,
                                     const double & p_value = 0.99);
 
 /// \brief Performs a Tightly Coupled (TC) Kalman Filter update using GNSS pseudo-range and pseudo-range rate measurements.
@@ -307,8 +314,8 @@ Navigation solution update
 /// \param[in] tor_s Elapsed time since last update in seconds.
 /// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefTc structure containing the updated state estimation.
-StateEstEcefTc tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas, 
-                                    const StateEstEcefTc & state_est_prior,
+StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas, 
+                                    const StateEstEcef & state_est_prior,
                                     const double & tor_s,
                                     const double & p_value = 0.99);
 
@@ -320,8 +327,8 @@ StateEstEcefTc tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
 /// and its covariance matrix.
 /// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
-StateEstEcefLc lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
-                                    const StateEstEcefLc & state_est_old,
+StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
+                                    const StateEstEcef & state_est_old,
                                     const double & p_value = 0.99);
 
 /// @}

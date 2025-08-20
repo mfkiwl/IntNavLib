@@ -71,7 +71,7 @@ def plot_errors(csv_file):
 def main():
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python plot_errors.py <csv_file>")
+        print("Usage: python plot_errors_ned.py <csv_file>")
         return
     
     csv_file = sys.argv[1]

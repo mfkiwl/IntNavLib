@@ -60,17 +60,17 @@ def plot_errors(csv_file):
     
     axs[2, 0].plot(time, roll_error_sigma, color=[0, 0.7, 0.7], linestyle="dashed", linewidth=1.5)
     axs[2, 0].plot(time, roll_error, color=[0, 0.7, 0.7], linewidth=1.5)
-    axs[2, 0].set_title('Roll error, deg')
+    axs[2, 0].set_title('X error, deg')
     axs[2, 0].set_xlabel('Time, s')
     
     axs[2, 1].plot(time, pitch_error, color=[0.7, 0, 0.7], linewidth=1.5)
     axs[2, 1].plot(time, pitch_error_sigma, color=[0.7, 0, 0.7], linestyle="dashed", linewidth=1.5)
-    axs[2, 1].set_title('Pitch error, deg')
+    axs[2, 1].set_title('Y error, deg')
     axs[2, 1].set_xlabel('Time, s')
     
     axs[2, 2].plot(time, yaw_error, color=[0.7, 0.7, 0], linewidth=1.5)
     axs[2, 2].plot(time, yaw_error_sigma, color=[0.7, 0.7, 0], linestyle="dashed", linewidth=1.5)
-    axs[2, 2].set_title('Yaw error, deg')
+    axs[2, 2].set_title('Z error, deg')
     axs[2, 2].set_xlabel('Time, s')
     
     # Display the plot
@@ -80,7 +80,7 @@ def plot_errors(csv_file):
 def main():
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python plot_errors.py <csv_file>")
+        print("Usage: python plot_errors_sigmas_ecef.py <csv_file>")
         return
     
     csv_file = sys.argv[1]

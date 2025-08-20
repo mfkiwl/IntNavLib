@@ -249,13 +249,13 @@ ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol,
 
     // Attitude error calculation
     Eigen::Matrix3d delta_C_b_n = est_nav_sol.C_b_n * true_nav_sol.C_b_n.transpose();
-    Eigen::Vector3d delta_eul_nb_n = -rToRpy(delta_C_b_n);
+    Eigen::Vector3d delta_rot_nb_n = -rToRpy(delta_C_b_n);
 
     ErrorsNed errors_ned;
     errors_ned.time = true_nav_sol.time;
     errors_ned.delta_r_eb_n = delta_r_eb_n;
     errors_ned.delta_v_eb_n = delta_v_eb_n;
-    errors_ned.delta_eul_nb_n = delta_eul_nb_n;
+    errors_ned.delta_rot_nb_n = delta_rot_nb_n;
 
     return errors_ned;
 }

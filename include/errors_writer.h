@@ -46,7 +46,7 @@ public:
         Eigen::Vector3d delta_v_eb_n = row.delta_v_eb_n;
 
         // Convert Euler angles (in radians) to degrees
-        Eigen::Vector3d delta_eul_nb_n = row.delta_eul_nb_n * rad_to_deg;
+        Eigen::Vector3d delta_rot_nb_n = row.delta_rot_nb_n * rad_to_deg;
 
         // Write the row to the CSV file
         file << row.time << ","
@@ -56,9 +56,9 @@ public:
              << delta_v_eb_n[0] << "," // north velocity error
              << delta_v_eb_n[1] << "," // east velocity error
              << delta_v_eb_n[2] << "," // down velocity error
-             << delta_eul_nb_n[0] << "," // roll error
-             << delta_eul_nb_n[1] << "," // pitch error
-             << delta_eul_nb_n[2] << "\n"; // yaw error
+             << delta_rot_nb_n[0] << "," // roll error
+             << delta_rot_nb_n[1] << "," // pitch error
+             << delta_rot_nb_n[2] << "\n"; // yaw error
 
         return true;
     }

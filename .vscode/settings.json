@@ -82,6 +82,10 @@
         "exampleresources": "cpp",
         "spatialreference": "cpp",
         "ranges": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "any": "cpp",
+        "strstream": "cpp",
+        "cfenv": "cpp",
+        "variant": "cpp"
     }
 }

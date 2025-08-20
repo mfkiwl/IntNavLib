@@ -35,8 +35,8 @@ public:
         Eigen::Vector3d sigma_delta_v_eb_e = row.sigma_delta_v_eb_e;
 
         // Convert Euler angles (in radians) to degrees
-        Eigen::Vector3d delta_eul_eb_e = row.delta_eul_eb_e * rad_to_deg;
-        Eigen::Vector3d sigma_delta_eul_eb_e = row.sigma_delta_eul_eb_e * rad_to_deg;
+        Eigen::Vector3d delta_rot_eb_e = row.delta_rot_eb_e * rad_to_deg;
+        Eigen::Vector3d sigma_delta_rot_eb_e = row.sigma_delta_rot_eb_e * rad_to_deg;
 
         // Write the row to the CSV file
         file << row.time << ","
@@ -47,9 +47,9 @@ public:
              << delta_v_eb_e[0] << "," 
              << delta_v_eb_e[1] << ","
              << delta_v_eb_e[2] << ","
-             << delta_eul_eb_e[0] << ","
-             << delta_eul_eb_e[1] << ","
-             << delta_eul_eb_e[2] << ","
+             << delta_rot_eb_e[0] << ","
+             << delta_rot_eb_e[1] << ","
+             << delta_rot_eb_e[2] << ","
 
              << sigma_delta_r_eb_e[0] << "," // Errors sigma
              << sigma_delta_r_eb_e[1] << ","
@@ -57,9 +57,9 @@ public:
              << sigma_delta_v_eb_e[0] << "," 
              << sigma_delta_v_eb_e[1] << ","
              << sigma_delta_v_eb_e[2] << ","
-             << sigma_delta_eul_eb_e[0] << ","
-             << sigma_delta_eul_eb_e[1] << ","
-             << sigma_delta_eul_eb_e[2] << "\n";
+             << sigma_delta_rot_eb_e[0] << ","
+             << sigma_delta_rot_eb_e[1] << ","
+             << sigma_delta_rot_eb_e[2] << "\n";
 
         return true;
     }

@@ -2,6 +2,12 @@
 
 ### Core Development
 
+- better plot no abs value...
+
+- simple filter class that holds state est and does init
+
+- bad euler / dcm conversion
+
 - avoid duplication in apps, tests. write interface functions / classes to init sensors, run sim
 
 - no matrix inversions!

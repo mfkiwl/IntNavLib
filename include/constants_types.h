@@ -166,8 +166,8 @@ struct NavSolutionEcef {
     Eigen::Matrix3d C_b_e;
 };
 
-/// \brief Structure to hold the state estimation after a Loosely Coupled (LC) Kalman Filter update.
-struct StateEstEcefLc {
+/// Structure to hold the error state vector for an ECEF navigation filter.
+struct StateEstEcef {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     /// Wether update passed checks or not
     bool valid;
@@ -177,22 +177,7 @@ struct StateEstEcefLc {
     Eigen::Vector3d acc_bias;
     /// Estimated gyroscope biases.
     Eigen::Vector3d gyro_bias;
-    /// The error covariance matrix.
-    Eigen::Matrix<double,15,15> P_matrix;
-};
-
-/// \brief Structure to hold the state estimation after a Tightly Coupled (TC) Kalman Filter update.
-struct StateEstEcefTc {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    /// Wether update passed checks or not
-    bool valid;
-    /// The estimated navigation solution in ECEF frame.
-    NavSolutionEcef nav_sol;
-    /// Estimated accelerometer biases.
-    Eigen::Vector3d acc_bias;
-    /// Estimated gyroscope biases.
-    Eigen::Vector3d gyro_bias;
-    /// Estimated receiver clock offset.
+    // Estimated receiver clock bias.
     double clock_offset;
     /// Estimated receiver clock drift.
     double clock_drift;
@@ -210,7 +195,7 @@ struct ErrorsNed {
     /// NED Velocity error.
     Eigen::Vector3d delta_v_eb_n;
     /// NED orientation error (Euler angles).
-    Eigen::Vector3d delta_eul_nb_n;
+    Eigen::Vector3d delta_rot_nb_n;
 };
 
 /// \brief Structure to hold navigation errors in ECEF frame along with their estimated standard deviations.
@@ -222,14 +207,14 @@ struct ErrorsSigmasEcef {
     Eigen::Vector3d delta_r_eb_e;
     /// Velocity error in ECEF frame.
     Eigen::Vector3d delta_v_eb_e;
-    /// Orientation error (Euler angles) in ECEF frame.
-    Eigen::Vector3d delta_eul_eb_e;
+    /// Orientation error (rotation vector) in ECEF frame.
+    Eigen::Vector3d delta_rot_eb_e;
     /// Standard deviation of position error in ECEF frame.
     Eigen::Vector3d sigma_delta_r_eb_e;
     /// Standard deviation of velocity error in ECEF frame.
     Eigen::Vector3d sigma_delta_v_eb_e;
-    /// Standard deviation of orientation error (Euler angles) in ECEF frame.
-    Eigen::Vector3d sigma_delta_eul_eb_e;
+    /// Standard deviation of orientation error (rotation ector) in ECEF frame.
+    Eigen::Vector3d sigma_delta_rot_eb_e;
 };
 
 /// \brief Structure to configure Kalman Filter parameters.
@@ -385,24 +370,6 @@ struct GnssLsPosVelClock {
     Eigen::Vector3d v_ea_e;
     /// Estimated receiver clock offset and drift.
     Eigen::Vector2d clock;
-};
-
-/// \brief Structure to configure a generic position sensor.
-struct GenericPosSensorConfig {
-    /// Standard deviation on position for all axes (m)
-    double std_pos;
-    /// Interval between pos sensor epochs (s)
-    double epoch_interval;
-};
-
-/// \brief Structure to configure a generic position and rotation sensor.
-struct GenericPosRotSensorConfig {
-    /// Standard deviation on position for all axes (m)
-    double std_pos;
-    /// Standard deviation on rotation for all axes (rad)
-    double std_rot;
-    /// Interval between pos rot sensor epochs (s)
-    double epoch_interval;
 };
 
 /// @}
