@@ -13,13 +13,6 @@ namespace intnavlib {
 /// Navigation Kalman filter utilities.
 /// @{
 
-/// \brief Initializes the error covariance matrix for a navigation Kalman Filter.
-/// \param[in] tc_kf_config Configuration parameters for the Kalman Filter,
-/// including initial uncertainties for attitude, velocity, position, biases,
-/// and clock offset/drift.
-/// \return An Eigen::Matrix<double,17,17> representing the initialized error covariance matrix.
-Eigen::Matrix<double,17,17> initializePMmatrix(const KfConfig & tc_kf_config);
-
 /// \brief Utility to perform both state prediction and uncertainty propagation (Loose)
 StateEstEcef lcPredictKF(const StateEstEcef & state_est_old, 
                             const ImuMeasurements & imu_meas,

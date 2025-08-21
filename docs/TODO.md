@@ -4,6 +4,8 @@
 
 - better plot no abs value...
 
+- integrated test after done refactorring app
+
 - simple filter class that holds state est and does init
 
 - bad euler / dcm conversion

@@ -2,35 +2,24 @@
 
 namespace intnavlib {
 
-Eigen::Matrix<double,17,17> initializePMmatrix(const KfConfig & kf_config) {
-
-    Eigen::Matrix<double,17,17> P_matrix;
-
-    // Initialize error covariance matrix
-    P_matrix = Eigen::Matrix<double,17,17>::Zero();
-    P_matrix.block<3,3>(0,0) = Eigen::Matrix3d::Identity() * pow(kf_config.init_att_unc,2); // attitude error
-    P_matrix.block<3,3>(3,3) = Eigen::Matrix3d::Identity() * pow(kf_config.init_vel_unc,2); // vel error
-    P_matrix.block<3,3>(6,6) = Eigen::Matrix3d::Identity() * pow(kf_config.init_pos_unc,2); // pos error
-    P_matrix.block<3,3>(9,9) = Eigen::Matrix3d::Identity() * pow(kf_config.init_b_a_unc,2); // acc bias error
-    P_matrix.block<3,3>(12,12) = Eigen::Matrix3d::Identity() * pow(kf_config.init_b_g_unc,2); // gyro bias error
-    P_matrix(15,15) = pow(kf_config.init_clock_offset_unc,2); // clock offset error
-    P_matrix(16,16) = pow(kf_config.init_clock_drift_unc,2); // clock drift error
-
-    return P_matrix;
-}
-
 StateEstEcef lcPredictKF(const StateEstEcef & state_est_old, 
                         const ImuMeasurements & imu_meas,
                         const KfConfig & lc_kf_config,
                         const double & tor_i) {
+    // Compensate IMU measurements
+    ImuMeasurements imu_meas_comp = imu_meas;
+    imu_meas_comp.f -= state_est_old.acc_bias;
+    imu_meas_comp.omega -= state_est_old.gyro_bias;
+    // Prop uncertainty
     StateEstEcef state_est_ecef = state_est_old;
-    state_est_ecef.P_matrix.block<15,15>(0,0) = lcPropUnc(state_est_ecef.P_matrix.block<15,15>(0,0), 
-                                                            state_est_ecef.nav_sol,
-                                                            ecefToNed(state_est_ecef.nav_sol),
-                                                            imu_meas,
+    state_est_ecef.P_matrix.block<15,15>(0,0) = lcPropUnc(state_est_old.P_matrix.block<15,15>(0,0), 
+                                                            state_est_old.nav_sol,
+                                                            ecefToNed(state_est_old.nav_sol),
+                                                            imu_meas_comp,
                                                             lc_kf_config,
                                                             tor_i);
-    state_est_ecef.nav_sol = navEquationsEcef(state_est_ecef.nav_sol, imu_meas, tor_i);
+    // Predict state
+    state_est_ecef.nav_sol = navEquationsEcef(state_est_ecef.nav_sol, imu_meas_comp, tor_i);
     return state_est_ecef;
 }
 
@@ -38,14 +27,20 @@ StateEstEcef tcPredictKF(const StateEstEcef & state_est_old,
                         const ImuMeasurements & imu_meas,
                         const KfConfig & kf_config,
                         const double & tor_i) {
+    // Compensate IMU measurements
+    ImuMeasurements imu_meas_comp = imu_meas;
+    imu_meas_comp.f -= state_est_old.acc_bias;
+    imu_meas_comp.omega -= state_est_old.gyro_bias;
+    // Prop uncertainty
     StateEstEcef state_est_ecef = state_est_old;
-    state_est_ecef.P_matrix = tcPropUnc(state_est_ecef.P_matrix, 
-                                        state_est_ecef.nav_sol,
-                                        ecefToNed(state_est_ecef.nav_sol),
-                                        imu_meas,
+    state_est_ecef.P_matrix = tcPropUnc(state_est_old.P_matrix, 
+                                        state_est_old.nav_sol,
+                                        ecefToNed(state_est_old.nav_sol),
+                                        imu_meas_comp,
                                         kf_config,
                                         tor_i);
-    state_est_ecef.nav_sol = navEquationsEcef(state_est_ecef.nav_sol, imu_meas, tor_i);
+    // Predict state
+    state_est_ecef.nav_sol = navEquationsEcef(state_est_ecef.nav_sol, imu_meas_comp, tor_i);
     return state_est_ecef;
 }
 

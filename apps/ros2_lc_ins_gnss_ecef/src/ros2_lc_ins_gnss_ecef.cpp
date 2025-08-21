@@ -43,7 +43,7 @@ public:
         pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(out_pose_topic_, 100);
         path_pub_ = this->create_publisher<nav_msgs::msg::Path>(out_pose_topic_ + "_path", 10);
         path_msg_.header.frame_id = "ecef";
-        path_counter = 0;
+        path_counter_ = 0;
         tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
         // Start processing thread
@@ -52,7 +52,7 @@ public:
 
     ~InsGnssNode() {
         done = true;
-        imu_cv.notify_all();
+        imu_cv_.notify_all();
         processing_thread_.join();
         if (processing_thread_.joinable()) {
             processing_thread_.join();
@@ -73,7 +73,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gnss_sub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
-    unsigned int path_counter;
+    unsigned int path_counter_;
     nav_msgs::msg::Path path_msg_;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
@@ -81,7 +81,7 @@ private:
     std::queue<sensor_msgs::msg::Imu::SharedPtr> imu_buffer_;
     std::queue<sensor_msgs::msg::NavSatFix::SharedPtr> gnss_buffer_;
     std::mutex imu_buffer_mutex_;
-    std::condition_variable imu_cv;
+    std::condition_variable imu_cv_;
     std::mutex gnss_buffer_mutex_;
 
     // Init params
@@ -90,13 +90,10 @@ private:
     std::vector<double> init_v_eb_n_;
 
     // Navigation state
-    NavSolutionEcef est_nav_ecef_;
-    Eigen::Vector3d est_acc_bias_;
-    Eigen::Vector3d est_gyro_bias_;
-    Eigen::Matrix<double, 15, 15> P_matrix_;
+    StateEstEcef state_est_ecef_;
 
     // EKF config
-    KfConfig lc_kf_config_;
+    KfConfig kf_config_;
 
     std::thread processing_thread_;
 
@@ -148,15 +145,15 @@ private:
         }
 
         // EKF config
-        lc_kf_config_.init_att_unc = get_parameter("kf_config.init_att_unc").as_double();
-        lc_kf_config_.init_vel_unc = get_parameter("kf_config.init_vel_unc").as_double();
-        lc_kf_config_.init_pos_unc = get_parameter("kf_config.init_pos_unc").as_double();
-        lc_kf_config_.init_b_a_unc = get_parameter("kf_config.init_b_a_unc").as_double();
-        lc_kf_config_.init_b_g_unc = get_parameter("kf_config.init_b_g_unc").as_double();
-        lc_kf_config_.gyro_noise_PSD = get_parameter("kf_config.gyro_noise_PSD").as_double();
-        lc_kf_config_.accel_noise_PSD = get_parameter("kf_config.accel_noise_PSD").as_double();
-        lc_kf_config_.accel_bias_PSD = get_parameter("kf_config.accel_bias_PSD").as_double();
-        lc_kf_config_.gyro_bias_PSD = get_parameter("kf_config.gyro_bias_PSD").as_double();
+        kf_config_.init_att_unc = get_parameter("kf_config.init_att_unc").as_double();
+        kf_config_.init_vel_unc = get_parameter("kf_config.init_vel_unc").as_double();
+        kf_config_.init_pos_unc = get_parameter("kf_config.init_pos_unc").as_double();
+        kf_config_.init_b_a_unc = get_parameter("kf_config.init_b_a_unc").as_double();
+        kf_config_.init_b_g_unc = get_parameter("kf_config.init_b_g_unc").as_double();
+        kf_config_.gyro_noise_PSD = get_parameter("kf_config.gyro_noise_PSD").as_double();
+        kf_config_.accel_noise_PSD = get_parameter("kf_config.accel_noise_PSD").as_double();
+        kf_config_.accel_bias_PSD = get_parameter("kf_config.accel_bias_PSD").as_double();
+        kf_config_.gyro_bias_PSD = get_parameter("kf_config.gyro_bias_PSD").as_double();
 
         // Init nav solution
         init_lla_ = get_parameter("init_lla").as_double_array();
@@ -169,11 +166,12 @@ private:
                                                     init_lla_[2], 
                                                     Eigen::Vector3d(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
                                                     rpyToR(deg_to_rad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2])).transpose()};
-        est_nav_ecef_ = nedToEcef(est_nav_ned);
-
-        est_acc_bias_ = Eigen::Vector3d::Zero();
-        est_gyro_bias_ = Eigen::Vector3d::Zero();
-        P_matrix_ = initializeLcPMmatrix(lc_kf_config_);
+        
+        state_est_ecef_.valid = true;
+        state_est_ecef_.nav_sol = nedToEcef(est_nav_ned);
+        state_est_ecef_.acc_bias = Eigen::Vector3d::Zero();
+        state_est_ecef_.gyro_bias = Eigen::Vector3d::Zero();
+        state_est_ecef_.P_matrix = initializePMmatrix(kf_config_);
 
         // Log loaded parameters for debugging
         
@@ -184,9 +182,9 @@ private:
         RCLCPP_INFO(this->get_logger(), "Init_v_eb_n = %f %f %f", init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]);
         RCLCPP_INFO(this->get_logger(), "Init_rpy_b_n = %f %f %f", init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]);
 
-        RCLCPP_INFO(this->get_logger(), "Init_att_unc = %f", lc_kf_config_.init_att_unc);
-        RCLCPP_INFO(this->get_logger(), "Init_vel_unc = %f", lc_kf_config_.init_vel_unc);
-        RCLCPP_INFO(this->get_logger(), "Init_pos_unc = %f", lc_kf_config_.init_pos_unc);
+        RCLCPP_INFO(this->get_logger(), "Init_att_unc = %f", kf_config_.init_att_unc);
+        RCLCPP_INFO(this->get_logger(), "Init_vel_unc = %f", kf_config_.init_vel_unc);
+        RCLCPP_INFO(this->get_logger(), "Init_pos_unc = %f", kf_config_.init_pos_unc);
 
         RCLCPP_INFO(this->get_logger(), "Nav Filter Initialized! Waiting on measurements...");
     }
@@ -196,7 +194,7 @@ private:
         std::lock_guard<std::mutex> lock(imu_buffer_mutex_);
         if(imu_buffer_.size() < MAX_BUFFER_SIZE_IMU) {
             imu_buffer_.push(msg);
-            imu_cv.notify_one();
+            imu_cv_.notify_one();
         }
         else RCLCPP_ERROR(this->get_logger(), "IMU buffer full: dropping!");
     }
@@ -222,7 +220,7 @@ private:
                 // Wait on IMU buffer
                 std::unique_lock<std::mutex> lock(imu_buffer_mutex_);
                 // If exceed wait time, retry loop
-                if (!imu_cv.wait_for(lock, 5s, [this] { return !imu_buffer_.empty();})) {
+                if (!imu_cv_.wait_for(lock, 5s, [this] { return !imu_buffer_.empty();})) {
                     continue;  // No data received, retry loop
                 }
 
@@ -231,7 +229,7 @@ private:
                 imu_time = imu_stamp.seconds();
                 
                 // If new, use measurement, else just pop
-                if (imu_time > est_nav_ecef_.time)
+                if (imu_time > state_est_ecef_.nav_sol.time)
                     imu_msg = imu_buffer_.front();
                 imu_buffer_.pop();
                 
@@ -255,21 +253,10 @@ private:
                 imu_msg->angular_velocity.z);
             imu_meas.time = imu_time;
 
-            double tor_i = imu_meas.time - est_nav_ecef_.time;
-
-            // Apply bias corrections
-            imu_meas.f -= est_acc_bias_;
-            imu_meas.omega -= est_gyro_bias_;
+            double tor_i = imu_meas.time - state_est_ecef_.nav_sol.time;
 
             // Predict
-            est_nav_ecef_ = navEquationsEcef(est_nav_ecef_, imu_meas, tor_i);
-
-            // Propagate uncertainties
-            // Consider doing this at GNSS rate, if need to speed up
-            {
-                NavSolutionNed est_nav_ned = ecefToNed(est_nav_ecef_);
-                P_matrix_ = lcPropUnc(P_matrix_, est_nav_ecef_, est_nav_ned, imu_meas, lc_kf_config_, tor_i);
-            }
+            state_est_ecef_ = lcPredictKF(state_est_ecef_, imu_meas, kf_config_, tor_i);
 
             // Now, see if we also have a new GNSS measurement
 
@@ -300,18 +287,8 @@ private:
                 gnss_meas.r_eb_e = nedToEcef(NavSolutionNed{0,gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude, Eigen::Vector3d::Zero(), Eigen::Matrix3d::Identity()}).r_eb_e;
                 gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * std::pow(2.5,2); // Covariance matrix
 
-                // Update navigation state using GNSS
-                StateEstEcefLc est_state_ecef_prior{true, est_nav_ecef_, est_acc_bias_, est_gyro_bias_, P_matrix_};
-                StateEstEcefLc est_state_ecef_post = lcUpdateKFPosEcef(gnss_meas, est_state_ecef_prior);
-
-                // If valid, update navigation solution
-                if(est_state_ecef_post.valid) {
-                    est_nav_ecef_ = est_state_ecef_post.nav_sol;
-                    est_acc_bias_ = est_state_ecef_post.acc_bias;
-                    est_gyro_bias_ = est_state_ecef_post.gyro_bias;
-                    P_matrix_ = est_state_ecef_post.P_matrix;
-                }
-                else RCLCPP_ERROR(this->get_logger(), "Update failed real-time consistency check");
+                state_est_ecef_ = lcUpdateKFPosEcef(gnss_meas, state_est_ecef_);
+                
             }
 
             // Publish estimated pose
@@ -319,7 +296,7 @@ private:
 
             // Log nav sol to file
             if(write_log_){
-                NavSolutionNed est_nav_ned = ecefToNed(est_nav_ecef_);
+                NavSolutionNed est_nav_ned = ecefToNed(state_est_ecef_.nav_sol);
                 log_writer_->writeNextRow(est_nav_ned);
             }
         }
@@ -330,26 +307,26 @@ private:
         // ===== Pose + Cov stamped =====
 
         auto pose_msg = geometry_msgs::msg::PoseWithCovarianceStamped();
-        pose_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(est_nav_ecef_.time * 1e9));
+        pose_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(state_est_ecef_.nav_sol.time * 1e9));
         pose_msg.header.frame_id = "ecef";
 
         // Fill in position
-        pose_msg.pose.pose.position.x = est_nav_ecef_.r_eb_e[0];
-        pose_msg.pose.pose.position.y = est_nav_ecef_.r_eb_e[1];
-        pose_msg.pose.pose.position.z = est_nav_ecef_.r_eb_e[2];
+        pose_msg.pose.pose.position.x = state_est_ecef_.nav_sol.r_eb_e[0];
+        pose_msg.pose.pose.position.y = state_est_ecef_.nav_sol.r_eb_e[1];
+        pose_msg.pose.pose.position.z = state_est_ecef_.nav_sol.r_eb_e[2];
 
         // Fill in orientation (convert rotation matrix to quaternion)
-        Eigen::Quaterniond q(est_nav_ecef_.C_b_e);
+        Eigen::Quaterniond q(state_est_ecef_.nav_sol.C_b_e);
         pose_msg.pose.pose.orientation.x = q.x();
         pose_msg.pose.pose.orientation.y = q.y();
         pose_msg.pose.pose.orientation.z = q.z();
         pose_msg.pose.pose.orientation.w = q.w();
 
         Eigen::Matrix<double, 6, 6> pose_cov;
-        pose_cov.block<3,3>(0,0) = P_matrix_.block<3,3>(6,6);  // position covariance
-        pose_cov.block<3,3>(0,3) = P_matrix_.block<3,3>(6,0);  // cross-covariance
-        pose_cov.block<3,3>(3,0) = P_matrix_.block<3,3>(0,6);  // cross-covariance
-        pose_cov.block<3,3>(3,3) = P_matrix_.block<3,3>(0,0);  // attitude covariance
+        pose_cov.block<3,3>(0,0) = state_est_ecef_.P_matrix.block<3,3>(6,6);  // position covariance
+        pose_cov.block<3,3>(0,3) = state_est_ecef_.P_matrix.block<3,3>(6,0);  // cross-covariance
+        pose_cov.block<3,3>(3,0) = state_est_ecef_.P_matrix.block<3,3>(0,6);  // cross-covariance
+        pose_cov.block<3,3>(3,3) = state_est_ecef_.P_matrix.block<3,3>(0,0);  // attitude covariance
 
         // Copy the 6x6 matrix into the covariance array (which is in row-major order)
         for (int i = 0; i < 6; i++) {
@@ -367,9 +344,9 @@ private:
         tf_msg.header.frame_id = "ecef";  // Parent frame
         tf_msg.child_frame_id = "base";  // or whatever child frame makes sense
 
-        tf_msg.transform.translation.x = est_nav_ecef_.r_eb_e[0];
-        tf_msg.transform.translation.y = est_nav_ecef_.r_eb_e[1];
-        tf_msg.transform.translation.z = est_nav_ecef_.r_eb_e[2];
+        tf_msg.transform.translation.x = state_est_ecef_.nav_sol.r_eb_e[0];
+        tf_msg.transform.translation.y = state_est_ecef_.nav_sol.r_eb_e[1];
+        tf_msg.transform.translation.z = state_est_ecef_.nav_sol.r_eb_e[2];
         tf_msg.transform.rotation.x = q.x();
         tf_msg.transform.rotation.y = q.y();
         tf_msg.transform.rotation.z = q.z();
@@ -385,9 +362,9 @@ private:
         }
 
         // Publish only every nth pose
-        path_counter ++;
-        if (path_counter >= 100) {
-            path_counter = 0;
+        path_counter_ ++;
+        if (path_counter_ >= 100) {
+            path_counter_ = 0;
             geometry_msgs::msg::PoseStamped pose_stamped;
             pose_stamped.header = pose_msg.header;
             pose_stamped.pose = pose_msg.pose.pose;
