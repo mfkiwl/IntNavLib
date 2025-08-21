@@ -4,11 +4,7 @@
 
 - better variable names: no stupid random uppercases
 
-- integrated test after done refactoring app
-
-- bad euler / dcm conversion
-
-- avoid duplication in apps, tests. write interface functions / classes to init sensors, run sim
+- bad euler / dcm conversion (+ profile reader and writer): theres a stupid transpose
 
 - no matrix inversions!
 
@@ -22,17 +18,11 @@
 
 - real time whiteness check
 
-- isolate ekf update function?
-
-- random error init in apps, w gaussian dist
-
 - plot innovations
 
 - NEES evaluation
 
-- monte carlo
-
-- make single app, pass desired setup by arg
+- monte carlo bash script
 
 - in-house trajectory generator
 
@@ -40,10 +30,10 @@
 
 - profile code with valgrind
 
-- write tests + test bash script
+- write unit tests + test bash script
 
 - Remove dependencies: place eigen in include dir as submodule
 
-- clag tidy: cleanup code
+- clang tidy: cleanup code
 
-- doxygen: add latex to documentation
+- doxygen: add moree latex to documentation, compleete docs stubs

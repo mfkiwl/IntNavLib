@@ -3,9 +3,9 @@
 IntNavLib is a C++ integrated navigation library with a focus on readability, modularity, and documentation.
 Integrated navigation example applications using the IntNavLib API, including a ROS2 app, are in the [apps](/apps/) folder.
 
-The code is inspired by [Principles of GNSS, Inertial, and Multisensor Integrated Navigation](https://ieeexplore.ieee.org/document/9101092) by Paul Groves.
+The code is inspired by the books [Principles of GNSS, Inertial, and Multisensor Integrated Navigation](https://ieeexplore.ieee.org/document/9101092) and [Estimation with applications to tracking and navigation: theory algorithms and software](https://books.google.it/books/about/Estimation_with_Applications_to_Tracking.html?id=xz9nQ4wdXG4C&redir_esc=y).
 
-Reference: 
+References: 
 
 ```
 @BOOK{gpintnav,
@@ -13,6 +13,13 @@ Reference:
   booktitle={Principles of GNSS, Inertial, and Multisensor Integrated Navigation Systems, Second Edition},
   year={2013}
   }
+
+@BOOK{bar2001estimation,
+  title={Estimation with applications to tracking and navigation: theory algorithms and software},
+  author={Bar-Shalom, Yaakov and Li, X Rong and Kirubarajan, Thiagalingam},
+  year={2001},
+  publisher={John Wiley \& Sons}
+}
 ```
 
 ![image](media/Figure_1.png)

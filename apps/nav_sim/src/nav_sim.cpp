@@ -7,7 +7,7 @@
 
 #include "intnavlib.h"
 
-/// @example ins_ecef.cpp
+/// @example nav_sim.cpp
 /// Integrated navigation demo script
 
 using namespace intnavlib;
