@@ -77,10 +77,11 @@ int main(int argc, char** argv)
     MotionProfileReader reader(motion_profile_filename_in);
     ErrorsSigmasEcefWriter errors_sigmas_writer(errors_sigmas_filename_out);
 
-    // True old nav solution
-    NavSolutionNed true_nav_ned_t0;
-    reader.readNextRow(true_nav_ned_t0);
-    NavSolutionEcef true_nav_ecef_old = nedToEcef(true_nav_ned_t0);    
+    // True nav solution
+    NavSolutionNed true_nav_ned;
+    reader.readNextRow(true_nav_ned);
+    NavSolutionEcef true_nav_ecef = nedToEcef(true_nav_ned);   
+    NavSolutionEcef true_nav_ecef_old = true_nav_ecef;
 
     // Old IMU measurements
     ImuMeasurements imu_meas_old;
@@ -91,31 +92,31 @@ int main(int argc, char** argv)
     double time_last_update = -1.0;
 
     // Init GNSS range biases
-    SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned_t0.time,  gnss_config);
-    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> gnss_biases = initializeGNSSBiases(true_nav_ecef_old,
-                                                                                                        true_nav_ned_t0,
+    SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned.time,  gnss_config);
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> gnss_biases = initializeGNSSBiases(true_nav_ecef,
+                                                                                                        true_nav_ned,
                                                                                                         sat_pos_vel_0,
                                                                                                         gnss_config,
                                                                                                         gen);
     // GNSS measurements at t0
-    GnssMeasurements gnss_meas_t0 = generateGNSSMeasurements(true_nav_ned_t0.time,
+    GnssMeasurements gnss_meas_t0 = generateGnssMeasurements(true_nav_ned.time,
                                                             sat_pos_vel_0,
-                                                            true_nav_ned_t0,
-                                                            true_nav_ecef_old,
+                                                            true_nav_ned,
+                                                            true_nav_ecef,
                                                             gnss_biases, 
                                                             gnss_config,
                                                             gen);
 
-    // Init navigation filter state estimate
-    StateEstEcef state_est_ecef = initStateFromGroundTruth(true_nav_ecef_old, kf_config, gnss_meas_t0, gen);
+    // Init navigation filter
+    StateEstEcef state_est_ecef_init = initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas_t0, gen);
+    NavKF nav_filter(state_est_ecef_init, kf_config);
 
-    NavSolutionNed true_nav_ned;
     while (reader.readNextRow(true_nav_ned)) {
 
         // ========= Get ground truth ============
 
-        double tor_i = true_nav_ned.time - state_est_ecef.nav_sol.time;
-        NavSolutionEcef true_nav_ecef = nedToEcef(true_nav_ned);
+        double tor_i = true_nav_ned.time - nav_filter.getTime();
+        true_nav_ecef = nedToEcef(true_nav_ned);
 
         // ========== IMU Simulation ==========
 
@@ -127,20 +128,20 @@ int main(int argc, char** argv)
         // ========== Predict ==========
 
         if (sim_type == SimType::INS_GNSS_TC) {
-            state_est_ecef = tcPredictKF(state_est_ecef, imu_meas, kf_config, tor_i);
+            nav_filter.tcPredict(imu_meas, tor_i);
         }
         else {
-            state_est_ecef = lcPredictKF(state_est_ecef, imu_meas, kf_config, tor_i);
+            nav_filter.lcPredict(imu_meas, tor_i);
         }
 
         // ========== Update =========
 
         double tor_s = true_nav_ned.time - time_last_update;
-        if(tor_s >= gnss_config.epoch_interval) {
+        if(tor_s >= gnss_config.epoch_interval && sim_type != SimType::INS) {
 
-            // Simulate GNSS measurement
+            // Simulate GNSS measurements
             SatPosVel sat_pos_vel = satellitePositionsAndVelocities(true_nav_ned.time, gnss_config);
-            GnssMeasurements gnss_meas = generateGNSSMeasurements(true_nav_ned.time,
+            GnssMeasurements gnss_meas = generateGnssMeasurements(true_nav_ned.time,
                                                                     sat_pos_vel,
                                                                     true_nav_ned,
                                                                     true_nav_ecef,
@@ -150,37 +151,30 @@ int main(int argc, char** argv)
             
             // Loose GNSS Update
             if(sim_type == SimType::INS_GNSS_LC) {
-                // Estimate receiver pos + vel with NLLS
-                GnssPosVelMeasEcef pos_vel_gnss_meas_ecef = gnssLsPositionVelocity(gnss_meas, 
-                                                                                    state_est_ecef.nav_sol.r_eb_e, 
-                                                                                    state_est_ecef.nav_sol.v_eb_e,
-                                                                                    gnss_config);
-                state_est_ecef = lcUpdateKFGnssEcef(pos_vel_gnss_meas_ecef, state_est_ecef);
+                nav_filter.lcUpdateGnssEcef(gnss_meas, gnss_config);
             }
             // Tight GNSS Update
             else if(sim_type == SimType::INS_GNSS_TC) {
-                state_est_ecef = tcUpdateKFGnssEcef(gnss_meas, state_est_ecef, tor_s);
+                nav_filter.tcUpdateGnssEcef(gnss_meas, tor_s);
             }
             // Loose position update
             else if(sim_type == SimType::INS_POS) {
                 // Simulate position + attitude sensor measurement
                 PosMeasEcef pos_meas_ecef = genericPosSensModel(true_nav_ecef, 10.0, gen);
-                state_est_ecef = lcUpdateKFPosEcef(pos_meas_ecef, state_est_ecef);
+                nav_filter.lcUpdatePosEcef(pos_meas_ecef);
             }
             // Loose position + attitude update
             else if(sim_type == SimType::INS_POS_ROT) {
                 // Simulate position + attitude sensor measurement
                 PosRotMeasEcef pos_rot_meas_ecef = genericPosRotSensModel(true_nav_ecef, 10.0, 0.01, gen);
-                state_est_ecef = lcUpdateKFPosRotEcef(pos_rot_meas_ecef, state_est_ecef);
+                nav_filter.lcUpdatePosRotEcef(pos_rot_meas_ecef);
             }
-            // Else no update, pure INS
-            else continue;
-
             time_last_update = true_nav_ned.time;
         }
 
         // ========== Write Results ==========
 
+        StateEstEcef state_est_ecef = nav_filter.getStateEst();
         ErrorsSigmasEcef errors_sigmas_ecef = getErrorsSigmasEcef(state_est_ecef, true_nav_ecef);
         errors_sigmas_writer.writeNextRow(errors_sigmas_ecef);
         
@@ -188,7 +182,6 @@ int main(int argc, char** argv)
 
         true_nav_ecef_old = true_nav_ecef;
         imu_meas_old = imu_meas;
-
     }
 
     return 0;

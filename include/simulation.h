@@ -70,7 +70,7 @@ namespace intnavlib {
     /// \param[in] gen A Mersenne Twister random number generator for noise generation.
     /// \return A GnssMeasurements structure containing the generated pseudo-range and pseudo-range rate measurements,
     ///         along with corresponding satellite positions and velocities.
-    GnssMeasurements generateGNSSMeasurements(const double & time,
+    GnssMeasurements generateGnssMeasurements(const double & time,
                                         const SatPosVel & gnss_pos_vel,
                                         const NavSolutionNed& true_nav_ned,
                                         const NavSolutionEcef& true_nav_ecef,

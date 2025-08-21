@@ -230,12 +230,15 @@ Navigation solution update
 \f]
 
 */
-/// \param[in] pos_vel_gnss_meas The GNSS position and velocity measurement in ECEF frame.
+/// \param[in] gnss_meas The GNSS measurements, including pseudo-ranges, pseudo-range rates,
+/// satellite positions, and satellite velocities.
 /// \param[in] state_est_prior The prior estimated state (navigation solution and biases) and its covariance matrix.
+/// \param[in] gnss_config GNSS configuration.
 /// \param[in] p_value P-value threshold for Chi squared consistency check: accept update only if residual in the confidence interval.
 /// \return A StateEstEcefLc structure containing the updated state estimation.
-StateEstEcef lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
+StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas, 
                                     const StateEstEcef & state_est_old,
+                                    const GnssConfig & gnss_config,
                                     const double & p_value = 0.99);
 
 /// \brief Performs a Tightly Coupled (TC) Kalman Filter update using GNSS pseudo-range and pseudo-range rate measurements.
@@ -323,6 +326,36 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
 StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas, 
                                     const StateEstEcef & state_est_old,
                                     const double & p_value = 0.99);
+
+/// \brief Navigation Kalman filter class.
+class NavKF {
+    private:
+        /// \brief State estimate
+        StateEstEcef state_est_;
+        /// \brief KF config.
+        KfConfig kf_config_;
+    public:
+        /// \brief Deleted default constructor.
+        NavKF() = delete;
+        /// \brief Construct from prior state estimate and KF config.
+        NavKF(const StateEstEcef & state_est, const KfConfig & kf_config) { state_est_ = state_est; kf_config_ = kf_config;}
+        /// \brief Get state estimate.
+        StateEstEcef getStateEst() { return state_est_;}
+        /// \brief Get time.
+        double getTime() { return state_est_.nav_sol.time;}
+        /// \brief Predict (loose).
+        void lcPredict(const ImuMeasurements & imu_meas, const double & tor_i) { state_est_ = lcPredictKF(state_est_, imu_meas, kf_config_, tor_i);}
+        /// \brief Predict (tight).
+        void tcPredict(const ImuMeasurements & imu_meas, const double & tor_i) { state_est_ = tcPredictKF(state_est_, imu_meas, kf_config_, tor_i);}
+        /// \brief Update with position.
+        void lcUpdatePosEcef(const PosMeasEcef & pos_meas) { state_est_ = lcUpdateKFPosEcef(pos_meas, state_est_);}
+        /// \brief Update with position and rotation.
+        void lcUpdatePosRotEcef(const PosRotMeasEcef & pos_rot_meas) { state_est_ = lcUpdateKFPosRotEcef(pos_rot_meas, state_est_);}
+        /// \brief Update with GNSS (loose).
+        void lcUpdateGnssEcef(const GnssMeasurements & gnss_meas, const GnssConfig & gnss_config) { state_est_ = lcUpdateKFGnssEcef(gnss_meas, state_est_, gnss_config);}
+        /// \brief Update with GNSS (tight).
+        void tcUpdateGnssEcef(const GnssMeasurements & gnss_meas, const double & tor_s) { state_est_ = tcUpdateKFGnssEcef(gnss_meas, state_est_, tor_s);}
+};
 
 /// @}
 

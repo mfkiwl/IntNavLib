@@ -265,7 +265,7 @@ SatPosVel satellitePositionsAndVelocities(const double & time,
     return gnssPosVel;
 }
 
-GnssMeasurements generateGNSSMeasurements(const double & time,
+GnssMeasurements generateGnssMeasurements(const double & time,
                                         const SatPosVel & gnss_pos_vel,
                                         const NavSolutionNed& true_nav_ned,
                                         const NavSolutionEcef& true_nav_ecef,

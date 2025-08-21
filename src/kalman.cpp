@@ -189,9 +189,16 @@ StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
     return state_est_post;
 }
 
-StateEstEcef lcUpdateKFGnssEcef (const GnssPosVelMeasEcef & pos_vel_gnss_meas, 
+StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas, 
                                     const StateEstEcef & state_est_prior,
+                                    const GnssConfig & gnss_config,
                                     const double & p_value) {
+
+    // Get position + velocity estimate with nlls
+    GnssPosVelMeasEcef pos_vel_gnss_meas = gnssLsPositionVelocity(gnss_meas, 
+                                                                state_est_prior.nav_sol.r_eb_e, 
+                                                                state_est_prior.nav_sol.v_eb_e,
+                                                                gnss_config);
         
     // Set-up measurement matrix using (14.115)
     Eigen::Matrix<double,6,15> H_matrix = Eigen::Matrix<double,6,15>::Zero();
