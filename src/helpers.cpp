@@ -332,4 +332,72 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas
 }
 
 
+ImuErrors tacticalImuErrors(){
+    ImuErrors imu_errors;
+    imu_errors.b_a << 900.0,-1300.0,800.0;
+    imu_errors.b_a = imu_errors.b_a * micro_g_to_meters_per_second_squared;
+    imu_errors.b_g << -9.0, 13.0, -8.0;
+    imu_errors.b_g = imu_errors.b_g * deg_to_rad / 3600.0;
+    imu_errors.M_a << 500.0, -300.0, 200.0,
+            -150.0, -600.0, 250.0,
+            -250.0,  100.0, 450.0;
+    imu_errors.M_a = imu_errors.M_a * 1.0e-6;
+    imu_errors.M_g << 400.0, -300.0,  250.0,
+            0.0, -300.0, -150.0,
+            0.0,    0.0, -350.0; 
+    imu_errors.M_g = imu_errors.M_g * 1.0e-6;
+    imu_errors.G_g << 0.9, -1.1, -0.6,
+            -0.5,  1.9, -1.6,
+            0.3,  1.1, -1.3;
+    imu_errors.G_g = imu_errors.G_g * deg_to_rad / (3600.0 * 9.80665);  
+    imu_errors.accel_noise_root_PSD = 100.0 * micro_g_to_meters_per_second_squared;
+    imu_errors.gyro_noise_root_PSD = 0.01 * deg_to_rad / 60.0;
+    imu_errors.accel_quant_level = 1.0e-2;
+    imu_errors.gyro_quant_level = 2.0e-4;
+    return imu_errors;
+}
+
+GnssConfig defaultGnssConfig(){
+    GnssConfig gnss_config;
+    gnss_config.epoch_interval = 0.5;
+    gnss_config.init_est_r_ea_e = Eigen::Vector3d::Zero();
+    gnss_config.no_sat = 30.0;
+    gnss_config.r_os = 2.656175E7;
+    gnss_config.inclination = 55.0;
+    gnss_config.const_delta_lambda = 0.0;
+    gnss_config.const_delta_t = 0.0;
+    gnss_config.mask_angle = 10.0;
+    gnss_config.SIS_err_SD = 1.0;
+    gnss_config.zenith_iono_err_SD = 2.0;
+    gnss_config.zenith_trop_err_SD = 0.2;
+    gnss_config.code_track_err_SD = 1.0;
+    gnss_config.rate_track_err_SD = 0.02;
+    gnss_config.rx_clock_offset = 10000.0;
+    gnss_config.rx_clock_drift = 100.0;
+    gnss_config.lc_pos_sd = 2.5;
+    gnss_config.lc_vel_sd = 0.1;
+    gnss_config.pseudo_range_sd = 2.5;
+    gnss_config.range_rate_sd = 0.1;
+    return gnss_config;
+}
+
+KfConfig tacticalImuKFConfig(){
+    KfConfig kf_config;
+    kf_config.init_att_unc = deg_to_rad * 1.0;
+    kf_config.init_vel_unc = 0.1;
+    kf_config.init_pos_unc = 10.0;
+    kf_config.init_b_a_unc = 1000.0 * micro_g_to_meters_per_second_squared;
+    kf_config.init_b_g_unc = 10.0 * deg_to_rad / 3600.0;
+    kf_config.init_clock_offset_unc = 10.0;
+    kf_config.init_clock_drift_unc = 0.1;
+    kf_config.gyro_noise_PSD = pow(0.02 * deg_to_rad / 60.0, 2.0);
+    kf_config.accel_noise_PSD = pow(200.0 * micro_g_to_meters_per_second_squared, 2.0);
+    kf_config.accel_bias_PSD = 1.0E-7;
+    kf_config.gyro_bias_PSD = 2.0E-12;
+    kf_config.clock_freq_PSD = 1;
+    kf_config.clock_phase_PSD = 1;
+    return kf_config;
+}     
+
+
 };

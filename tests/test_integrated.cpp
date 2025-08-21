@@ -3,66 +3,37 @@
 #include <random>
 #include <filesystem>
 
+#include <gtest/gtest.h>
 #include <glog/logging.h>
 
 #include "intnavlib.h"
 
-/// @example ins_ecef.cpp
-/// Integrated navigation demo script
-
 using namespace intnavlib;
 
+constexpr double max_pos_error = 15.0; // meters
+constexpr char test_profile_path[] = "../data/Profile_3.csv";
+
 enum SimType {
-    INS,
     INS_POS,
     INS_POS_ROT,
     INS_GNSS_LC,
-    INS_GNSS_TC,
-    UNKNOWN
+    INS_GNSS_TC
 };
 
-SimType parseSimType(const std::string& sim_type) {
-    if (sim_type == "ins") return SimType::INS;
-    if (sim_type == "ins_pos")          return SimType::INS_POS;
-    if (sim_type == "ins_pos_rot")         return SimType::INS_POS_ROT;
-    if (sim_type == "ins_gnss_lc")         return SimType::INS_GNSS_LC;
-    if (sim_type == "ins_gnss_tc")         return SimType::INS_GNSS_TC;
-    return SimType::UNKNOWN;
-}
+std::array<SimType, 5> sim_types = {
+    SimType::INS_POS,
+    SimType::INS_GNSS_LC,
+    SimType::INS_GNSS_TC,
+    SimType::INS_POS_ROT
+};
 
-int main(int argc, char** argv)
-{   
-    google::InitGoogleLogging(argv[0]);
-    FLAGS_stderrthreshold = 0; // INFO: 0, WARNING: 1, ERROR: 2, FATAL: 3
-    FLAGS_colorlogtostderr = 1;
-
-    if(argc != 3) {
-        LOG(ERROR) << "Usage: ./nav_sim <profile_path> <sim_type>";
-        return 1;
-    }
-
-    // Get simulation type
-    SimType sim_type = parseSimType(argv[2]);
-    if(sim_type == SimType::UNKNOWN) {
-        LOG(ERROR) << "Unknown simulation type";
-        return 1;
-    }
-
-    // Get input profile path and create output dir
-    std::string motion_profile_filename_in(argv[1]);
-    std::string new_directory = "../results";
-    std::string base_filename = std::filesystem::path(motion_profile_filename_in).filename().string();
-    std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
-    std::string errors_sigmas_filename_out = new_directory + "/" + filename_without_extension + "_errors_sigmas.csv";
-    if (!std::filesystem::exists(new_directory)) {
-        std::filesystem::create_directory(new_directory);
-    }
+TEST(navigation_filter, test_integrated)
+{ 
 
     // ============== Init sim ==============
 
-    std::random_device rd;
-    // Mersenne twister PRNG, initialized with random seed
-    std::mt19937 gen(rd());
+    // Mersenne twister PRNG, initialized with fixed seed for repeatability
+    std::mt19937 gen(43);
 
     // Tactcal grade IMU errors
     ImuErrors imu_errors = tacticalImuErrors();
@@ -73,12 +44,13 @@ int main(int argc, char** argv)
     // Tactcal grade IMU - KF config
     KfConfig kf_config = tacticalImuKFConfig();
 
-    // Init profile reader + writers 
-    MotionProfileReader reader(motion_profile_filename_in);
-    ErrorsSigmasEcefWriter errors_sigmas_writer(errors_sigmas_filename_out);
+    // ============ Test each sim type ===========
+
+    for(auto & sim_type : sim_types) {
 
     // True nav solution
     NavSolutionNed true_nav_ned;
+    MotionProfileReader reader(test_profile_path);
     reader.readNextRow(true_nav_ned);
     NavSolutionEcef true_nav_ecef = nedToEcef(true_nav_ned);   
     NavSolutionEcef true_nav_ecef_old = true_nav_ecef;
@@ -109,7 +81,11 @@ int main(int argc, char** argv)
 
     // Init navigation filter
     StateEstEcef state_est_ecef_init = initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas_t0, gen);
+    
     NavKF nav_filter(state_est_ecef_init, kf_config);
+    
+    double pos_error_sum = 0.0;
+    long unsigned int count = 0;
 
     while (reader.readNextRow(true_nav_ned)) {
 
@@ -137,7 +113,7 @@ int main(int argc, char** argv)
         // ========== Update =========
 
         double tor_s = true_nav_ned.time - time_last_update;
-        if(tor_s >= gnss_config.epoch_interval && sim_type != SimType::INS) {
+        if(tor_s >= gnss_config.epoch_interval) {
 
             // Simulate GNSS measurements
             SatPosVel sat_pos_vel = satellitePositionsAndVelocities(true_nav_ned.time, gnss_config);
@@ -172,11 +148,11 @@ int main(int argc, char** argv)
             time_last_update = true_nav_ned.time;
         }
 
-        // ========== Write Results ==========
+        // ========== Compute error ==========
 
-        StateEstEcef state_est_ecef = nav_filter.getStateEst();
-        ErrorsSigmasEcef errors_sigmas_ecef = getErrorsSigmasEcef(state_est_ecef, true_nav_ecef);
-        errors_sigmas_writer.writeNextRow(errors_sigmas_ecef);
+        double pos_error = (nav_filter.getStateEst().nav_sol.r_eb_e - true_nav_ecef.r_eb_e).norm();
+        pos_error_sum += pos_error;
+        count++;
         
         // ============= Update simulation state ==============
 
@@ -184,5 +160,13 @@ int main(int argc, char** argv)
         imu_meas_old = imu_meas;
     }
 
-    return 0;
+    double avg_position_error = pos_error_sum / (double) count;
+    EXPECT_LT(avg_position_error, max_pos_error)
+        << "Simulation setup n." << sim_type << "failed. \n"
+        << "Mean absolute position error should be under "
+        << max_pos_error << " m, but was "
+        << avg_position_error << " m.";
+
+    }
+
 }

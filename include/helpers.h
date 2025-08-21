@@ -142,7 +142,13 @@ namespace intnavlib {
                                     const Eigen::Vector3d & prior_r_ea_e,
                                     const Eigen::Vector3d & prior_v_ea_e,
                                     const GnssConfig & gnss_config);
-                                
+    
+    /// \brief Get IMU errors for a tactical grade IMU.
+    ImuErrors tacticalImuErrors();
+    /// \brief Get default GNSS config.
+    GnssConfig defaultGnssConfig();
+    /// \brief Get default KfConfig.
+    KfConfig tacticalImuKFConfig();                  
                                 
     /// @}                      
                                 

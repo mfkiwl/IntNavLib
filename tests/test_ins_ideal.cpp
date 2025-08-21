@@ -49,7 +49,7 @@ double runIdealInsSimulation(const std::string& motion_profile_path) {
 }
 
 
-TEST(inertial_navigation, test_ins_ecef) {
+TEST(inertial_navigation, test_ins_ideal) {
 
     double avg_position_error = runIdealInsSimulation(test_profile_path);
 

@@ -2,11 +2,9 @@
 
 ### Core Development
 
-- better plot no abs value...
+- better variable names: no stupid random uppercases
 
-- integrated test after done refactorring app
-
-- simple filter class that holds state est and does init
+- integrated test after done refactoring app
 
 - bad euler / dcm conversion
 
@@ -22,8 +20,6 @@
 
 - Particle filter
 
-- real time consistency check
-
 - real time whiteness check
 
 - isolate ekf update function?
@@ -35,8 +31,6 @@
 - NEES evaluation
 
 - monte carlo
-
-- nav filter class
 
 - make single app, pass desired setup by arg
 
