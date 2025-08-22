@@ -31,21 +31,6 @@ namespace intnavlib {
     /// \return Navigation solution in NED frame.
     NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef);
 
-    /// \brief Initializes the error covariance matrix for a navigation Kalman Filter.
-    /// \param[in] tc_kf_config Configuration parameters for the Kalman Filter,
-    /// including initial uncertainties for attitude, velocity, position, biases,
-    /// and clock offset/drift.
-    /// \return An Eigen::Matrix<double,17,17> representing the initialized error covariance matrix.
-    Eigen::Matrix<double,17,17> initializePMmatrix(const KfConfig & tc_kf_config);
-
-    /// \brief Init navigation filter state from ground truth.
-    /// \param[in] true_nav_ecef Ground truth navigation solution.
-    /// \param[in] kf_config Navigation filter configuration.
-    /// \param[in] gnss_meas GNSS measurements.
-    /// \param[in] gen Random source.
-    /// \return Navigation filter state.
-    StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, const KfConfig & kf_config, const GnssMeasurements & gnss_meas, std::mt19937 & gen);
-
     /// \brief Compute errors from state estimate and ground truth.
     /// \param[in] state_est_ecef State estimate.
     /// \param[in] true_nav_ecef grounud truth.
@@ -121,28 +106,6 @@ namespace intnavlib {
     /// \param[in] S 3x3 skew-symmetric matrix.
     /// \return The 3D vector from which the skew-symmetric matrix was formed.
     Eigen::Vector3d deSkew(const Eigen::Matrix3d & S);
-
-    /// \brief Calculates position, velocity, clock offset, and clock drift rate using unweighted iterated least squares.
-    /// \param[in] GNSS_measurements Structure containing GNSS pseudo-range and pseudo-range rate measurements,
-    ///                              along with satellite positions and velocities.
-    /// \param[in] prior_r_ea_e Prior estimated antenna position in ECEF frame.
-    /// \param[in] prior_v_ea_e Prior estimated antenna velocity in ECEF frame.
-    /// \return Structure containing the estimated antenna position, velocity, clock offset and drift rate.
-    GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & GNSS_measurements,
-                                                const Eigen::Vector3d & prior_r_ea_e,
-                                                const Eigen::Vector3d & prior_v_ea_e);
-    
-    /// \brief Calculates position, velocity using unweighted iterated least squares.
-    /// \param[in] GNSS_measurements Structure containing GNSS pseudo-range and pseudo-range rate measurements,
-    ///                              along with satellite positions and velocities.
-    /// \param[in] prior_r_ea_e Prior estimated antenna position in ECEF frame.
-    /// \param[in] prior_v_ea_e Prior estimated antenna velocity in ECEF frame.
-    /// \param[in] gnss_config GNSS config parameters
-    /// \return Structure containing the estimated antenna position, velocity.
-    GnssPosVelMeasEcef gnssLsPositionVelocity(const GnssMeasurements & GNSS_measurements,
-                                    const Eigen::Vector3d & prior_r_ea_e,
-                                    const Eigen::Vector3d & prior_v_ea_e,
-                                    const GnssConfig & gnss_config);
     
     /// \brief Get IMU errors for a tactical grade IMU.
     ImuErrors tacticalImuErrors();
@@ -170,8 +133,8 @@ namespace intnavlib {
             Eigen::Vector3d delta_v_eb_e = row.delta_v_eb_e;
             Eigen::Vector3d sigma_delta_v_eb_e = row.sigma_delta_v_eb_e;
             // Convert Euler angles (in radians) to degrees
-            Eigen::Vector3d delta_rot_eb_e = row.delta_rot_eb_e * rad_to_deg;
-            Eigen::Vector3d sigma_delta_rot_eb_e = row.sigma_delta_rot_eb_e * rad_to_deg;
+            Eigen::Vector3d delta_rot_eb_e = row.delta_rot_eb_e * kRadToDeg;
+            Eigen::Vector3d sigma_delta_rot_eb_e = row.sigma_delta_rot_eb_e * kRadToDeg;
             // Write the row to the CSV file
             file << row.time << ","
                 << delta_r_eb_e[0] << "," // Errors
@@ -315,7 +278,7 @@ namespace intnavlib {
                 Eigen::Vector3d delta_v_eb_n = row.delta_v_eb_n;
 
                 // Convert Euler angles (in radians) to degrees
-                Eigen::Vector3d delta_rot_nb_n = row.delta_rot_nb_n * rad_to_deg;
+                Eigen::Vector3d delta_rot_nb_n = row.delta_rot_nb_n * kRadToDeg;
 
                 // Write the row to the CSV file
                 file << row.time << ","

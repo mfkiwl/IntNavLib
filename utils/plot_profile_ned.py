@@ -17,11 +17,11 @@ from shapely.geometry import Point
 # // Column 10: yaw angle of body w.r.t NED (deg)
 
 def radii_of_curvature(L):
-    R_0 = 6378137  # WGS84 Equatorial radius in meters
+    kR0 = 6378137  # WGS84 Equatorial radius in meters
     e = 0.0818191908425  # WGS84 eccentricity
     temp = 1 - (e * np.sin(L))**2
-    R_N = R_0 * (1 - e**2) / temp**1.5
-    R_E = R_0 / np.sqrt(temp)
+    R_N = kR0 * (1 - e**2) / temp**1.5
+    R_E = kR0 / np.sqrt(temp)
     return R_N, R_E
 
 def plot_profile(csv_file):

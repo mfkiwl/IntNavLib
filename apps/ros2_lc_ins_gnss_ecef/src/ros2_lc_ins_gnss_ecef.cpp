@@ -120,10 +120,10 @@ private:
         declare_parameter<double>("kf_config.init_pos_unc");
         declare_parameter<double>("kf_config.init_b_a_unc");
         declare_parameter<double>("kf_config.init_b_g_unc");
-        declare_parameter<double>("kf_config.gyro_noise_PSD");
-        declare_parameter<double>("kf_config.accel_noise_PSD");
-        declare_parameter<double>("kf_config.accel_bias_PSD");
-        declare_parameter<double>("kf_config.gyro_bias_PSD");
+        declare_parameter<double>("kf_config.gyro_noise_psd");
+        declare_parameter<double>("kf_config.accel_noise_psd");
+        declare_parameter<double>("kf_config.accel_bias_psd");
+        declare_parameter<double>("kf_config.gyro_bias_psd");
 
         // Init 
         declare_parameter<std::vector<double>>("init_lla");
@@ -150,10 +150,10 @@ private:
         kf_config_.init_pos_unc = get_parameter("kf_config.init_pos_unc").as_double();
         kf_config_.init_b_a_unc = get_parameter("kf_config.init_b_a_unc").as_double();
         kf_config_.init_b_g_unc = get_parameter("kf_config.init_b_g_unc").as_double();
-        kf_config_.gyro_noise_PSD = get_parameter("kf_config.gyro_noise_PSD").as_double();
-        kf_config_.accel_noise_PSD = get_parameter("kf_config.accel_noise_PSD").as_double();
-        kf_config_.accel_bias_PSD = get_parameter("kf_config.accel_bias_PSD").as_double();
-        kf_config_.gyro_bias_PSD = get_parameter("kf_config.gyro_bias_PSD").as_double();
+        kf_config_.gyro_noise_psd = get_parameter("kf_config.gyro_noise_psd").as_double();
+        kf_config_.accel_noise_psd = get_parameter("kf_config.accel_noise_psd").as_double();
+        kf_config_.accel_bias_psd = get_parameter("kf_config.accel_bias_psd").as_double();
+        kf_config_.gyro_bias_psd = get_parameter("kf_config.gyro_bias_psd").as_double();
 
         // Init nav solution
         init_lla_ = get_parameter("init_lla").as_double_array();
@@ -161,11 +161,11 @@ private:
         init_rpy_b_n_ = get_parameter("init_rpy_b_n").as_double_array();
 
         NavSolutionNed est_nav_ned = NavSolutionNed{0.0,
-                                                    deg_to_rad * init_lla_[0], 
-                                                    deg_to_rad * init_lla_[1], 
+                                                    kDegToRad * init_lla_[0], 
+                                                    kDegToRad * init_lla_[1], 
                                                     init_lla_[2], 
                                                     Eigen::Vector3d(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
-                                                    rpyToR(deg_to_rad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2])).transpose()};
+                                                    rpyToR(kDegToRad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2])).transpose()};
         
         state_est_ecef_.valid = true;
         state_est_ecef_.nav_sol = nedToEcef(est_nav_ned);

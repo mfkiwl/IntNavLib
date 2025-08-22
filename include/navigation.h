@@ -361,6 +361,44 @@ StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
                                     const StateEstEcef & state_est_old,
                                     const double & p_value = 0.99);
 
+/// \brief Calculates position, velocity, clock offset, and clock drift rate using unweighted iterated least squares.
+/// \param[in] gnss_meas Structure containing GNSS pseudo-range and pseudo-range rate measurements,
+///                              along with satellite positions and velocities.
+/// \param[in] prior_r_ea_e Prior estimated antenna position in ECEF frame.
+/// \param[in] prior_v_ea_e Prior estimated antenna velocity in ECEF frame.
+/// \return Structure containing the estimated antenna position, velocity, clock offset and drift rate.
+GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas,
+                                            const Eigen::Vector3d & prior_r_ea_e,
+                                            const Eigen::Vector3d & prior_v_ea_e);
+
+/// \brief Calculates position, velocity using unweighted iterated least squares.
+/// \param[in] gnss_meas Structure containing GNSS pseudo-range and pseudo-range rate measurements,
+///                              along with satellite positions and velocities.
+/// \param[in] prior_r_ea_e Prior estimated antenna position in ECEF frame.
+/// \param[in] prior_v_ea_e Prior estimated antenna velocity in ECEF frame.
+/// \param[in] gnss_config GNSS config parameters
+/// \return Structure containing the estimated antenna position, velocity.
+GnssPosVelMeasEcef gnssLsPositionVelocity(const GnssMeasurements & gnss_meas,
+                                const Eigen::Vector3d & prior_r_ea_e,
+                                const Eigen::Vector3d & prior_v_ea_e,
+                                const GnssConfig & gnss_config);
+
+/// \brief Initializes the error covariance matrix for a navigation Kalman Filter.
+/// \param[in] tc_kf_config Configuration parameters for the Kalman Filter,
+/// including initial uncertainties for attitude, velocity, position, biases,
+/// and clock offset/drift.
+/// \return An Eigen::Matrix<double,17,17> representing the initialized error covariance matrix.
+Eigen::Matrix<double,17,17> initializePMmatrix(const KfConfig & tc_kf_config);
+
+/// \brief Init navigation filter state from ground truth.
+/// \param[in] true_nav_ecef Ground truth navigation solution.
+/// \param[in] kf_config Navigation filter configuration.
+/// \param[in] gnss_meas GNSS measurements.
+/// \param[in] gen Random source.
+/// \return Navigation filter state.
+StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, const KfConfig & kf_config, const GnssMeasurements & gnss_meas, std::mt19937 & gen);
+
+
 /// \brief Navigation Kalman filter class.
 class NavKF {
     private:

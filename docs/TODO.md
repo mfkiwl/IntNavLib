@@ -36,4 +36,4 @@
 
 - clang tidy: cleanup code
 
-- doxygen: add moree latex to documentation, compleete docs stubs
+- doxygen: add more latex to documentation, compleete docs stubs

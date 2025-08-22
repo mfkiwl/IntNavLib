@@ -65,7 +65,7 @@ TEST(navigation_filter, test_integrated)
 
     // Init GNSS range biases
     SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned.time,  gnss_config);
-    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> gnss_biases = initializeGNSSBiases(true_nav_ecef,
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
                                                                                                         true_nav_ned,
                                                                                                         sat_pos_vel_0,
                                                                                                         gnss_config,

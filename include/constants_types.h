@@ -11,27 +11,27 @@ namespace intnavlib {
 
 /// Max number of GNSS satellites.
 /// Leaving some extra room for future expansion.
-constexpr int MAX_GNSS_SATELLITES = 35;
+constexpr int kMaxGnssSatellites = 35;
 /// Epsilon for checking if a value is approximately zero.
-constexpr double EPSILON = 1.0e-100; 
+constexpr double kEpsilon = 1.0e-100; 
 /// WGS84 Equatorial radius in meters.
-constexpr double R_0 = 6378137.0;  // WGS84 Equatorial radius in meters
+constexpr double kR0 = 6378137.0;  // WGS84 Equatorial radius in meters
 /// WGS84 eccentricity.
-constexpr double e = 0.0818191908425; // WGS84 eccentricity
+constexpr double kEccentricity = 0.0818191908425; // WGS84 eccentricity
 /// Earth rotation rate.
-constexpr double omega_ie = 7.292115e-5;  // Earth rotation rate
+constexpr double kOmega_ie = 7.292115e-5;  // Earth rotation rate
 /// WGS84 Earth gravitational constant (m^3 s^-2).
-constexpr double mu = 3.986004418e14; // WGS84 Earth gravitational constant (m^3 s^-2)
+constexpr double kGravConst = 3.986004418e14; // WGS84 Earth gravitational constant (m^3 s^-2)
 /// WGS84 Earth's second gravitational constant.
-constexpr double J_2 = 1.082627e-3; // WGS84 Earth's second gravitational constant
+constexpr double kJ2 = 1.082627e-3; // WGS84 Earth's second gravitational constant
 /// Speed of light in m/s.
 constexpr double c = 299792458.0 ; // Speed of light in m/s
 /// Conversion factor from degrees to radians.
-constexpr double deg_to_rad = 0.01745329252;
+constexpr double kDegToRad = 0.01745329252;
 /// Conversion factor from radians to degrees.
-constexpr double rad_to_deg = 1.0/deg_to_rad;
+constexpr double kRadToDeg = 1.0/kDegToRad;
 /// Conversion factor from micro-g to meters per second squared.
-constexpr double micro_g_to_meters_per_second_squared = 9.80665e-6;
+constexpr double kMuGToMetersPerSecondSquared = 9.80665e-6;
 
 /// \brief Structure to hold IMU measurements.
 struct ImuMeasurements {
@@ -100,9 +100,9 @@ struct ImuErrors {
     /// Gyro g-dependent biases (rad-sec/m).
     Eigen::Matrix3d G_g;
     /// Accelerometer noise root PSD (m s^-1.5).
-    double accel_noise_root_PSD;
+    double accel_noise_root_psd;
     /// Gyro noise root PSD (rad s^-0.5).
-    double gyro_noise_root_PSD;
+    double gyro_noise_root_psd;
     /// Accelerometer quantization level (m/s^2).
     double accel_quant_level;
     /// Gyro quantization level (rad/s).
@@ -208,17 +208,17 @@ struct KfConfig {
     /// Initial clock drift uncertainty per axis (m/s)
     double init_clock_drift_unc;
     /// Gyro noise PSD (rad^2/s)                
-    double gyro_noise_PSD;
+    double gyro_noise_psd;
     /// Accelerometer noise PSD (m^2 s^-3)                
-    double accel_noise_PSD;
+    double accel_noise_psd;
     /// Accelerometer bias random walk PSD (m^2 s^-5)
-    double accel_bias_PSD;
+    double accel_bias_psd;
     /// Gyro bias random walk PSD (rad^2 s^-3)
-    double gyro_bias_PSD;
+    double gyro_bias_psd;
     /// Receiver clock frequency-drift PSD (m^2/s^3)
-    double clock_freq_PSD;
+    double clock_freq_psd;
     /// Receiver clock phase-drift PSD (m^2/s)
-    double clock_phase_PSD;
+    double clock_phase_psd;
 };
 
 /// \brief Structure to configure GNSS simulation parameters.
@@ -241,15 +241,15 @@ struct GnssConfig {
     /// Mask angle (deg)
     double mask_angle;
     /// Signal in space error SD (m) *Give residual where corrections are applied
-    double SIS_err_SD;
+    double sis_err_sd;
     /// Zenith ionosphere error SD (m) *Give residual where corrections are applied
-    double zenith_iono_err_SD;
+    double zenith_iono_err_sd;
     /// Zenith troposphere error SD (m) *Give residual where corrections are applied
-    double zenith_trop_err_SD;
+    double zenith_trop_err_sd;
     /// Code tracking error SD (m) *Can extend to account for multipath
-    double code_track_err_SD;
+    double code_track_err_sd;
     /// Range rate tracking error SD (m/s) *Can extend to account for multipath
-    double rate_track_err_SD;
+    double rate_track_err_sd;
     /// Receiver clock offset at time=0 (m);
     double rx_clock_offset;
     /// Receiver clock drift at time=0 (m/s);
@@ -268,9 +268,9 @@ struct GnssConfig {
 struct SatPosVel {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     /// Satellite ECEF positions.
-    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES, 3> sat_r_es_e;
+    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, kMaxGnssSatellites, 3> sat_r_es_e;
     /// Satellite ECEF velocities.
-    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, MAX_GNSS_SATELLITES, 3> sat_v_es_e;
+    Eigen::Matrix<double, Eigen::Dynamic, 3, 0, kMaxGnssSatellites, 3> sat_v_es_e;
 };
 
 /// \brief Structure to hold GNSS measurement data.
@@ -282,11 +282,11 @@ struct SatPosVel {
 struct GnssMeasurements {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     /// Matrix containing pseudo-range, pseudo-range rate, satellite position, and satellite velocity.
-    Eigen::Matrix<double, Eigen::Dynamic, 8, 0, MAX_GNSS_SATELLITES, 8> meas; 
+    Eigen::Matrix<double, Eigen::Dynamic, 8, 0, kMaxGnssSatellites, 8> meas; 
     /// Number of measurements.
     int no_meas;
     /// Covariance matrix of the measurements.
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* MAX_GNSS_SATELLITES, 2* MAX_GNSS_SATELLITES> cov_mat;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> cov_mat;
 };
 
 // Processed GNSS measurements for LC integration (pos + vel + clock offset)

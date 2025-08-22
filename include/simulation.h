@@ -55,9 +55,9 @@ namespace intnavlib {
 
     /// \brief Generates satellite positions and velocities in the ECEF frame based on a simplified circular orbit model.
     /// \param[in] time Current simulation time in seconds.
-    /// \param[in] GNSS_config Configuration parameters for the GNSS constellation.
+    /// \param[in] gnss_config Configuration parameters for the GNSS constellation.
     /// \return A SatPosVel structure containing the ECEF Cartesian positions and velocities of all satellites.
-    SatPosVel satellitePositionsAndVelocities(const double & time, const GnssConfig & GNSS_config);
+    SatPosVel satellitePositionsAndVelocities(const double & time, const GnssConfig & gnss_config);
 
     /// \brief Generates GNSS pseudo-range and pseudo-range rate measurements for satellites above the elevation mask angle.
     /// This function also includes satellite positions and velocities in the output.
@@ -65,8 +65,8 @@ namespace intnavlib {
     /// \param[in] gnss_pos_vel Satellite positions and velocities.
     /// \param[in] true_nav_ned True navigation solution in NED frame.
     /// \param[in] true_nav_ecef True navigation solution in ECEF frame.
-    /// \param[in] GNSS_biases Pre-calculated GNSS range biases for each satellite.
-    /// \param[in] GNSS_config Configuration parameters for the GNSS receiver and constellation.
+    /// \param[in] gnss_biases Pre-calculated GNSS range biases for each satellite.
+    /// \param[in] gnss_config Configuration parameters for the GNSS receiver and constellation.
     /// \param[in] gen A Mersenne Twister random number generator for noise generation.
     /// \return A GnssMeasurements structure containing the generated pseudo-range and pseudo-range rate measurements,
     ///         along with corresponding satellite positions and velocities.
@@ -74,8 +74,8 @@ namespace intnavlib {
                                         const SatPosVel & gnss_pos_vel,
                                         const NavSolutionNed& true_nav_ned,
                                         const NavSolutionEcef& true_nav_ecef,
-                                        const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES> & GNSS_biases, 
-                                        const GnssConfig& GNSS_config,
+                                        const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> & gnss_biases, 
+                                        const GnssConfig& gnss_config,
                                         std::mt19937 & gen);
 
     /// \brief Initializes GNSS range biases due to signal-in-space, ionosphere, and troposphere errors.
@@ -83,14 +83,14 @@ namespace intnavlib {
     /// \param[in] true_nav_ecef True navigation solution in ECEF frame.
     /// \param[in] true_nav_ned True navigation solution in NED frame.
     /// \param[in] gnss_pos_vel Satellite positions and velocities.
-    /// \param[in] GNSS_config Configuration parameters for the GNSS constellation and error models.
+    /// \param[in] gnss_config Configuration parameters for the GNSS constellation and error models.
     /// \param[in] gen A Mersenne Twister random number generator for noise generation.
     /// \return An Eigen::Matrix containing the initialized GNSS range biases for each satellite.
-    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, MAX_GNSS_SATELLITES>
-    initializeGNSSBiases(const NavSolutionEcef & true_nav_ecef,
+    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites>
+    initializeGnssBiases(const NavSolutionEcef & true_nav_ecef,
                                     const NavSolutionNed & true_nav_ned,
                                     const SatPosVel & gnss_pos_vel,
-                                    const GnssConfig& GNSS_config,
+                                    const GnssConfig& gnss_config,
                                     std::mt19937 & gen);
     
     /// @}
