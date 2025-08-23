@@ -615,7 +615,7 @@ StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, con
     std::normal_distribution att_d{0.0, kf_config.init_att_unc};
     std::normal_distribution vel_d{0.0, kf_config.init_vel_unc};
     std::normal_distribution pos_d{0.0, kf_config.init_pos_unc};
-    state_est_ecef.nav_sol.C_b_e = true_nav_ecef.C_b_e * rpyToR(Eigen::Vector3d(att_d(gen), att_d(gen), att_d(gen)));
+    state_est_ecef.nav_sol.C_b_e = true_nav_ecef.C_b_e * eulerToDcm(Eigen::Vector3d(att_d(gen), att_d(gen), att_d(gen)));
     state_est_ecef.nav_sol.r_eb_e += Eigen::Vector3d(pos_d(gen), pos_d(gen), pos_d(gen));
     state_est_ecef.nav_sol.v_eb_e += Eigen::Vector3d(vel_d(gen), vel_d(gen), vel_d(gen));
     state_est_ecef.acc_bias = Eigen::Vector3d::Zero();

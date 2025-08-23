@@ -51,15 +51,17 @@ namespace intnavlib {
         return rads / 0.01745329252;
     }
 
-    /// \brief Converts Euler angles (roll, pitch, yaw) to a rotation matrix.
+    /// \brief Converts Euler angles (roll, pitch, yaw) to a rotation matrix C.
+    /// The Euler sequence is the following: C = Rz(yaw) * Ry(pitch) * Rx(roll).
     /// \param[in] rpy Eigen::Vector3d containing roll, pitch, and yaw angles (in radians).
     /// \return 3x3 rotation matrix.
-    Eigen::Matrix3d rpyToR(const Eigen::Vector3d & rpy);
+    Eigen::Matrix3d eulerToDcm(const Eigen::Vector3d & rpy);
 
     /// \brief Converts a rotation matrix to Euler angles (roll, pitch, yaw).
+    /// The Euler sequence is the following: R = Rz(yaw) * Ry(pitch) * Rx(roll).
     /// \param[in] C 3x3 rotation matrix.
     /// \return Eigen::Vector3d containing roll, pitch, and yaw angles (in radians).
-    Eigen::Vector3d rToRpy(const Eigen::Matrix3d & C);
+    Eigen::Vector3d dcmToEuler(const Eigen::Matrix3d & C);
 
     /// \brief Gets the skew-symmetric matrix from a 3D vector.
     /// For a vector `a = [ax, ay, az]`, the skew-symmetric matrix `S` is:
@@ -163,6 +165,16 @@ namespace intnavlib {
     };
 
     /// \brief Profile reader utility
+    // Column 1: time (sec)
+    // Column 2: latitude (deg)
+    // Column 3: longitude (deg)
+    // Column 4: height (m)
+    // Column 5: north velocity (m/s)
+    // Column 6: east velocity (m/s)
+    // Column 7: down velocity (m/s)
+    // Column 8: roll angle of body w.r.t NED (deg)
+    // Column 9: pitch angle of body w.r.t NED (deg)
+    // Column 10: yaw angle of body w.r.t NED (deg)
     class MotionProfileReader {
         public:
             MotionProfileReader(const std::string& filename) : file(filename), ok(false) {
@@ -192,7 +204,7 @@ namespace intnavlib {
                         double yaw = degToRad(values[9]);
                         Eigen::Vector3d rpy;
                         rpy << roll, pitch, yaw;
-                        row.C_b_n = rpyToR(rpy).transpose();
+                        row.C_b_n = eulerToDcm(rpy);
 
                         return true;
                     }
@@ -208,6 +220,16 @@ namespace intnavlib {
     };
 
     /// \brief Profile writer utility
+    // Column 1: time (sec)
+    // Column 2: latitude (deg)
+    // Column 3: longitude (deg)
+    // Column 4: height (m)
+    // Column 5: north velocity (m/s)
+    // Column 6: east velocity (m/s)
+    // Column 7: down velocity (m/s)
+    // Column 8: roll angle of body w.r.t NED (deg)
+    // Column 9: pitch angle of body w.r.t NED (deg)
+    // Column 10: yaw angle of body w.r.t NED (deg)
     class MotionProfileWriter {
         public:
             MotionProfileWriter(const std::string& filename) : file(filename), ok(false) {
@@ -230,7 +252,7 @@ namespace intnavlib {
                 // Extract velocity components
                 Eigen::Vector3d v_eb_n = row.v_eb_n;
                 // Convert rotation matrix to roll, pitch, yaw (in radians)
-                Eigen::Vector3d rpy = rToRpy(row.C_b_n.transpose());
+                Eigen::Vector3d rpy = dcmToEuler(row.C_b_n);
                 // Convert roll, pitch, yaw to degrees
                 double roll = radToDeg(rpy[0]);
                 double pitch = radToDeg(rpy[1]);
@@ -255,6 +277,16 @@ namespace intnavlib {
     };
 
     /// \brief NED Errors writer
+    // Column 1: time (sec)
+    // Column 2: north position error (m)
+    // Column 3: east position error (m)
+    // Column 4: down position error (m)
+    // Column 5: north velocity error (m/s)
+    // Column 6: east velocity error (m/s)
+    // Column 7: down velocity error (m/s)
+    // Column 8: roll component of NED attitude error (deg)
+    // Column 9: pitch component of NED attitude error (deg)
+    // Column 10: yaw component of NED attitude error (deg)
     class ErrorsWriter {
         public:
             ErrorsWriter(const std::string& filename) : file(filename), ok(false) {

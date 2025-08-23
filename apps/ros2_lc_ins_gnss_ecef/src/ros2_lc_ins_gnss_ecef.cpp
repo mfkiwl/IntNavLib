@@ -165,7 +165,7 @@ private:
                                                     kDegToRad * init_lla_[1], 
                                                     init_lla_[2], 
                                                     Eigen::Vector3d(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
-                                                    rpyToR(kDegToRad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2])).transpose()};
+                                                    eulerToDcm(kDegToRad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]))};
         
         state_est_ecef_.valid = true;
         state_est_ecef_.nav_sol = nedToEcef(est_nav_ned);

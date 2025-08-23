@@ -101,36 +101,36 @@ ErrorsSigmasEcef getErrorsSigmasEcef(const StateEstEcef & state_est_ecef, const 
     return errors_sigmas;
 }
 
-Eigen::Matrix3d rpyToR(const Eigen::Vector3d & rpy) {
+Eigen::Matrix3d eulerToDcm(const Eigen::Vector3d & rpy) {
     double roll = rpy(0);
     double pitch = rpy(1);
     double yaw = rpy(2);
     // Precompute sines and cosines of Euler angles
-    double sin_phi = std::sin(roll);
-    double cos_phi = std::cos(roll);
-    double sin_theta = std::sin(pitch);
-    double cos_theta = std::cos(pitch);
-    double sin_psi = std::sin(yaw);
-    double cos_psi = std::cos(yaw);
-    // Calculate the coordinate transformation matrix using the provided equations
+    double sin_roll = std::sin(roll);
+    double cos_roll = std::cos(roll);
+    double sin_pitch = std::sin(pitch);
+    double cos_pitch = std::cos(pitch);
+    double sin_yaw = std::sin(yaw);
+    double cos_yaw = std::cos(yaw);
+    // Calculate the coordinate transformation matrix R = Rz(yaw) * Ry(pitch) * Rx(roll)
     Eigen::Matrix3d C;
-    C(0,0) = cos_theta * cos_psi;
-    C(0,1) = cos_theta * sin_psi;
-    C(0,2) = -sin_theta;
-    C(1,0) = -cos_phi * sin_psi + sin_phi * sin_theta * cos_psi;
-    C(1,1) = cos_phi * cos_psi + sin_phi * sin_theta * sin_psi;
-    C(1,2) = sin_phi * cos_theta;
-    C(2,0) = sin_phi * sin_psi + cos_phi * sin_theta * cos_psi;
-    C(2,1) = -sin_phi * cos_psi + cos_phi * sin_theta * sin_psi;
-    C(2,2) = cos_phi * cos_theta;
+    C(0,0) = cos_pitch * cos_yaw;
+    C(1,0) = cos_pitch * sin_yaw;
+    C(2,0) = -sin_pitch;
+    C(0,1) = -cos_roll * sin_yaw + sin_roll * sin_pitch * cos_yaw;
+    C(1,1) = cos_roll * cos_yaw + sin_roll * sin_pitch * sin_yaw;
+    C(2,1) = sin_roll * cos_pitch;
+    C(0,2) = sin_roll * sin_yaw + cos_roll * sin_pitch * cos_yaw;
+    C(1,2) = -sin_roll * cos_yaw + cos_roll * sin_pitch * sin_yaw;
+    C(2,2) = cos_roll * cos_pitch;
     return C;
 }
 
-Eigen::Vector3d rToRpy(const Eigen::Matrix3d & C) {
+Eigen::Vector3d dcmToEuler(const Eigen::Matrix3d & C) {
     Eigen::Vector3d rpy;
-    rpy(0) = atan2(C(1,2),C(2,2));
-    rpy(1) = - asin(C(0,2));      
-    rpy(2) = atan2(C(0,1),C(0,0));
+    rpy(0) = atan2(C(2,1),C(2,2));
+    rpy(1) = - asin(C(2,0));      
+    rpy(2) = atan2(C(1,0),C(0,0));
     return rpy;
 }
 
@@ -207,7 +207,7 @@ ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol,
     Eigen::Vector3d delta_v_eb_n = est_nav_sol.v_eb_n - true_nav_sol.v_eb_n;
     // Attitude error calculation
     Eigen::Matrix3d delta_C_b_n = est_nav_sol.C_b_n * true_nav_sol.C_b_n.transpose();
-    Eigen::Vector3d delta_rot_nb_n = -rToRpy(delta_C_b_n);
+    Eigen::Vector3d delta_rot_nb_n = -dcmToEuler(delta_C_b_n);
     ErrorsNed errors_ned;
     errors_ned.time = true_nav_sol.time;
     errors_ned.delta_r_eb_n = delta_r_eb_n;

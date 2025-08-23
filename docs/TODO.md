@@ -2,10 +2,6 @@
 
 ### Core Development
 
-- better variable names: no stupid random uppercases
-
-- bad euler / dcm conversion (+ profile reader and writer): theres a stupid transpose
-
 - no matrix inversions!
 
 - ros2 app: do fast imu prop so state is not delayed.
@@ -22,7 +18,9 @@
 
 - NEES evaluation
 
-- monte carlo bash script
+- template double float filter funcs and classes
+
+- monte carlo bash script + eval script
 
 - in-house trajectory generator
 
@@ -36,4 +34,4 @@
 
 - clang tidy: cleanup code
 
-- doxygen: add more latex to documentation, compleete docs stubs
+- doxygen: add more latex to documentation, complete docs stubs

@@ -198,7 +198,7 @@ PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav,
 
     Eigen::Vector3d rot_error;
     rot_error << randn_rot(gen), randn_rot(gen), randn_rot(gen);
-    Eigen::Matrix3d C_b_b = rpyToR(rot_error); // perturbation Rot mat
+    Eigen::Matrix3d C_b_b = eulerToDcm(rot_error); // perturbation Rot mat
 
     Eigen::Matrix<double,6,6> cov_mat = Eigen::Matrix<double,6,6>::Identity();
     cov_mat.block<3,3>(0,0) *= pos_sigma * pos_sigma;
