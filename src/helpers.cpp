@@ -88,17 +88,35 @@ NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
     return nav_sol_ned;
 }
 
-ErrorsSigmasEcef getErrorsSigmasEcef(const StateEstEcef & state_est_ecef, const NavSolutionEcef & true_nav_ecef) {   
-    ErrorsSigmasEcef errors_sigmas;
-    errors_sigmas.time = state_est_ecef.nav_sol.time;
-    errors_sigmas.delta_r_eb_e = state_est_ecef.nav_sol.r_eb_e - true_nav_ecef.r_eb_e;
-    errors_sigmas.delta_v_eb_e = state_est_ecef.nav_sol.v_eb_e - true_nav_ecef.v_eb_e;
-    errors_sigmas.delta_rot_eb_e = deSkew(state_est_ecef.nav_sol.C_b_e * true_nav_ecef.C_b_e.transpose() - Eigen::Matrix3d::Identity());
+EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, const NavSolutionEcef & true_nav_ecef) {
+
+    EvalDataEcef eval_data;
+
+    // Errors
+    eval_data.time = state_est_ecef.nav_sol.time;
+    eval_data.delta_r_eb_e = state_est_ecef.nav_sol.r_eb_e - true_nav_ecef.r_eb_e;
+    eval_data.delta_v_eb_e = state_est_ecef.nav_sol.v_eb_e - true_nav_ecef.v_eb_e;
+    eval_data.delta_rot_eb_e = deSkew(state_est_ecef.nav_sol.C_b_e * true_nav_ecef.C_b_e.transpose() - Eigen::Matrix3d::Identity());
+
+    // Sigmas
+    eval_data.sigma_delta_r_eb_e << sqrt(state_est_ecef.P_matrix(6,6)), sqrt(state_est_ecef.P_matrix(7,7)), sqrt(state_est_ecef.P_matrix(8,8));
+    eval_data.sigma_delta_v_eb_e << sqrt(state_est_ecef.P_matrix(3,3)), sqrt(state_est_ecef.P_matrix(4,4)), sqrt(state_est_ecef.P_matrix(5,5));
+    eval_data.sigma_delta_rot_eb_e << sqrt(state_est_ecef.P_matrix(0,0)), sqrt(state_est_ecef.P_matrix(1,1)), sqrt(state_est_ecef.P_matrix(2,2));
     
-    errors_sigmas.sigma_delta_r_eb_e << sqrt(state_est_ecef.P_matrix(6,6)), sqrt(state_est_ecef.P_matrix(7,7)), sqrt(state_est_ecef.P_matrix(8,8));
-    errors_sigmas.sigma_delta_v_eb_e << sqrt(state_est_ecef.P_matrix(3,3)), sqrt(state_est_ecef.P_matrix(4,4)), sqrt(state_est_ecef.P_matrix(5,5));
-    errors_sigmas.sigma_delta_rot_eb_e << sqrt(state_est_ecef.P_matrix(0,0)), sqrt(state_est_ecef.P_matrix(1,1)), sqrt(state_est_ecef.P_matrix(2,2));
-    return errors_sigmas;
+    // These are just error-state estimates and their estimated sigmas
+    eval_data.delta_b_a = state_est_ecef.acc_bias;
+    eval_data.delta_b_g = state_est_ecef.gyro_bias;
+    eval_data.delta_clock_offset = state_est_ecef.clock_offset;
+    eval_data.delta_clock_drift = state_est_ecef.clock_drift;
+    eval_data.sigma_delta_b_a << sqrt(state_est_ecef.P_matrix(9,9)), sqrt(state_est_ecef.P_matrix(10,10)), sqrt(state_est_ecef.P_matrix(11,11));
+    eval_data.sigma_delta_b_g << sqrt(state_est_ecef.P_matrix(12,12)), sqrt(state_est_ecef.P_matrix(13,13)), sqrt(state_est_ecef.P_matrix(14,14));
+    eval_data.sigma_delta_clock_offset = sqrt(state_est_ecef.P_matrix(15,15));
+    eval_data.sigma_delta_clock_drift = sqrt(state_est_ecef.P_matrix(16,16));
+
+    // Innovations and sigmas
+    eval_data.innovations_sigmas = state_est_ecef.innovations_sigmas;
+
+    return eval_data;
 }
 
 Eigen::Matrix3d eulerToDcm(const Eigen::Vector3d & rpy) {

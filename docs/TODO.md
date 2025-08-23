@@ -24,7 +24,15 @@
 
 - in-house trajectory generator
 
+- no dynamic memory allocation
+
+- modular update functions, no duplications
+
+- plot profile on map
+
 ### Support & Infrastructure
+
+- github actions build
 
 - profile code with valgrind
 

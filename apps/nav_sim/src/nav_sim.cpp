@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     std::string new_directory = "../results";
     std::string base_filename = std::filesystem::path(motion_profile_filename_in).filename().string();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
-    std::string errors_sigmas_filename_out = new_directory + "/" + filename_without_extension + "_errors_sigmas.csv";
+    std::string errors_sigmas_filename_out = new_directory + "/" + filename_without_extension + "_eval.csv";
     if (!std::filesystem::exists(new_directory)) {
         std::filesystem::create_directory(new_directory);
     }
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 
     // Init profile reader + writers 
     MotionProfileReader reader(motion_profile_filename_in);
-    ErrorsSigmasEcefWriter errors_sigmas_writer(errors_sigmas_filename_out);
+    FileWriter eval_data_writer(errors_sigmas_filename_out);
 
     // True nav solution
     NavSolutionNed true_nav_ned;
@@ -175,8 +175,8 @@ int main(int argc, char** argv)
         // ========== Write Results ==========
 
         StateEstEcef state_est_ecef = nav_filter.getStateEst();
-        ErrorsSigmasEcef errors_sigmas_ecef = getErrorsSigmasEcef(state_est_ecef, true_nav_ecef);
-        errors_sigmas_writer.writeNextRow(errors_sigmas_ecef);
+        EvalDataEcef eval_data_ecef = getEvalDataEcef(state_est_ecef, true_nav_ecef);
+        eval_data_writer.writeEvalDataRow(eval_data_ecef);
         
         // ============= Update simulation state ==============
 

@@ -31,11 +31,11 @@ namespace intnavlib {
     /// \return Navigation solution in NED frame.
     NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef);
 
-    /// \brief Compute errors from state estimate and ground truth.
+    /// \brief Compute eval data from state estimate and ground truth.
     /// \param[in] state_est_ecef State estimate.
     /// \param[in] true_nav_ecef grounud truth.
     /// \return Errors and standard deviations.
-    ErrorsSigmasEcef getErrorsSigmasEcef(const StateEstEcef & state_est_ecef, const NavSolutionEcef & true_nav_ecef);
+    EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, const NavSolutionEcef & true_nav_ecef);
 
     /// \brief Converts degrees to radians.
     /// \param[in] degrees Angle in degrees.
@@ -115,54 +115,6 @@ namespace intnavlib {
     GnssConfig defaultGnssConfig();
     /// \brief Get default KfConfig.
     KfConfig tacticalImuKFConfig(); 
-    
-    /// \brief Text file writer utility
-    class ErrorsSigmasEcefWriter {
-    public:
-        ErrorsSigmasEcefWriter(const std::string& filename) : file(filename), ok(false) {
-            if (!file.is_open()) {
-                std::cerr << "Failed to open file: " << filename << std::endl;
-                return;
-            }
-            ok = true;
-        }
-        bool writeNextRow(const ErrorsSigmasEcef & row) {
-            if (!file.good()) return false;
-            // Extract position errors (in meters)
-            Eigen::Vector3d delta_r_eb_e = row.delta_r_eb_e;
-            Eigen::Vector3d sigma_delta_r_eb_e = row.sigma_delta_r_eb_e;
-            // Extract velocity errors (in m/s)
-            Eigen::Vector3d delta_v_eb_e = row.delta_v_eb_e;
-            Eigen::Vector3d sigma_delta_v_eb_e = row.sigma_delta_v_eb_e;
-            // Convert Euler angles (in radians) to degrees
-            Eigen::Vector3d delta_rot_eb_e = row.delta_rot_eb_e * kRadToDeg;
-            Eigen::Vector3d sigma_delta_rot_eb_e = row.sigma_delta_rot_eb_e * kRadToDeg;
-            // Write the row to the CSV file
-            file << row.time << ","
-                << delta_r_eb_e[0] << "," // Errors
-                << delta_r_eb_e[1] << ","
-                << delta_r_eb_e[2] << ","
-                << delta_v_eb_e[0] << "," 
-                << delta_v_eb_e[1] << ","
-                << delta_v_eb_e[2] << ","
-                << delta_rot_eb_e[0] << ","
-                << delta_rot_eb_e[1] << ","
-                << delta_rot_eb_e[2] << ","
-                << sigma_delta_r_eb_e[0] << "," // Errors sigma
-                << sigma_delta_r_eb_e[1] << ","
-                << sigma_delta_r_eb_e[2] << ","
-                << sigma_delta_v_eb_e[0] << "," 
-                << sigma_delta_v_eb_e[1] << ","
-                << sigma_delta_v_eb_e[2] << ","
-                << sigma_delta_rot_eb_e[0] << ","
-                << sigma_delta_rot_eb_e[1] << ","
-                << sigma_delta_rot_eb_e[2] << "\n";
-            return true;
-        }
-    private:
-        std::ofstream file;
-        bool ok;
-    };
 
     /// \brief Profile reader utility
     // Column 1: time (sec)
@@ -219,31 +171,19 @@ namespace intnavlib {
             bool ok;
     };
 
-    /// \brief Profile writer utility
-    // Column 1: time (sec)
-    // Column 2: latitude (deg)
-    // Column 3: longitude (deg)
-    // Column 4: height (m)
-    // Column 5: north velocity (m/s)
-    // Column 6: east velocity (m/s)
-    // Column 7: down velocity (m/s)
-    // Column 8: roll angle of body w.r.t NED (deg)
-    // Column 9: pitch angle of body w.r.t NED (deg)
-    // Column 10: yaw angle of body w.r.t NED (deg)
-    class MotionProfileWriter {
+    /// \brief File writer utility. Can write output profile, NED nav errors, and full filter eval including innovations monitoring
+    class FileWriter {
         public:
-            MotionProfileWriter(const std::string& filename) : file(filename), ok(false) {
+            FileWriter(const std::string& filename) : file(filename), ok(false) {
                 if (!file.is_open()) {
                     std::cerr << "Failed to open file: " << filename << std::endl;
                     return;
                 }
                 // Since we will use this csv file to compute errors between profiles, its important to set precision
                 file << std::fixed << std::setprecision(20);
-                // Write header
-                // file << "time,latitude,longitude,height,vx,vy,vz,roll,pitch,yaw\n";
                 ok = true;
             }
-            bool writeNextRow(const NavSolutionNed& row) {
+            bool writeProfileRow(const NavSolutionNed& row) {
                 if (!file.good()) return false;
                 // Convert latitude and longitude from radians to degrees
                 double latitude = radToDeg(row.latitude);
@@ -271,48 +211,11 @@ namespace intnavlib {
 
                 return true;
             }
-        private:
-            std::ofstream file;
-            bool ok;
-    };
-
-    /// \brief NED Errors writer
-    // Column 1: time (sec)
-    // Column 2: north position error (m)
-    // Column 3: east position error (m)
-    // Column 4: down position error (m)
-    // Column 5: north velocity error (m/s)
-    // Column 6: east velocity error (m/s)
-    // Column 7: down velocity error (m/s)
-    // Column 8: roll component of NED attitude error (deg)
-    // Column 9: pitch component of NED attitude error (deg)
-    // Column 10: yaw component of NED attitude error (deg)
-    class ErrorsWriter {
-        public:
-            ErrorsWriter(const std::string& filename) : file(filename), ok(false) {
-                if (!file.is_open()) {
-                    std::cerr << "Failed to open file: " << filename << std::endl;
-                    return;
-                }
-
-                // Write header
-                // file << "time,d_north,d_east,d_down,d_v_north,d_v_east,d_v_down,d_roll,d_pitch,d_yaw\n";
-                ok = true;
-            }
-
-            bool writeNextRow(const ErrorsNed& row) {
+            bool writeErrorsRow(const ErrorsNed& row) {
                 if (!file.good()) return false;
-
-                // Extract position errors (in meters)
                 Eigen::Vector3d delta_r_eb_n = row.delta_r_eb_n;
-
-                // Extract velocity errors (in m/s)
                 Eigen::Vector3d delta_v_eb_n = row.delta_v_eb_n;
-
-                // Convert Euler angles (in radians) to degrees
                 Eigen::Vector3d delta_rot_nb_n = row.delta_rot_nb_n * kRadToDeg;
-
-                // Write the row to the CSV file
                 file << row.time << ","
                     << delta_r_eb_n[0] << "," // north position error
                     << delta_r_eb_n[1] << "," // east position error
@@ -326,13 +229,58 @@ namespace intnavlib {
 
                 return true;
             }
-
+            bool writeEvalDataRow(const EvalDataEcef& row) {
+                if (!file.good()) return false;
+                // Write the row to the CSV file
+                file << row.time << ","
+                    // Errors
+                    << row.delta_r_eb_e[0] << "," 
+                    << row.delta_r_eb_e[1] << ","
+                    << row.delta_r_eb_e[2] << ","
+                    << row.delta_v_eb_e[0] << "," 
+                    << row.delta_v_eb_e[1] << ","
+                    << row.delta_v_eb_e[2] << ","
+                    << row.delta_rot_eb_e[0] * kRadToDeg << ","
+                    << row.delta_rot_eb_e[1] * kRadToDeg << ","
+                    << row.delta_rot_eb_e[2] * kRadToDeg << ","
+                    // Errors sigmas
+                    << row.sigma_delta_r_eb_e[0] << ","
+                    << row.sigma_delta_r_eb_e[1] << ","
+                    << row.sigma_delta_r_eb_e[2] << ","
+                    << row.sigma_delta_v_eb_e[0] << "," 
+                    << row.sigma_delta_v_eb_e[1] << ","
+                    << row.sigma_delta_v_eb_e[2] << ","
+                    << row.sigma_delta_rot_eb_e[0] * kRadToDeg << ","
+                    << row.sigma_delta_rot_eb_e[1] * kRadToDeg << ","
+                    << row.sigma_delta_rot_eb_e[2] * kRadToDeg << ","
+                    // Imu bias estimates and clock bias estimates + est sigmas
+                    << row.delta_b_a[0] << ","
+                    << row.delta_b_a[1] << ","
+                    << row.delta_b_a[2] << ","
+                    << row.delta_b_g[0] << ","
+                    << row.delta_b_g[1] << ","
+                    << row.delta_b_g[2] << ","
+                    << row.delta_clock_offset << ","
+                    << row.delta_clock_drift << ","
+                    << row.sigma_delta_b_a[0] << ","
+                    << row.sigma_delta_b_a[1] << ","
+                    << row.sigma_delta_b_a[2] << ","
+                    << row.sigma_delta_b_g[0] << ","
+                    << row.sigma_delta_b_g[1] << ","
+                    << row.sigma_delta_b_g[2] << ","
+                    << row.sigma_delta_clock_offset << ","
+                    << row.sigma_delta_clock_drift;
+                    // Innovations and innovations sigmas
+                    for (int i = 0; i < row.innovations_sigmas.size(); i++) {
+                        file << "," <<row.innovations_sigmas[i].first << "," << row.innovations_sigmas[i].second;
+                    }
+                file << "\n";   
+                return true;
+            }
         private:
             std::ofstream file;
             bool ok;
-        };
-                                
-    /// @}                      
+    };              
                                 
 };
 

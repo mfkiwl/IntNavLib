@@ -156,6 +156,19 @@ struct StateEstEcef {
     double clock_drift;
     /// The error covariance matrix.
     Eigen::Matrix<double,17,17> P_matrix;
+    /// Innovations + sigmas vector (dynamic, depends on measurements)
+    std::vector<std::pair<double, double>> innovations_sigmas;
+    // /// Default constructor
+    StateEstEcef()
+        : valid(false),
+          nav_sol(), // assumes NavSolutionEcef has its own default constructor
+          acc_bias(Eigen::Vector3d::Constant(-1.0)),
+          gyro_bias(Eigen::Vector3d::Constant(-1.0)),
+          clock_offset(-1.0),
+          clock_drift(-1.0),
+          P_matrix(Eigen::Matrix<double,17,17>::Constant(-1.0)),
+          innovations_sigmas()
+    {}
 };
 
 /// \brief Structure to hold navigation errors in the NED (North, East, Down) frame.
@@ -171,8 +184,8 @@ struct ErrorsNed {
     Eigen::Vector3d delta_rot_nb_n;
 };
 
-/// \brief Structure to hold navigation errors in ECEF frame along with their estimated standard deviations.
-struct ErrorsSigmasEcef {
+/// \brief Structure to hold navigation eval data in ECEF frame along with their estimated standard deviations.
+struct EvalDataEcef {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     /// Time of the error calculation.
     double time;
@@ -182,12 +195,30 @@ struct ErrorsSigmasEcef {
     Eigen::Vector3d delta_v_eb_e;
     /// Orientation error (rotation vector) in ECEF frame.
     Eigen::Vector3d delta_rot_eb_e;
+    /// Accelerometer bias estimate
+    Eigen::Vector3d delta_b_a;
+    /// Gyro bias estimate
+    Eigen::Vector3d delta_b_g;
+    /// Clock bias estimate
+    double delta_clock_offset;
+    /// Clock drift estimate
+    double delta_clock_drift;
     /// Standard deviation of position error in ECEF frame.
     Eigen::Vector3d sigma_delta_r_eb_e;
     /// Standard deviation of velocity error in ECEF frame.
     Eigen::Vector3d sigma_delta_v_eb_e;
     /// Standard deviation of orientation error (rotation ector) in ECEF frame.
     Eigen::Vector3d sigma_delta_rot_eb_e;
+    /// Standard deviation of accelerometer bias
+    Eigen::Vector3d sigma_delta_b_a;
+    /// Standard deviation of gyro bias
+    Eigen::Vector3d sigma_delta_b_g;
+    /// Standard deviation of clock bias
+    double sigma_delta_clock_offset;
+    /// Standard deviation of clock drift   
+    double sigma_delta_clock_drift;
+    // Innovations and sigmas
+    std::vector<std::pair<double, double>> innovations_sigmas;
 };
 
 /// \brief Structure to configure Kalman Filter parameters.

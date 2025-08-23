@@ -76,7 +76,11 @@ StateEstEcef lcPredictKF(const StateEstEcef & state_est_old,
     imu_meas_comp.f -= state_est_old.acc_bias;
     imu_meas_comp.omega -= state_est_old.gyro_bias;
     // Prop uncertainty
-    StateEstEcef state_est_ecef = state_est_old;
+    StateEstEcef state_est_ecef;
+    state_est_ecef.valid = state_est_old.valid;
+    state_est_ecef.acc_bias = state_est_old.acc_bias;
+    state_est_ecef.gyro_bias = state_est_old.gyro_bias;
+    state_est_ecef.innovations_sigmas = state_est_old.innovations_sigmas;
     state_est_ecef.P_matrix.block<15,15>(0,0) = lcPropUnc(state_est_old.P_matrix.block<15,15>(0,0), 
                                                             state_est_old.nav_sol,
                                                             ecefToNed(state_est_old.nav_sol),
@@ -84,7 +88,7 @@ StateEstEcef lcPredictKF(const StateEstEcef & state_est_old,
                                                             lc_kf_config,
                                                             tor_i);
     // Predict state
-    state_est_ecef.nav_sol = navEquationsEcef(state_est_ecef.nav_sol, imu_meas_comp, tor_i);
+    state_est_ecef.nav_sol = navEquationsEcef(state_est_old.nav_sol, imu_meas_comp, tor_i);
     return state_est_ecef;
 }
 
@@ -97,7 +101,13 @@ StateEstEcef tcPredictKF(const StateEstEcef & state_est_old,
     imu_meas_comp.f -= state_est_old.acc_bias;
     imu_meas_comp.omega -= state_est_old.gyro_bias;
     // Prop uncertainty
-    StateEstEcef state_est_ecef = state_est_old;
+    StateEstEcef state_est_ecef;
+    state_est_ecef.valid = state_est_old.valid;
+    state_est_ecef.acc_bias = state_est_old.acc_bias;
+    state_est_ecef.gyro_bias = state_est_old.gyro_bias;
+    state_est_ecef.clock_offset = state_est_old.clock_offset;
+    state_est_ecef.clock_drift = state_est_old.clock_drift;
+    state_est_ecef.innovations_sigmas = state_est_old.innovations_sigmas;
     state_est_ecef.P_matrix = tcPropUnc(state_est_old.P_matrix, 
                                         state_est_old.nav_sol,
                                         ecefToNed(state_est_old.nav_sol),
@@ -105,7 +115,7 @@ StateEstEcef tcPredictKF(const StateEstEcef & state_est_old,
                                         kf_config,
                                         tor_i);
     // Predict state
-    state_est_ecef.nav_sol = navEquationsEcef(state_est_ecef.nav_sol, imu_meas_comp, tor_i);
+    state_est_ecef.nav_sol = navEquationsEcef(state_est_old.nav_sol, imu_meas_comp, tor_i);
     return state_est_ecef;
 }
 
@@ -206,7 +216,8 @@ StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
     Eigen::Matrix3d R_matrix = pos_meas.cov_mat;
 
     // Calculate Kalman gain using (3.21)
-    Eigen::Matrix3d S_matrix_inv = (H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix).inverse();
+    Eigen::Matrix3d S_matrix = H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix;
+    auto S_matrix_inv = S_matrix.inverse();
     Eigen::Matrix<double, 15,3> K_matrix = state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() * S_matrix_inv;
 
     // Formulate measurement innovations using (14.102), noting that zero
@@ -235,6 +246,12 @@ StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
     // Update IMU bias estimates
     state_est_post.acc_bias = state_est_prior.acc_bias + x_est_new.block<3,1>(9,0);
     state_est_post.gyro_bias = state_est_prior.gyro_bias + x_est_new.block<3,1>(12,0);
+
+    // Update innovations and sigmas
+    state_est_post.innovations_sigmas.clear();
+    for(int i=0; i<delta_z.rows(); i++){
+        state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
+    }
 
     // Real-time consistency check
     // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
@@ -274,7 +291,8 @@ StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     Eigen::Matrix<double,6,6> R_matrix = pos_vel_gnss_meas.cov_mat;
 
     // Calculate Kalman gain using (3.21)
-    Eigen::Matrix<double, 6,6> S_matrix_inv = (H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix).inverse();
+    Eigen::Matrix<double, 6,6> S_matrix = H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix;
+    auto S_matrix_inv = S_matrix.inverse();
     Eigen::Matrix<double, 15,6> K_matrix = state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() * S_matrix_inv;
 
     // Formulate measurement innovations using (14.102), noting that zero
@@ -306,6 +324,12 @@ StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     // Update IMU bias estimates
     state_est_post.acc_bias = state_est_prior.acc_bias + x_est_new.block<3,1>(9,0);
     state_est_post.gyro_bias = state_est_prior.gyro_bias + x_est_new.block<3,1>(12,0);
+
+    // Update innovations and sigmas
+    state_est_post.innovations_sigmas.clear();
+    for(int i=0; i<delta_z.rows(); i++){
+        state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
+    }
 
     // Real-time consistency check
     // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
@@ -389,7 +413,8 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> R_matrix = gnss_meas.cov_mat;
 
     // 7. Calculate Kalman gain using (3.21)
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> S_matrix_inv = (H_matrix * state_est_prior.P_matrix * H_matrix.transpose() + R_matrix).inverse();
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> S_matrix = H_matrix * state_est_prior.P_matrix * H_matrix.transpose() + R_matrix;
+    auto S_matrix_inv = S_matrix.inverse();
     Eigen::Matrix<double, 17, Eigen::Dynamic, 0, 17, 2* kMaxGnssSatellites> K_matrix = state_est_prior.P_matrix * H_matrix.transpose() * S_matrix_inv;
 
     // 8. Formulate measurement innovations using (14.119)
@@ -430,6 +455,12 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     state_est_post.clock_offset = state_est_prior.clock_offset +  x_est_new(15,0);
     state_est_post.clock_drift = state_est_prior.clock_drift + x_est_new(16,0);
 
+    // Update innovations and sigmas
+    state_est_post.innovations_sigmas.clear();
+    for(int i=0; i<delta_z.rows(); i++){
+        state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
+    }
+
     // Real-time consistency check
     // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
     // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
@@ -463,7 +494,8 @@ StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
     Eigen::Matrix<double, 6,6> R_matrix = pos_rot_meas.cov_mat;
 
     // 7. Calculate Kalman gain using (3.21)
-    Eigen::Matrix<double, 6,6> S_matrix_inv = (H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix).inverse();
+    Eigen::Matrix<double, 6,6> S_matrix = H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix;
+    auto S_matrix_inv = S_matrix.inverse();
     Eigen::Matrix<double, 15,6> K_matrix = state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() * S_matrix_inv;
 
     // 8. Formulate measurement innovations using (14.102), noting that zero
@@ -494,6 +526,12 @@ StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
     // Update IMU bias estimates
     state_est_post.acc_bias = state_est_prior.acc_bias + x_est_new.block<3,1>(9,0);
     state_est_post.gyro_bias = state_est_prior.gyro_bias + x_est_new.block<3,1>(12,0);
+
+    // Update innovations and sigmas
+    state_est_post.innovations_sigmas.clear();
+    for(int i=0; i<delta_z.rows(); i++){
+        state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
+    }
 
     // Real-time consistency check
     // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
@@ -620,8 +658,9 @@ StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, con
     state_est_ecef.nav_sol.v_eb_e += Eigen::Vector3d(vel_d(gen), vel_d(gen), vel_d(gen));
     state_est_ecef.acc_bias = Eigen::Vector3d::Zero();
     state_est_ecef.gyro_bias = Eigen::Vector3d::Zero();
+    // Error covariance matrix
     state_est_ecef.P_matrix = initializePMmatrix(kf_config);
-    // Get clock states using NLLS solver
+    // Init clock states using NLLS solver
     GnssLsPosVelClock gnss_pos_vel_clock_est = gnssLsPositionVelocityClock(gnss_meas, state_est_ecef.nav_sol.r_eb_e, state_est_ecef.nav_sol.v_eb_e);
     state_est_ecef.clock_offset = gnss_pos_vel_clock_est.clock(0);
     state_est_ecef.clock_drift = gnss_pos_vel_clock_est.clock(1);

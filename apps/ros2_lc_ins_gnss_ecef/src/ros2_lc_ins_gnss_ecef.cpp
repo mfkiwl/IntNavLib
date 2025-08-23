@@ -99,7 +99,7 @@ private:
 
     // If log, write results to file
     bool write_log_;
-    std::unique_ptr<MotionProfileWriter> log_writer_;
+    std::unique_ptr<FileWriter> log_writer_;
 
     void init() {
 
@@ -141,7 +141,7 @@ private:
         write_log_ = get_parameter("write_log").as_bool();
         std::string log_path = get_parameter("log_path").as_string();
         if(write_log_){
-            log_writer_ = std::make_unique<MotionProfileWriter>(log_path);
+            log_writer_ = std::make_unique<FileWriter>(log_path);
         }
 
         // EKF config
@@ -297,7 +297,7 @@ private:
             // Log nav sol to file
             if(write_log_){
                 NavSolutionNed est_nav_ned = ecefToNed(state_est_ecef_.nav_sol);
-                log_writer_->writeNextRow(est_nav_ned);
+                log_writer_->writeProfileRow(est_nav_ned);
             }
         }
     }
