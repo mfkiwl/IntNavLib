@@ -58,7 +58,7 @@ cd apps/ins_ecef
 ![image](media/Figure_2.png)
 
 This library also comes with an example of how to use it in a ROS2 project.
-To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation, first install ROS2 (Humble supported, other releases might require minor refactoring), then run for example:
+To launch a ROS2 node performing integrated loosely-coupled GNSS/INS navigation, first install ROS2 (Humble supported, other distributions might require minor refactoring), then run:
 
 ```
 cd apps/ros2_lc_ins_gnss_ecef
@@ -66,7 +66,7 @@ source install/setup.bash
 ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py log_level:=ERROR
 ```
 
-Find Python and C++ scripts to plot results in Groves' style in the [utils](/utils/) directory. You can launch them like this:
+Find Python and C++ scripts to plot results in the [utils](/utils/) directory. You can launch them like this:
 
 ```
 python3 plot_profile.py <path_to_profile_csv> # to plot a motion profile

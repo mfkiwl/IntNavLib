@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import math
 
-def plot_errors(csv_file):
+def plot_eval(csv_file):
     # Load data
     data = pd.read_csv(csv_file)
     time = data.iloc[:, 0].to_numpy()
@@ -118,7 +118,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python plot_eval.py <csv_file>")
         return
-    plot_errors(sys.argv[1])
+    plot_eval(sys.argv[1])
 
 if __name__ == "__main__":
     main()

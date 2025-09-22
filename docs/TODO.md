@@ -14,9 +14,7 @@
 
 - real time whiteness check
 
-- plot innovations
-
-- NEES evaluation
+- better eval: display NEES, NIS, MAE, RMSE
 
 - template double float filter funcs and classes
 
@@ -27,8 +25,6 @@
 - no dynamic memory allocation
 
 - modular update functions, no duplications
-
-- plot profile on map
 
 ### Support & Infrastructure
 
