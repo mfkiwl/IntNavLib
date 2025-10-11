@@ -188,6 +188,29 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
                                         const KfConfig & tc_kf_config,
                                         const double & tor_s);
 
+/// \brief Generic Kalman filter update
+/// This function performs a generic Kalman filter update step. It calculates the Kalman gain,
+/// updates the error state estimates, and propagates the error covariance matrix.
+/// It also includes a real-time consistency check using the Chi-squared test.
+/// \tparam n_x The dimension of the state vector.
+/// \tparam n_z The dimension of the measurement vector.
+/// \param[in] delta_z The measurement innovation vector.
+/// \param[in] P_matrix The prior error covariance matrix.
+/// \param[in] H_matrix The measurement matrix.
+/// \param[in] R_matrix The measurement noise covariance matrix.
+/// \param[out] S_matrix The innovation covariance matrix.
+/// \param[out] x_est_new The updated error state estimates.
+/// \param[out] P_matrix_post The updated (posterior) error covariance matrix.
+template<int n_x, int n_z, int max_n_z = 2* kMaxGnssSatellites>
+bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
+            const Eigen::Matrix<double, n_x, n_x> & P_matrix, 
+            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
+            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
+            const double & p_value,
+            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
+            Eigen::Matrix<double, n_x, 1> & x_est_new,
+            Eigen::Matrix<double, n_x, n_x> & P_matrix_post);
+
 /// \brief Performs a Loosely Coupled (LC) Kalman Filter update using an ECEF position measurement.
 /// This is a closed-loop error-state KF update that corrects the navigation solution
 /// and IMU bias estimates by integrating a position measurement.
@@ -409,24 +432,26 @@ class NavKF {
     public:
         /// \brief Deleted default constructor.
         NavKF() = delete;
+        NavKF(const NavKF & ) = default;
+        NavKF& operator=(const NavKF &) = default;
         /// \brief Construct from prior state estimate and KF config.
         NavKF(const StateEstEcef & state_est, const KfConfig & kf_config) { state_est_ = state_est; kf_config_ = kf_config;}
         /// \brief Get state estimate.
-        StateEstEcef getStateEst() { return state_est_;}
+        inline StateEstEcef getStateEst() { return state_est_;}
         /// \brief Get time.
-        double getTime() { return state_est_.nav_sol.time;}
+        inline double getTime() { return state_est_.nav_sol.time;}
         /// \brief Predict (loose).
-        void lcPredict(const ImuMeasurements & imu_meas, const double & tor_i) { state_est_ = lcPredictKF(state_est_, imu_meas, kf_config_, tor_i);}
+        inline void lcPredict(const ImuMeasurements & imu_meas, const double & tor_i) { state_est_ = lcPredictKF(state_est_, imu_meas, kf_config_, tor_i);}
         /// \brief Predict (tight).
-        void tcPredict(const ImuMeasurements & imu_meas, const double & tor_i) { state_est_ = tcPredictKF(state_est_, imu_meas, kf_config_, tor_i);}
+        inline void tcPredict(const ImuMeasurements & imu_meas, const double & tor_i) { state_est_ = tcPredictKF(state_est_, imu_meas, kf_config_, tor_i);}
         /// \brief Update with position.
-        void lcUpdatePosEcef(const PosMeasEcef & pos_meas) { state_est_ = lcUpdateKFPosEcef(pos_meas, state_est_);}
+        inline void lcUpdatePosEcef(const PosMeasEcef & pos_meas) { state_est_ = lcUpdateKFPosEcef(pos_meas, state_est_);}
         /// \brief Update with position and rotation.
-        void lcUpdatePosRotEcef(const PosRotMeasEcef & pos_rot_meas) { state_est_ = lcUpdateKFPosRotEcef(pos_rot_meas, state_est_);}
+        inline void lcUpdatePosRotEcef(const PosRotMeasEcef & pos_rot_meas) { state_est_ = lcUpdateKFPosRotEcef(pos_rot_meas, state_est_);}
         /// \brief Update with GNSS (loose).
-        void lcUpdateGnssEcef(const GnssMeasurements & gnss_meas, const GnssConfig & gnss_config) { state_est_ = lcUpdateKFGnssEcef(gnss_meas, state_est_, gnss_config);}
+        inline void lcUpdateGnssEcef(const GnssMeasurements & gnss_meas, const GnssConfig & gnss_config) { state_est_ = lcUpdateKFGnssEcef(gnss_meas, state_est_, gnss_config);}
         /// \brief Update with GNSS (tight).
-        void tcUpdateGnssEcef(const GnssMeasurements & gnss_meas, const double & tor_s) { state_est_ = tcUpdateKFGnssEcef(gnss_meas, state_est_, tor_s);}
+        inline void tcUpdateGnssEcef(const GnssMeasurements & gnss_meas, const double & tor_s) { state_est_ = tcUpdateKFGnssEcef(gnss_meas, state_est_, tor_s);}
 };
 
 /// @}

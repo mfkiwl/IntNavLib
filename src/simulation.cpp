@@ -81,7 +81,9 @@ ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
     }
     
     // Transform specific force to body-frame resolving axes using (5.81)
-    true_imu_meas.f = ave_C_b_e.inverse() * f_ib_e; // transpose or inverse?
+    // plain inverse as matrix is 3x3
+    // true_imu_meas.f = ave_C_b_e.inverse() * f_ib_e;
+    true_imu_meas.f = ave_C_b_e.colPivHouseholderQr().solve(f_ib_e);
 
     }
 

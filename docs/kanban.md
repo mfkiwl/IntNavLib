@@ -2,8 +2,6 @@
 
 ### Core Development
 
-- no matrix inversions!
-
 - ros2 app: do fast imu prop so state is not delayed.
 
 - Visual Odometry (simplified groves/px4 style)
@@ -18,17 +16,17 @@
 
 - template double float filter funcs and classes
 
+- generic core templated kalman update func
+
 - monte carlo bash script + eval script
 
 - in-house trajectory generator
 
 - no dynamic memory allocation
 
-- modular update functions, no duplications
+- Joseph update
 
 ### Support & Infrastructure
-
-- github actions build
 
 - profile code with valgrind
 
@@ -39,3 +37,11 @@
 - clang tidy: cleanup code
 
 - doxygen: add more latex to documentation, complete docs stubs
+
+# DONE
+
+- modular update functions, no duplications
+
+- Git hooks
+
+- no matrix inversions!

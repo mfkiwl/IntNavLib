@@ -134,7 +134,7 @@ Eigen::Matrix<double,15,15> lcPropUnc(const Eigen::Matrix<double,15,15> & P_matr
     kOmega_ie_vec << 0.0,0.0,kOmega_ie;
     Eigen::Matrix3d Omega_ie = skewSymmetric(kOmega_ie_vec);
 
-    // 1. Determine error-state transition matrix using (14.50) (first-order approx)
+    // Determine error-state transition matrix using (14.50) (first-order approx)
     Eigen::Matrix<double,15,15> Phi_matrix = Eigen::Matrix<double,15,15>::Identity();
     Phi_matrix.block<3,3>(0,0) -= Omega_ie * tor_i;
     Phi_matrix.block<3,3>(0,12) = old_nav_est_ecef.C_b_e * tor_i;
@@ -145,14 +145,14 @@ Eigen::Matrix<double,15,15> lcPropUnc(const Eigen::Matrix<double,15,15> & P_matr
     Phi_matrix.block<3,3>(3,9) = old_nav_est_ecef.C_b_e * tor_i;
     Phi_matrix.block<3,3>(6,3) = Eigen::Matrix3d::Identity() * tor_i;
 
-    // 2. Determine approximate system noise covariance matrix using (14.82)
+    // Determine approximate system noise covariance matrix using (14.82)
     Eigen::Matrix<double,15,15> Q_prime_matrix = Eigen::Matrix<double,15,15>::Zero();
     Q_prime_matrix.block<3,3>(0,0) = Eigen::Matrix3d::Identity() * lc_kf_config.gyro_noise_psd * tor_i;
     Q_prime_matrix.block<3,3>(3,3) = Eigen::Matrix3d::Identity() * lc_kf_config.accel_noise_psd * tor_i;
     Q_prime_matrix.block<3,3>(9,9) = Eigen::Matrix3d::Identity() * lc_kf_config.accel_bias_psd * tor_i;
     Q_prime_matrix.block<3,3>(12,12) = Eigen::Matrix3d::Identity() * lc_kf_config.gyro_bias_psd * tor_i;
 
-    // 4. Propagate state estimation error covariance matrix using (3.46)
+    // Propagate state estimation error covariance matrix using (3.46)
     Eigen::Matrix<double,15,15> P_matrix = Phi_matrix * (P_matrix_old + 0.5 * Q_prime_matrix) * Phi_matrix.transpose() + 0.5 * Q_prime_matrix;
     return P_matrix;
 }
@@ -171,7 +171,7 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
     kOmega_ie_vec << 0.0,0.0,kOmega_ie;
     Eigen::Matrix3d Omega_ie = skewSymmetric(kOmega_ie_vec);
 
-    // 1. Determine error-state transition matrix using (14.50) (first-order approx)
+    // Determine error-state transition matrix using (14.50) (first-order approx)
     Eigen::Matrix<double,17,17> Phi_matrix = Eigen::Matrix<double,17,17>::Identity();
     Phi_matrix.block<3,3>(0,0) -= Omega_ie * tor_i;
     Phi_matrix.block<3,3>(0,12) = old_nav_est_ecef.C_b_e * tor_i;
@@ -185,7 +185,7 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
     // Clock offset
     Phi_matrix(15,16) = tor_i;
 
-    // 2. Determine approximate system noise covariance matrix using (14.82)
+    // Determine approximate system noise covariance matrix using (14.82)
     Eigen::Matrix<double,17,17> Q_prime_matrix = Eigen::Matrix<double,17,17>::Zero();
     Q_prime_matrix.block<3,3>(0,0) = Eigen::Matrix3d::Identity() * tc_kf_config.gyro_noise_psd * tor_i;
     Q_prime_matrix.block<3,3>(3,3) = Eigen::Matrix3d::Identity() * tc_kf_config.accel_noise_psd * tor_i;
@@ -196,9 +196,51 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
     Q_prime_matrix(15,15) = tc_kf_config.clock_phase_psd * tor_i;
     Q_prime_matrix(16,16) = tc_kf_config.clock_freq_psd * tor_i;
 
-    // 4. Propagate state estimation error covariance matrix using (3.46)
+    // Propagate state estimation error covariance matrix using (3.46)
     Eigen::Matrix<double,17,17> P_matrix = Phi_matrix * (P_matrix_old + 0.5 * Q_prime_matrix) * Phi_matrix.transpose() + 0.5 * Q_prime_matrix;
     return P_matrix;
+}
+
+template<int n_x, int n_z, int max_n_z>
+bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
+            const Eigen::Matrix<double, n_x, n_x> & P_matrix, 
+            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
+            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
+            const double & p_value,
+            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
+            Eigen::Matrix<double, n_x, 1> & x_est_new,
+            Eigen::Matrix<double, n_x, n_x> & P_matrix_post) {
+
+    // Calculate Kalman gain using (3.21)
+    S_matrix = H_matrix * P_matrix * H_matrix.transpose() + R_matrix;
+    
+    // auto S_matrix_inv = S_matrix.inverse();
+    // Eigen::Matrix<double, n_z, n_z> S_matrix_inv = S_matrix.selfadjointView<Eigen::Upper>().llt().solve(Eigen::MatrixXd::Identity(R_matrix.rows(), R_matrix.cols()));
+
+    Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> S_matrix_inv = S_matrix.template selfadjointView<Eigen::Upper>().llt().solve(Eigen::MatrixXd::Identity(R_matrix.rows(), R_matrix.cols()));
+
+    Eigen::Matrix<double, n_x, n_z, 0, n_x, max_n_z> K_matrix = P_matrix * H_matrix.transpose() * S_matrix_inv;
+
+    // Update error state estimates using (3.24)
+    // A priori error state is always zero in closed loop filter
+    x_est_new = /*x_est_propagated + */ K_matrix * delta_z;
+
+    // Update state estimation error covariance matrix using (3.25)
+    P_matrix_post = (Eigen::Matrix<double, n_x, n_x>::Identity() - K_matrix * H_matrix) * P_matrix;
+
+    // Real-time consistency check
+    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
+    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
+    // We check it's inside the desired p_value
+    // Simplified version: no history, just current measurement, 1 * n_res dof's.
+    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
+    unsigned int n_dofs = delta_z.rows();
+    boost::math::chi_squared chi2_dist(n_dofs);
+    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
+    if (chi2 > chi2_thresh)
+        return false;
+    else return true;
+
 }
 
 StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas, 
@@ -215,26 +257,28 @@ StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
     // Set-up measurement noise covariance matrix
     Eigen::Matrix3d R_matrix = pos_meas.cov_mat;
 
-    // Calculate Kalman gain using (3.21)
-    Eigen::Matrix3d S_matrix = H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix;
-    auto S_matrix_inv = S_matrix.inverse();
-    Eigen::Matrix<double, 15,3> K_matrix = state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() * S_matrix_inv;
-
     // Formulate measurement innovations using (14.102), noting that zero
     // lever arm is assumed here
     Eigen::Vector3d delta_z = pos_meas.r_eb_e - state_est_prior.nav_sol.r_eb_e;
 
-    // Update error state estimates using (3.24)
-    Eigen::Matrix<double,15,1> x_est_new = x_est_propagated + K_matrix * delta_z;
-
-    // Update state estimation error covariance matrix using (3.25)
-    Eigen::Matrix<double,15,15> P_matrix_post = (Eigen::Matrix<double,15,15>::Identity() 
-                                            - K_matrix * H_matrix) * state_est_prior.P_matrix.block<15,15>(0,0);
+    // Do error-state Kalman filter update
+    Eigen::Matrix<double, 3, 3> S_matrix;
+    Eigen::Matrix<double, 15, 1> x_est_new;
+    Eigen::Matrix<double, 15, 15> P_matrix_post;
+    bool valid_update = updateKF<15, 3>(delta_z,
+                                        state_est_prior.P_matrix.block<15,15>(0,0),
+                                        H_matrix,
+                                        R_matrix,
+                                        p_value,
+                                        S_matrix,
+                                        x_est_new,
+                                        P_matrix_post);
 
     // CLOSED-LOOP CORRECTION
 
     // Correct attitude, velocity, and position using (14.7-9)
     StateEstEcef state_est_post;
+    state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Eigen::Matrix3d::Identity() - 
                                 skewSymmetric(x_est_new.block<3,1>(0,0))) * 
@@ -252,20 +296,6 @@ StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
     for(int i=0; i<delta_z.rows(); i++){
         state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
     }
-
-    // Real-time consistency check
-    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
-    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
-    // We check it's inside the desired p_value
-    // Simplified version: no history, just current measurement, 1 * n_res dof's.
-    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
-    unsigned int n_dofs = delta_z.rows();
-    boost::math::chi_squared chi2_dist(n_dofs);
-    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
-    state_est_post.valid = true;
-    if (chi2 > chi2_thresh)
-        // Set invalid update flag
-        state_est_post.valid = false;
     
     // Return 
     return state_est_post;
@@ -290,29 +320,30 @@ StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     // Set-up measurement noise covariance matrix
     Eigen::Matrix<double,6,6> R_matrix = pos_vel_gnss_meas.cov_mat;
 
-    // Calculate Kalman gain using (3.21)
-    Eigen::Matrix<double, 6,6> S_matrix = H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix;
-    auto S_matrix_inv = S_matrix.inverse();
-    Eigen::Matrix<double, 15,6> K_matrix = state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() * S_matrix_inv;
-
     // Formulate measurement innovations using (14.102), noting that zero
     // lever arm is assumed here
     Eigen::Matrix<double,6,1> delta_z;
     delta_z.block<3,1>(0,0) = pos_vel_gnss_meas.r_ea_e - state_est_prior.nav_sol.r_eb_e;
     delta_z.block<3,1>(3,0) = pos_vel_gnss_meas.v_ea_e - state_est_prior.nav_sol.v_eb_e;
 
-    // Update error state estimates using (3.24)
-    // A priori error state is always zero in closed loop filter
-    Eigen::Matrix<double,15,1> x_est_new = /*x_est_propagated + */ K_matrix * delta_z;
-
-    // Update state estimation error covariance matrix using (3.25)
-    Eigen::Matrix<double,15,15> P_matrix_post = (Eigen::Matrix<double,15,15>::Identity() 
-                                            - K_matrix * H_matrix) * state_est_prior.P_matrix.block<15,15>(0,0);
+    // Do error-state Kalman filter update
+    Eigen::Matrix<double, 6, 6> S_matrix;
+    Eigen::Matrix<double, 15, 1> x_est_new;
+    Eigen::Matrix<double, 15, 15> P_matrix_post;
+    bool valid_update = updateKF<15, 6>(delta_z,
+                                        state_est_prior.P_matrix.block<15,15>(0,0),
+                                        H_matrix,
+                                        R_matrix,
+                                        p_value,
+                                        S_matrix,
+                                        x_est_new,
+                                        P_matrix_post);
 
     // CLOSED-LOOP CORRECTION
 
     // Correct attitude, velocity, and position using (14.7-9)
     StateEstEcef state_est_post;
+    state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Eigen::Matrix3d::Identity() - 
                                 skewSymmetric(x_est_new.block<3,1>(0,0))) * 
@@ -330,20 +361,6 @@ StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     for(int i=0; i<delta_z.rows(); i++){
         state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
     }
-
-    // Real-time consistency check
-    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
-    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
-    // We check it's inside the desired p_value
-    // Simplified version: no history, just current measurement, 1 * n_res dof's.
-    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
-    unsigned int n_dofs = delta_z.rows();
-    boost::math::chi_squared chi2_dist(n_dofs);
-    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
-    state_est_post.valid = true;
-    if (chi2 > chi2_thresh)
-        // Set invalid update flag
-        state_est_post.valid = false;
 
     return state_est_post;
 }
@@ -397,7 +414,7 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
         pred_meas(j,1) = range_rate + state_est_prior.clock_drift;
     }
 
-    // 5. Set-up measurement matrix using (14.126) - simplified Jacobian
+    // Set-up measurement matrix using (14.126) - simplified Jacobian
     Eigen::Matrix<double, Eigen::Dynamic, 17, 0, 2 * kMaxGnssSatellites, 17> H_matrix = 
         Eigen::Matrix<double, Eigen::Dynamic, 17, 0, 2 * kMaxGnssSatellites, 17>::Zero(2*gnss_meas.no_meas, 17);
 
@@ -409,15 +426,10 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     H_matrix.block(gnss_meas.no_meas,16, gnss_meas.no_meas,1) = Eigen::MatrixXd::Ones(gnss_meas.no_meas,1);
 
     
-    // 6. Set-up measurement noise covariance matrix
+    // Set-up measurement noise covariance matrix
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> R_matrix = gnss_meas.cov_mat;
 
-    // 7. Calculate Kalman gain using (3.21)
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> S_matrix = H_matrix * state_est_prior.P_matrix * H_matrix.transpose() + R_matrix;
-    auto S_matrix_inv = S_matrix.inverse();
-    Eigen::Matrix<double, 17, Eigen::Dynamic, 0, 17, 2* kMaxGnssSatellites> K_matrix = state_est_prior.P_matrix * H_matrix.transpose() * S_matrix_inv;
-
-    // 8. Formulate measurement innovations using (14.119)
+    // Formulate measurement innovations using (14.119)
     Eigen::Matrix<double, Eigen::Dynamic, 1, 0, 2* kMaxGnssSatellites, 1> delta_z = Eigen::MatrixXd::Zero(2*gnss_meas.no_meas,1);
 
     // Range innovations
@@ -427,18 +439,25 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     delta_z.block(gnss_meas.no_meas,0,gnss_meas.no_meas,1) = gnss_meas.meas.block(0,1,gnss_meas.no_meas,1) -
                                                                 pred_meas.block(0,1,gnss_meas.no_meas,1);
 
-    // 9. Update error state estimates using (3.24)
-    // A priori error state is always zero in closed loop filter
-    Eigen::Matrix<double,17,1> x_est_new = /*x_est_propagated + */ K_matrix * delta_z;
 
-    // 10. Update state estimation error covariance matrix using (3.25)
-    Eigen::Matrix<double,17,17> P_matrix_post = (Eigen::Matrix<double,17,17>::Identity() 
-                                            - K_matrix * H_matrix) * state_est_prior.P_matrix;
+    // Do error-state Kalman filter update
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites> S_matrix;
+    Eigen::Matrix<double, 17, 1> x_est_new;
+    Eigen::Matrix<double, 17, 17> P_matrix_post;
+    bool valid_update = updateKF<17, Eigen::Dynamic, 2* kMaxGnssSatellites>(delta_z,
+                                                                            state_est_prior.P_matrix,
+                                                                            H_matrix,
+                                                                            R_matrix,
+                                                                            p_value,
+                                                                            S_matrix,
+                                                                            x_est_new,
+                                                                            P_matrix_post);
 
     // CLOSED-LOOP CORRECTION
 
     // Correct attitude, velocity, and position using (14.7-9)
     StateEstEcef state_est_post;
+    state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Eigen::Matrix3d::Identity() - 
                                 skewSymmetric(x_est_new.block<3,1>(0,0))) * 
@@ -461,20 +480,6 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
         state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
     }
 
-    // Real-time consistency check
-    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
-    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
-    // We check it's inside the desired p_value
-    // Simplified version: no history, just current measurement, 1 * n_res dof's.
-    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
-    unsigned int n_dofs = delta_z.rows();
-    boost::math::chi_squared chi2_dist(n_dofs);
-    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
-    state_est_post.valid = true;
-    if (chi2 > chi2_thresh)
-        // Set invalid update flag
-        state_est_post.valid = false;
-
     return state_est_post;
 }
 
@@ -485,36 +490,38 @@ StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
     // A priori error state is always zero in closed loop filter
     Eigen::Matrix<double,15,1> x_est_propagated = Eigen::Matrix<double,15,1>::Zero();
         
-    // 5. Set-up measurement matrix using (14.115)
+    // Set-up measurement matrix using (14.115)
     Eigen::Matrix<double,6,15> H_matrix = Eigen::Matrix<double,6,15>::Zero();
     H_matrix.block<3,3>(0,6) = - Eigen::Matrix3d::Identity(); // Position
     H_matrix.block<3,3>(3,0) = - Eigen::Matrix3d::Identity(); // Rotation
 
-    // 6. Set-up measurement noise covariance matrix
+    // Set-up measurement noise covariance matrix
     Eigen::Matrix<double, 6,6> R_matrix = pos_rot_meas.cov_mat;
 
-    // 7. Calculate Kalman gain using (3.21)
-    Eigen::Matrix<double, 6,6> S_matrix = H_matrix * state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() + R_matrix;
-    auto S_matrix_inv = S_matrix.inverse();
-    Eigen::Matrix<double, 15,6> K_matrix = state_est_prior.P_matrix.block<15,15>(0,0) * H_matrix.transpose() * S_matrix_inv;
-
-    // 8. Formulate measurement innovations using (14.102), noting that zero
+    // Formulate measurement innovations using (14.102), noting that zero
     // lever arm is assumed here. See (14.151) for attitude int
     Eigen::Matrix<double,6,1> delta_z;
     delta_z.block<3,1>(0,0) = pos_rot_meas.r_eb_e - state_est_prior.nav_sol.r_eb_e; // pos
     delta_z.block<3,1>(3,0) = deSkew(pos_rot_meas.C_b_e * state_est_prior.nav_sol.C_b_e.transpose() - Eigen::Matrix3d::Identity());// rot
 
-    // 9. Update error state estimates using (3.24)
-    Eigen::Matrix<double,15,1> x_est_new = x_est_propagated + K_matrix * delta_z;
-
-    // 10. Update state estimation error covariance matrix using (3.25)
-    Eigen::Matrix<double,15,15> P_matrix_post = (Eigen::Matrix<double,15,15>::Identity() 
-                                            - K_matrix * H_matrix) * state_est_prior.P_matrix.block<15,15>(0,0);
+    // Do error-state Kalman filter update
+    Eigen::Matrix<double, 6, 6> S_matrix;
+    Eigen::Matrix<double, 15, 1> x_est_new;
+    Eigen::Matrix<double, 15, 15> P_matrix_post;
+    bool valid_update = updateKF<15, 6>(delta_z,
+                                        state_est_prior.P_matrix.block<15,15>(0,0),
+                                        H_matrix,
+                                        R_matrix,
+                                        p_value,
+                                        S_matrix,
+                                        x_est_new,
+                                        P_matrix_post);
 
     // CLOSED-LOOP CORRECTION
 
     // Correct attitude, velocity, and position using (14.7-9)
     StateEstEcef state_est_post;
+    state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Eigen::Matrix3d::Identity() - 
                                 skewSymmetric(x_est_new.block<3,1>(0,0))) * 
@@ -532,20 +539,6 @@ StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
     for(int i=0; i<delta_z.rows(); i++){
         state_est_post.innovations_sigmas.push_back(std::make_pair(delta_z(i), sqrt(S_matrix(i,i))));
     }
-
-    // Real-time consistency check
-    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
-    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
-    // We check it's inside the desired p_value
-    // Simplified version: no history, just current measurement, 1 * n_res dof's.
-    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
-    unsigned int n_dofs = delta_z.rows();
-    boost::math::chi_squared chi2_dist(n_dofs);
-    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
-    state_est_post.valid = true;
-    if (chi2 > chi2_thresh)
-        // Set invalid update flag
-        state_est_post.valid = false;
 
     return state_est_post;
 
@@ -576,7 +569,13 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas
             H_matrix.block<1,3>(j,0) = -delta_r.transpose() / range;
             H_matrix(j,3) = 1;
         }
-        x_est = x_pred + (H_matrix.transpose() * H_matrix).inverse() * H_matrix.transpose() * (gnss_measurements.meas.col(0).head(gnss_measurements.no_meas) - pred_meas.head(gnss_measurements.no_meas));
+
+        // Gauss-Newton: J'J * Dx = J' * cost -> Ax = b -> x = A.llt().solve(b)
+        // x = x + Dx
+        auto A = H_matrix.transpose() * H_matrix;
+        auto b = H_matrix.transpose() * (gnss_measurements.meas.col(0).head(gnss_measurements.no_meas) - pred_meas.head(gnss_measurements.no_meas));
+        auto delta_x = A.selfadjointView<Eigen::Upper>().llt().solve(b);
+        x_est = x_pred + delta_x;
         test_convergence = (x_est - x_pred).norm();
         x_pred = x_est;
     }
@@ -608,7 +607,14 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas
             H_matrix.block<1,3>(j,0) = -u_as_e.transpose();
             H_matrix(j,3) = 1;
         }
-        x_est = x_pred + (H_matrix.transpose() * H_matrix).inverse() * H_matrix.transpose() * (gnss_measurements.meas.col(1).head(gnss_measurements.no_meas) - pred_meas.head(gnss_measurements.no_meas));
+
+        // Gauss-Newton: J'J * Dx = J' * cost -> Ax = b -> x = A.llt().solve(b)
+        // x = x + Dx
+        auto A = H_matrix.transpose() * H_matrix;
+        auto b = H_matrix.transpose() * (gnss_measurements.meas.col(1).head(gnss_measurements.no_meas) - pred_meas.head(gnss_measurements.no_meas));
+        auto delta_x = A.selfadjointView<Eigen::Upper>().llt().solve(b);
+        x_est = x_pred + delta_x;
+
         test_convergence = (x_est - x_pred).norm();
         x_pred = x_est;
     }

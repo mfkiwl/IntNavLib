@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 echo "Initing pre-commit hook..."
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
