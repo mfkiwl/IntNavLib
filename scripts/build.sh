@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # This script builds the IntNavLib library and all associated applications.
 #
@@ -37,7 +37,7 @@ for arg in "$@"; do
 done
 
 INSTALL_PREFIX="$HOME/local_install"
-REPO_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "================================================="
 echo "IntNavLib Full Build Script"

@@ -40,18 +40,23 @@ firefox docs/doxygen/html/index.html
 
 2) Install Eigen 3. On Ubuntu and other Debian-based Linux distributions, just: `sudo apt install libeigen3-dev`
 
-3) Build & install the IntNavLib library locally, and build the apps in the [apps](/apps/) folder using the script build.sh
+3) Use the build.sh script to build & install the IntNavLib library locally, and build the apps in the [apps](/apps/) folder.
+
+## Development Guidelines
+
+- Building: see build.sh file
+
+- Linting: see .clang-tidy file
+
+- Testing: write Google tests
+
+- Documentation: document code using Doxygen-compatible comments
+
+- **Hooks**: paste hook.sh to .git/hooks/ so builds, linting, and tests are run before committing
 
 ## Using IntNavLib
 
 You can find apps using IntNavLib in the [apps](/apps/) folder.
-
-For example, to run the inertial navigation demo using ECEF navigation equations, run: 
-
-```
-cd apps/ins_ecef
-./ins_ecef ../../data/Profile_3.csv
-```
 
 ### ROS 2 App
 
