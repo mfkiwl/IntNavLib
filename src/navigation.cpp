@@ -400,8 +400,8 @@ StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
 
         // Calculate ecef rotation during signal transit time using (8.36)
         Eigen::Matrix3d C_e_I;
-        C_e_I << 1, kOmega_ie * range / c, 0,
-                -kOmega_ie * range / c, 1, 0,
+        C_e_I << 1, kOmega_ie * range / kC, 0,
+                -kOmega_ie * range / kC, 1, 0,
                 0, 0, 1;
 
         // Predicted range, corrected
@@ -575,8 +575,8 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas
             Eigen::Vector3d delta_r = gnss_measurements.meas.block<1,3>(j,2).transpose() - x_pred.segment<3>(0);
             double approx_range = delta_r.norm();
             Eigen::Matrix3d C_e_I;
-            C_e_I << 1, kOmega_ie * approx_range / c, 0,
-                     -kOmega_ie * approx_range / c, 1, 0,
+            C_e_I << 1, kOmega_ie * approx_range / kC, 0,
+                     -kOmega_ie * approx_range / kC, 1, 0,
                      0, 0, 1;
             delta_r = C_e_I * gnss_measurements.meas.block<1,3>(j,2).transpose() - x_pred.segment<3>(0);
             double range = delta_r.norm();
@@ -609,8 +609,8 @@ GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas
             Eigen::Vector3d delta_r = gnss_measurements.meas.block<1,3>(j,2).transpose() - est_pos_vel.r_ea_e;
             double approx_range = delta_r.norm();
             Eigen::Matrix3d C_e_I;
-            C_e_I << 1, kOmega_ie * approx_range / c, 0,
-                     -kOmega_ie * approx_range / c, 1, 0,
+            C_e_I << 1, kOmega_ie * approx_range / kC, 0,
+                     -kOmega_ie * approx_range / kC, 1, 0,
                      0, 0, 1;
             delta_r = C_e_I * gnss_measurements.meas.block<1,3>(j,2).transpose() - est_pos_vel.r_ea_e;
             double range = delta_r.norm();

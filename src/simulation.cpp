@@ -316,8 +316,8 @@ GnssMeasurements generateGnssMeasurements(const double & time,
     
             // Calculate frame rotation during signal transit time
             Eigen::Matrix3d C_e_I;
-            C_e_I << 1, kOmega_ie * approx_range / c, 0,
-                     -kOmega_ie * approx_range / c, 1, 0,
+            C_e_I << 1, kOmega_ie * approx_range / kC, 0,
+                     -kOmega_ie * approx_range / kC, 1, 0,
                      0, 0, 1;
 
             // Calculate range
