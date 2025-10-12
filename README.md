@@ -44,15 +44,15 @@ firefox docs/doxygen/html/index.html
 
 ## Development Guidelines
 
-- Building: see build.sh file
+- Building: use scripts/build.sh file
 
-- Linting: see .clang-tidy file
+- Linting: see .clang-tidy file, lint using scripts/lint.sh
 
-- Testing: write Google tests
+- Testing: write Google tests, launch using scripts/test.sh
 
-- Documentation: document code using Doxygen-compatible comments
+- Documentation: document code using Doxygen-compatible comments, launch Doxygen using scripts/doc.sh
 
-- **Hooks**: paste hook.sh to .git/hooks/ so builds, linting, and tests are run before committing
+- **Hooks**: paste hook.sh to .git/hooks/ so builds and tests are run before committing
 
 ## Using IntNavLib
 

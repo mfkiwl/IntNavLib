@@ -12,6 +12,42 @@ namespace intnavlib {
 /// Navigation utilities.
 /// @{
 
+/// \brief Predicts the state estimation error covariance matrix.
+/// This function propagates the error covariance matrix using the discrete-time Kalman filter prediction equation.
+/// \tparam n_x The dimension of the state vector.
+/// \param[in] Phi_matrix The state transition matrix.
+/// \param[in] Q_matrix The system noise covariance matrix.
+/// \param[in] P_matrix_old The error covariance matrix from the previous time step.
+/// \param[out] P_matrix The predicted error covariance matrix for the current time step.
+template<int n_x>
+void predictKF(const Eigen::Matrix<double, n_x, n_x> & Phi_matrix, 
+                const Eigen::Matrix<double, n_x, n_x> & Q_matrix,
+                const Eigen::Matrix<double, n_x, n_x> & P_matrix_old, 
+                Eigen::Matrix<double, n_x, n_x> & P_matrix);
+
+/// \brief Generic Kalman filter update
+/// This function performs a generic Kalman filter update step. It calculates the Kalman gain,
+/// updates the error state estimates, and propagates the error covariance matrix.
+/// It also includes a real-time consistency check using the Chi-squared test.
+/// \tparam n_x The dimension of the state vector.
+/// \tparam n_z The dimension of the measurement vector.
+/// \param[in] delta_z The measurement innovation vector.
+/// \param[in] P_matrix The prior error covariance matrix.
+/// \param[in] H_matrix The measurement matrix.
+/// \param[in] R_matrix The measurement noise covariance matrix.
+/// \param[out] S_matrix The innovation covariance matrix.
+/// \param[out] x_est_new The updated error state estimates.
+/// \param[out] P_matrix_post The updated (posterior) error covariance matrix.
+template<int n_x, int n_z, int max_n_z = 2* kMaxGnssSatellites>
+bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
+            const Eigen::Matrix<double, n_x, n_x> & P_matrix, 
+            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
+            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
+            const double & p_value,
+            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
+            Eigen::Matrix<double, n_x, 1> & x_est_new,
+            Eigen::Matrix<double, n_x, n_x> & P_matrix_post);
+
 /// \brief Solves the navigation equations in the ECEF frame.
 /// This function propagates the navigation solution (position, velocity, and attitude)
 /// from a previous time step to the current time step using IMU measurements.
@@ -187,29 +223,6 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
                                         const ImuMeasurements & imu_meas,
                                         const KfConfig & tc_kf_config,
                                         const double & tor_s);
-
-/// \brief Generic Kalman filter update
-/// This function performs a generic Kalman filter update step. It calculates the Kalman gain,
-/// updates the error state estimates, and propagates the error covariance matrix.
-/// It also includes a real-time consistency check using the Chi-squared test.
-/// \tparam n_x The dimension of the state vector.
-/// \tparam n_z The dimension of the measurement vector.
-/// \param[in] delta_z The measurement innovation vector.
-/// \param[in] P_matrix The prior error covariance matrix.
-/// \param[in] H_matrix The measurement matrix.
-/// \param[in] R_matrix The measurement noise covariance matrix.
-/// \param[out] S_matrix The innovation covariance matrix.
-/// \param[out] x_est_new The updated error state estimates.
-/// \param[out] P_matrix_post The updated (posterior) error covariance matrix.
-template<int n_x, int n_z, int max_n_z = 2* kMaxGnssSatellites>
-bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
-            const Eigen::Matrix<double, n_x, n_x> & P_matrix, 
-            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
-            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
-            const double & p_value,
-            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
-            Eigen::Matrix<double, n_x, 1> & x_est_new,
-            Eigen::Matrix<double, n_x, n_x> & P_matrix_post);
 
 /// \brief Performs a Loosely Coupled (LC) Kalman Filter update using an ECEF position measurement.
 /// This is a closed-loop error-state KF update that corrects the navigation solution
@@ -420,7 +433,6 @@ Eigen::Matrix<double,17,17> initializePMmatrix(const KfConfig & tc_kf_config);
 /// \param[in] gen Random source.
 /// \return Navigation filter state.
 StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, const KfConfig & kf_config, const GnssMeasurements & gnss_meas, std::mt19937 & gen);
-
 
 /// \brief Navigation Kalman filter class.
 class NavKF {

@@ -161,11 +161,16 @@ TEST(navigation_filter, test_integrated)
     }
 
     double avg_position_error = pos_error_sum / (double) count;
+
     EXPECT_LT(avg_position_error, max_pos_error)
         << "Simulation setup n." << sim_type << "failed. \n"
         << "Mean absolute position error should be under "
         << max_pos_error << " m, but was "
         << avg_position_error << " m.";
+
+    // always print summary for visibility
+    std::cout << "[INFO] Avg position error (" << sim_type << "): "
+            << avg_position_error << " m" << std::endl;
 
     }
 

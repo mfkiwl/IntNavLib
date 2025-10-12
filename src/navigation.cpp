@@ -2,6 +2,58 @@
 
 namespace intnavlib {
 
+template<int n_x>
+void predictKF(const Eigen::Matrix<double, n_x, n_x> & Phi_matrix, 
+                const Eigen::Matrix<double, n_x, n_x> & Q_matrix,
+                const Eigen::Matrix<double, n_x, n_x> & P_matrix_old, 
+                Eigen::Matrix<double, n_x, n_x> & P_matrix){
+
+    P_matrix = Phi_matrix * (P_matrix_old + 0.5 * Q_matrix) * Phi_matrix.transpose() + 0.5 * Q_matrix;
+
+}
+
+template<int n_x, int n_z, int max_n_z>
+bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
+            const Eigen::Matrix<double, n_x, n_x> & P_matrix, 
+            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
+            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
+            const double & p_value,
+            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
+            Eigen::Matrix<double, n_x, 1> & x_est_new,
+            Eigen::Matrix<double, n_x, n_x> & P_matrix_post) {
+
+    // Calculate Kalman gain using (3.21)
+    S_matrix = H_matrix * P_matrix * H_matrix.transpose() + R_matrix;
+    
+    // auto S_matrix_inv = S_matrix.inverse();
+    // Eigen::Matrix<double, n_z, n_z> S_matrix_inv = S_matrix.selfadjointView<Eigen::Upper>().llt().solve(Eigen::MatrixXd::Identity(R_matrix.rows(), R_matrix.cols()));
+
+    Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> S_matrix_inv = S_matrix.template selfadjointView<Eigen::Upper>().llt().solve(Eigen::MatrixXd::Identity(R_matrix.rows(), R_matrix.cols()));
+
+    Eigen::Matrix<double, n_x, n_z, 0, n_x, max_n_z> K_matrix = P_matrix * H_matrix.transpose() * S_matrix_inv;
+
+    // Update error state estimates using (3.24)
+    // A priori error state is always zero in closed loop filter
+    x_est_new = /*x_est_propagated + */ K_matrix * delta_z;
+
+    // Update state estimation error covariance matrix using (3.25)
+    P_matrix_post = (Eigen::Matrix<double, n_x, n_x>::Identity() - K_matrix * H_matrix) * P_matrix;
+
+    // Real-time consistency check
+    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
+    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
+    // We check it's inside the desired p_value
+    // Simplified version: no history, just current measurement, 1 * n_res dof's.
+    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
+    unsigned int n_dofs = delta_z.rows();
+    boost::math::chi_squared chi2_dist(n_dofs);
+    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
+    if (chi2 > chi2_thresh)
+        return false;
+    else return true;
+
+}
+
 NavSolutionEcef navEquationsEcef(const NavSolutionEcef & old_nav, 
                                 const ImuMeasurements & imu_meas,
                                 const double & tor_i) {
@@ -153,7 +205,9 @@ Eigen::Matrix<double,15,15> lcPropUnc(const Eigen::Matrix<double,15,15> & P_matr
     Q_prime_matrix.block<3,3>(12,12) = Eigen::Matrix3d::Identity() * lc_kf_config.gyro_bias_psd * tor_i;
 
     // Propagate state estimation error covariance matrix using (3.46)
-    Eigen::Matrix<double,15,15> P_matrix = Phi_matrix * (P_matrix_old + 0.5 * Q_prime_matrix) * Phi_matrix.transpose() + 0.5 * Q_prime_matrix;
+    Eigen::Matrix<double,15,15> P_matrix;
+    predictKF<15>(Phi_matrix, Q_prime_matrix, P_matrix_old, P_matrix);
+    
     return P_matrix;
 }
 
@@ -197,50 +251,11 @@ Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matr
     Q_prime_matrix(16,16) = tc_kf_config.clock_freq_psd * tor_i;
 
     // Propagate state estimation error covariance matrix using (3.46)
-    Eigen::Matrix<double,17,17> P_matrix = Phi_matrix * (P_matrix_old + 0.5 * Q_prime_matrix) * Phi_matrix.transpose() + 0.5 * Q_prime_matrix;
+
+    Eigen::Matrix<double,17,17> P_matrix;
+    predictKF<17>(Phi_matrix, Q_prime_matrix, P_matrix_old, P_matrix);
+
     return P_matrix;
-}
-
-template<int n_x, int n_z, int max_n_z>
-bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
-            const Eigen::Matrix<double, n_x, n_x> & P_matrix, 
-            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
-            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
-            const double & p_value,
-            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
-            Eigen::Matrix<double, n_x, 1> & x_est_new,
-            Eigen::Matrix<double, n_x, n_x> & P_matrix_post) {
-
-    // Calculate Kalman gain using (3.21)
-    S_matrix = H_matrix * P_matrix * H_matrix.transpose() + R_matrix;
-    
-    // auto S_matrix_inv = S_matrix.inverse();
-    // Eigen::Matrix<double, n_z, n_z> S_matrix_inv = S_matrix.selfadjointView<Eigen::Upper>().llt().solve(Eigen::MatrixXd::Identity(R_matrix.rows(), R_matrix.cols()));
-
-    Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> S_matrix_inv = S_matrix.template selfadjointView<Eigen::Upper>().llt().solve(Eigen::MatrixXd::Identity(R_matrix.rows(), R_matrix.cols()));
-
-    Eigen::Matrix<double, n_x, n_z, 0, n_x, max_n_z> K_matrix = P_matrix * H_matrix.transpose() * S_matrix_inv;
-
-    // Update error state estimates using (3.24)
-    // A priori error state is always zero in closed loop filter
-    x_est_new = /*x_est_propagated + */ K_matrix * delta_z;
-
-    // Update state estimation error covariance matrix using (3.25)
-    P_matrix_post = (Eigen::Matrix<double, n_x, n_x>::Identity() - K_matrix * H_matrix) * P_matrix;
-
-    // Real-time consistency check
-    // See: Estimation with Applications to Tracking and Navigation -- Yaakov Bar-Shalom et al. p.237
-    // The quadratic form res' * inv(S) * res is a determination of the standard Chi squared distribution with one dof.
-    // We check it's inside the desired p_value
-    // Simplified version: no history, just current measurement, 1 * n_res dof's.
-    double chi2 = delta_z.dot(S_matrix_inv * delta_z);
-    unsigned int n_dofs = delta_z.rows();
-    boost::math::chi_squared chi2_dist(n_dofs);
-    double chi2_thresh = boost::math::quantile(chi2_dist, p_value);
-    if (chi2 > chi2_thresh)
-        return false;
-    else return true;
-
 }
 
 StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas, 

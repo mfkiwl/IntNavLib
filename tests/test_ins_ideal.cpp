@@ -57,4 +57,8 @@ TEST(inertial_navigation, test_ins_ideal) {
         << "Mean absolute position error should be under "
         << max_pos_error << " m, but was "
         << avg_position_error << " m.";
+
+    // always print summary for visibility
+    std::cout << "[INFO] Avg position error: "
+            << avg_position_error << " m" << std::endl;
 }
