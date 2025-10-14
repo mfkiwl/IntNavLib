@@ -2,33 +2,35 @@
 
 namespace intnavlib {
 
-NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
+template <typename T>
+typename Types<T>::NavSolutionEcef 
+Helpers<T>::nedToEcef(const typename Types<T>::NavSolutionNed& nav_sol_ned) {
     // Extract the inputs
-    double L_b = nav_sol_ned.latitude;
-    double lambda_b = nav_sol_ned.longitude;
-    double h_b = nav_sol_ned.height;
-    Eigen::Vector3d v_eb_n = nav_sol_ned.v_eb_n;
-    Eigen::Matrix3d C_b_n = nav_sol_ned.C_b_n;
-    double sin_lat = std::sin(L_b);
-    double cos_lat = std::cos(L_b);
-    double sin_long = std::sin(lambda_b);
-    double cos_long = std::cos(lambda_b);
+    T L_b = nav_sol_ned.latitude;
+    T lambda_b = nav_sol_ned.longitude;
+    T h_b = nav_sol_ned.height;
+    Vector3 v_eb_n = nav_sol_ned.v_eb_n;
+    Matrix3 C_b_n = nav_sol_ned.C_b_n;
+    T sin_lat = std::sin(L_b);
+    T cos_lat = std::cos(L_b);
+    T sin_long = std::sin(lambda_b);
+    T cos_long = std::cos(lambda_b);
     // Compute transverse radius of curvature
-    double R_E = kR0 / std::sqrt(1.0 - pow((kEccentricity * sin_lat),2.0));
+    T R_E = kR0 / std::sqrt(1.0 - pow((kEccentricity * sin_lat),2.0));
     // Convert position from curvilinear to Cartesian ECEF coordinates
-    Eigen::Vector3d r_eb_e;
+    Vector3 r_eb_e;
     r_eb_e(0) = (R_E + h_b) * cos_lat * cos_long;
     r_eb_e(1) = (R_E + h_b) * cos_lat * sin_long;
     r_eb_e(2) = ((1.0 - kEccentricity * kEccentricity) * R_E + h_b) * sin_lat;
     // Compute the ECEF to NED coordinate transformation matrix
-    Eigen::Matrix3d C_e_n;
+    Matrix3 C_e_n;
     C_e_n << -sin_lat * cos_long, -sin_lat * sin_long, cos_lat,
              -sin_long,            cos_long,          0.0,
              -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
     // Transform velocity from NED to ECEF frame
-    Eigen::Vector3d v_eb_e = C_e_n.transpose() * v_eb_n;
+    Vector3 v_eb_e = C_e_n.transpose() * v_eb_n;
     // Transform attitude from NED to ECEF frame
-    Eigen::Matrix3d C_b_e = C_e_n.transpose() * C_b_n;
+    Matrix3 C_b_e = C_e_n.transpose() * C_b_n;
     // Construct the output structure
     NavSolutionEcef nav_sol_ecef;
     nav_sol_ecef.time = nav_sol_ned.time;
@@ -38,46 +40,48 @@ NavSolutionEcef nedToEcef(const NavSolutionNed& nav_sol_ned) {
     return nav_sol_ecef;
 }
 
-NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
+template <typename T>
+typename Types<T>::NavSolutionNed 
+Helpers<T>::ecefToNed(const typename Types<T>::NavSolutionEcef & nav_sol_ecef){
     // Convert position using Borkowski closed-form exact solution
     // From (2.113)
-    double lambda_b = atan2(nav_sol_ecef.r_eb_e(1), nav_sol_ecef.r_eb_e(0));
+    T lambda_b = atan2(nav_sol_ecef.r_eb_e(1), nav_sol_ecef.r_eb_e(0));
     // From (C.29) and (C.30)
-    double k1 = sqrt(1.0 - pow(kEccentricity,2.0)) * abs(nav_sol_ecef.r_eb_e(2));
-    double k2 = pow(kEccentricity,2.0) * kR0;
-    double beta = sqrt(pow(nav_sol_ecef.r_eb_e(0),2.0) + pow(nav_sol_ecef.r_eb_e(1),2.0));
-    double E = (k1 - k2) / beta;
-    double F = (k1 + k2) / beta;
+    T k1 = sqrt(1.0 - pow(kEccentricity,2.0)) * abs(nav_sol_ecef.r_eb_e(2));
+    T k2 = pow(kEccentricity,2.0) * kR0;
+    T beta = sqrt(pow(nav_sol_ecef.r_eb_e(0),2.0) + pow(nav_sol_ecef.r_eb_e(1),2.0));
+    T E = (k1 - k2) / beta;
+    T F = (k1 + k2) / beta;
     // From (C.31)
-    double P = 4.0/3.0 * (E*F + 1.0);
+    T P = 4.0/3.0 * (E*F + 1.0);
     // From (C.32)
-    double Q = 2.0 * (pow(E,2.0) - pow(F,2.0));
+    T Q = 2.0 * (pow(E,2.0) - pow(F,2.0));
     // From (C.33)
-    double D = pow(P,3.0) + pow(Q,2.0);
+    T D = pow(P,3.0) + pow(Q,2.0);
     // From (C.34)
-    double V = pow(sqrt(D) - Q, 1.0/3.0) - pow(sqrt(D) + Q,1.0/3.0);
+    T V = pow(sqrt(D) - Q, 1.0/3.0) - pow(sqrt(D) + Q,1.0/3.0);
     // From (C.35)
-    double G = 0.5 * (sqrt(pow(E,2.0) + V) + E);
+    T G = 0.5 * (sqrt(pow(E,2.0) + V) + E);
     // From (C.36)
-    double T = sqrt(pow(G,2.0) + (F - V * G) / (2.0 * G - E)) - G;
+    T T_ = sqrt(pow(G,2.0) + (F - V * G) / (2.0 * G - E)) - G;
     // From (C.37)
-    double L_b = sgn(nav_sol_ecef.r_eb_e(2)) * atan((1.0 - pow(T,2.0)) / (2.0 * T * sqrt (1.0 - pow(kEccentricity,2.0))));
+    T L_b = sgn(nav_sol_ecef.r_eb_e(2)) * atan((1.0 - pow(T_,2.0)) / (2.0 * T_ * sqrt (1.0 - pow(kEccentricity,2.0))));
     // From (C.38)
-    double h_b = (beta - kR0 * T) * cos(L_b) +
+    T h_b = (beta - kR0 * T_) * cos(L_b) +
         (nav_sol_ecef.r_eb_e(2) - sgn(nav_sol_ecef.r_eb_e(2)) * kR0 * sqrt(1.0 - pow(kEccentricity,2.0))) * sin(L_b);  
     // Calculate ECEF to NED coordinate transformation matrix using (2.150)
-    double cos_lat = cos(L_b);
-    double sin_lat = sin(L_b);
-    double cos_long = cos(lambda_b);
-    double sin_long = sin(lambda_b);
-    Eigen::Matrix3d C_e_n;
+    T cos_lat = cos(L_b);
+    T sin_lat = sin(L_b);
+    T cos_long = cos(lambda_b);
+    T sin_long = sin(lambda_b);
+    Matrix3 C_e_n;
     C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
                     -sin_long,            cos_long,        0.0,
             -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
     // Transform velocity using (2.73)
-    Eigen::Vector3d v_eb_n = C_e_n * nav_sol_ecef.v_eb_e;
+    Vector3 v_eb_n = C_e_n * nav_sol_ecef.v_eb_e;
     // Transform attitude using (2.15)
-    Eigen::Matrix3d C_b_n = C_e_n * nav_sol_ecef.C_b_e;
+    Matrix3 C_b_n = C_e_n * nav_sol_ecef.C_b_e;
     NavSolutionNed nav_sol_ned;
     nav_sol_ned.time = nav_sol_ecef.time;
     nav_sol_ned.latitude = L_b;
@@ -88,7 +92,10 @@ NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
     return nav_sol_ned;
 }
 
-EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, const NavSolutionEcef & true_nav_ecef) {
+template <typename T>
+typename Types<T>::EvalDataEcef 
+Helpers<T>::getEvalDataEcef(const typename Types<T>::StateEstEcef & state_est_ecef, 
+                            const typename Types<T>::NavSolutionEcef & true_nav_ecef) {
 
     EvalDataEcef eval_data;
 
@@ -96,7 +103,7 @@ EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, const NavSolut
     eval_data.time = state_est_ecef.nav_sol.time;
     eval_data.delta_r_eb_e = state_est_ecef.nav_sol.r_eb_e - true_nav_ecef.r_eb_e;
     eval_data.delta_v_eb_e = state_est_ecef.nav_sol.v_eb_e - true_nav_ecef.v_eb_e;
-    eval_data.delta_rot_eb_e = deSkew(state_est_ecef.nav_sol.C_b_e * true_nav_ecef.C_b_e.transpose() - Eigen::Matrix3d::Identity());
+    eval_data.delta_rot_eb_e = deSkew(state_est_ecef.nav_sol.C_b_e * true_nav_ecef.C_b_e.transpose() - Matrix3::Identity());
 
     // Sigmas
     eval_data.sigma_delta_r_eb_e << sqrt(state_est_ecef.P_matrix(6,6)), sqrt(state_est_ecef.P_matrix(7,7)), sqrt(state_est_ecef.P_matrix(8,8));
@@ -119,19 +126,21 @@ EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, const NavSolut
     return eval_data;
 }
 
-Eigen::Matrix3d eulerToDcm(const Eigen::Vector3d & rpy) {
-    double roll = rpy(0);
-    double pitch = rpy(1);
-    double yaw = rpy(2);
+template <typename T>
+typename Helpers<T>::Matrix3 
+Helpers<T>::eulerToDcm(const typename Helpers<T>::Vector3 & rpy) {
+    T roll = rpy(0);
+    T pitch = rpy(1);
+    T yaw = rpy(2);
     // Precompute sines and cosines of Euler angles
-    double sin_roll = std::sin(roll);
-    double cos_roll = std::cos(roll);
-    double sin_pitch = std::sin(pitch);
-    double cos_pitch = std::cos(pitch);
-    double sin_yaw = std::sin(yaw);
-    double cos_yaw = std::cos(yaw);
+    T sin_roll = std::sin(roll);
+    T cos_roll = std::cos(roll);
+    T sin_pitch = std::sin(pitch);
+    T cos_pitch = std::cos(pitch);
+    T sin_yaw = std::sin(yaw);
+    T cos_yaw = std::cos(yaw);
     // Calculate the coordinate transformation matrix R = Rz(yaw) * Ry(pitch) * Rx(roll)
-    Eigen::Matrix3d C;
+    Matrix3 C;
     C(0,0) = cos_pitch * cos_yaw;
     C(1,0) = cos_pitch * sin_yaw;
     C(2,0) = -sin_pitch;
@@ -144,27 +153,31 @@ Eigen::Matrix3d eulerToDcm(const Eigen::Vector3d & rpy) {
     return C;
 }
 
-Eigen::Vector3d dcmToEuler(const Eigen::Matrix3d & C) {
-    Eigen::Vector3d rpy;
+template <typename T>
+typename Helpers<T>::Vector3 
+Helpers<T>::dcmToEuler(const typename Helpers<T>::Matrix3 & C) {
+    Vector3 rpy;
     rpy(0) = atan2(C(2,1),C(2,2));
     rpy(1) = - asin(C(2,0));      
     rpy(2) = atan2(C(1,0),C(0,0));
     return rpy;
 }
 
-Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e) {
-    double mag_r = r_eb_e.norm();
-    Eigen::Vector3d g = Eigen::Vector3d::Zero();
+template <typename T>
+typename Helpers<T>::Vector3 
+Helpers<T>::gravityEcef(const typename Helpers<T>::Vector3 & r_eb_e) {
+    T mag_r = r_eb_e.norm();
+    Vector3 g = Vector3::Zero();
     // If the input position is 0,0,0, produce a dummy output
     if (mag_r >= kEpsilon)
     // Calculate gravitational acceleration using (2.142)
     {
-        double z_scale = 5.0 * pow(r_eb_e(2) / mag_r,2.0);
-        Eigen::Vector3d gamma_1;
+        T z_scale = 5.0 * pow(r_eb_e(2) / mag_r,2.0);
+        Vector3 gamma_1;
         gamma_1 << (1.0 - z_scale) * r_eb_e(0), 
                     (1.0 - z_scale) * r_eb_e(1),
                     (3.0 - z_scale) * r_eb_e(2);
-        Eigen::Vector3d gamma;
+        Vector3 gamma;
         gamma = (-kGravConst / pow(mag_r,3.0)) *
                 (r_eb_e + 1.5 * kJ2 * 
                 pow(kR0 / mag_r,2.0) * gamma_1);
@@ -176,22 +189,27 @@ Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e) {
     return g;
 }
 
-Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d & a) {
-    Eigen::Matrix3d S;
+template <typename T>
+typename Helpers<T>::Matrix3 
+Helpers<T>::skewSymmetric(const typename Helpers<T>::Vector3 & a) {
+    Matrix3 S;
     S << 0.0, -a(2),  a(1),
       a(2),     0.0, -a(0),
      -a(1),  a(0),     0.0;
     return S;
 }
 
-Eigen::Vector3d deSkew(const Eigen::Matrix3d & S){
-    Eigen::Vector3d a;
+template <typename T>
+typename Helpers<T>::Vector3 
+Helpers<T>::deSkew(const typename Helpers<T>::Matrix3 & S){
+    Vector3 a;
     a << -S(1,2), S(0,2), -S(0,1);
     return a; 
 }
 
-// Function to get the current date and time as a formatted string
-std::string getCurrentDateTime() {
+template <typename T>
+std::string 
+Helpers<T>::getCurrentDateTime() {
     auto now = std::time(nullptr);
     std::tm tm_now;
     localtime_r(&now, &tm_now); // Use localtime_s on Windows or localtime_r on Unix-like systems
@@ -200,32 +218,36 @@ std::string getCurrentDateTime() {
     return oss.str();
 }
 
-Eigen::Vector2d radiiOfCurvature(double L) {
+template <typename T>
+typename Helpers<T>::Vector2
+Helpers<T>::radiiOfCurvature(T L) {
     // Calculate meridian radius of curvature using (2.105)
-    double temp = 1.0 - pow((kEccentricity * sin(L)),2.0); 
-    double R_N = kR0 * (1.0 - pow(kEccentricity,2.0)) / pow(temp,1.5);
+    T temp = 1.0 - pow((kEccentricity * sin(L)),2.0); 
+    T R_N = kR0 * (1.0 - pow(kEccentricity,2.0)) / pow(temp,1.5);
     // Calculate transverse radius of curvature using (2.105)
-    double R_E = kR0 / sqrt(temp);
-    Eigen::Vector2d radii;
+    T R_E = kR0 / sqrt(temp);
+    Vector2 radii;
     radii << R_N, R_E;
     return radii;
 }
 
-ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
-                                const NavSolutionNed & est_nav_sol){
+template <typename T>
+typename Types<T>::ErrorsNed 
+Helpers<T>::calculateErrorsNed(const typename Types<T>::NavSolutionNed & true_nav_sol, 
+                                const typename Types<T>::NavSolutionNed & est_nav_sol){
     // Position error calculation
-    Eigen::Vector2d radii = radiiOfCurvature(true_nav_sol.latitude);
-    double R_N = radii(0);
-    double R_E = radii(1);
-    Eigen::Vector3d delta_r_eb_n;
+    Vector2 radii = radiiOfCurvature(true_nav_sol.latitude);
+    T R_N = radii(0);
+    T R_E = radii(1);
+    Vector3 delta_r_eb_n;
     delta_r_eb_n(0) = (est_nav_sol.latitude - true_nav_sol.latitude) * (R_N + true_nav_sol.height);
     delta_r_eb_n(1) = (est_nav_sol.longitude - true_nav_sol.longitude) * (R_E + true_nav_sol.height) * std::cos(true_nav_sol.latitude);
     delta_r_eb_n(2) = -(est_nav_sol.height - true_nav_sol.height);
     // Velocity error calculation
-    Eigen::Vector3d delta_v_eb_n = est_nav_sol.v_eb_n - true_nav_sol.v_eb_n;
+    Vector3 delta_v_eb_n = est_nav_sol.v_eb_n - true_nav_sol.v_eb_n;
     // Attitude error calculation
-    Eigen::Matrix3d delta_C_b_n = est_nav_sol.C_b_n * true_nav_sol.C_b_n.transpose();
-    Eigen::Vector3d delta_rot_nb_n = -dcmToEuler(delta_C_b_n);
+    Matrix3 delta_C_b_n = est_nav_sol.C_b_n * true_nav_sol.C_b_n.transpose();
+    Vector3 delta_rot_nb_n = -dcmToEuler(delta_C_b_n);
     ErrorsNed errors_ned;
     errors_ned.time = true_nav_sol.time;
     errors_ned.delta_r_eb_n = delta_r_eb_n;
@@ -234,7 +256,9 @@ ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol,
     return errors_ned;
 }
 
-ImuErrors tacticalImuErrors(){
+template <typename T>
+typename Types<T>::ImuErrors 
+Helpers<T>::tacticalImuErrors(){
     ImuErrors imu_errors;
     imu_errors.b_a << 900.0,-1300.0,800.0;
     imu_errors.b_a = imu_errors.b_a * kMuGToMetersPerSecondSquared;
@@ -259,10 +283,12 @@ ImuErrors tacticalImuErrors(){
     return imu_errors;
 }
 
-GnssConfig defaultGnssConfig(){
+template <typename T>
+typename Types<T>::GnssConfig 
+Helpers<T>::defaultGnssConfig(){
     GnssConfig gnss_config;
     gnss_config.epoch_interval = 0.5;
-    gnss_config.init_est_r_ea_e = Eigen::Vector3d::Zero();
+    gnss_config.init_est_r_ea_e = Vector3::Zero();
     gnss_config.no_sat = 30.0;
     gnss_config.r_os = 2.656175E7;
     gnss_config.inclination = 55.0;
@@ -283,7 +309,9 @@ GnssConfig defaultGnssConfig(){
     return gnss_config;
 }
 
-KfConfig tacticalImuKFConfig(){
+template <typename T>
+typename Types<T>::KfConfig 
+Helpers<T>::tacticalImuKFConfig(){
     KfConfig kf_config;
     kf_config.init_att_unc = kDegToRad * 1.0;
     kf_config.init_vel_unc = 0.1;
@@ -299,7 +327,11 @@ KfConfig tacticalImuKFConfig(){
     kf_config.clock_freq_psd = 1;
     kf_config.clock_phase_psd = 1;
     return kf_config;
-}     
+} 
+
+// Tell compiler to look for definition elsewhere
+// template struct Helpers<float>;
+template struct Helpers<double>;
 
 
 };
