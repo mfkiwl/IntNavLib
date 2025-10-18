@@ -347,41 +347,48 @@ struct Types {
 
 // For backward compatibility
 
+// Define default type
+#ifdef USE_FLOAT
+    using nav_type = float;
+#else
+    using nav_type = double;
+#endif
+
 // Constants
 
-using Constantsd = Constants<double>;
+using Constantst = Constants<nav_type>;
 
-static constexpr int kMaxGnssSatellites = Constantsd::kMaxGnssSatellites;
-static constexpr double kEpsilon = Constantsd::kEpsilon;
-static constexpr double kR0 = Constantsd::kR0;
-static constexpr double kEccentricity = Constantsd::kEccentricity;
-static constexpr double kOmega_ie = Constantsd::kOmega_ie;
-static constexpr double kGravConst = Constantsd::kGravConst;
-static constexpr double kJ2 = Constantsd::kJ2;
-static constexpr double kC = Constantsd::kC;
-static constexpr double kDegToRad = Constantsd::kDegToRad;
-static constexpr double kRadToDeg = Constantsd::kRadToDeg;
-static constexpr double kMuGToMetersPerSecondSquared = Constantsd::kMuGToMetersPerSecondSquared;
+static constexpr int kMaxGnssSatellites = Constantst::kMaxGnssSatellites;
+static constexpr nav_type kEpsilon = Constantst::kEpsilon;
+static constexpr nav_type kR0 = Constantst::kR0;
+static constexpr nav_type kEccentricity = Constantst::kEccentricity;
+static constexpr nav_type kOmega_ie = Constantst::kOmega_ie;
+static constexpr nav_type kGravConst = Constantst::kGravConst;
+static constexpr nav_type kJ2 = Constantst::kJ2;
+static constexpr nav_type kC = Constantst::kC;
+static constexpr nav_type kDegToRad = Constantst::kDegToRad;
+static constexpr nav_type kRadToDeg = Constantst::kRadToDeg;
+static constexpr nav_type kMuGToMetersPerSecondSquared = Constantst::kMuGToMetersPerSecondSquared;
 
 // Types
 
-using Typesd = Types<double>;
+using Typest = Types<nav_type>;
 
-using ImuMeasurements = Typesd::ImuMeasurements;
-using PosMeasEcef = Typesd::PosMeasEcef;
-using PosRotMeasEcef = Typesd::PosRotMeasEcef;
-using GnssPosVelMeasEcef = Typesd::GnssPosVelMeasEcef;
-using ImuErrors = Typesd::ImuErrors;
-using NavSolutionNed = Typesd::NavSolutionNed;
-using NavSolutionEcef = Typesd::NavSolutionEcef;
-using StateEstEcef = Typesd::StateEstEcef;
-using ErrorsNed = Typesd::ErrorsNed;
-using EvalDataEcef = Typesd::EvalDataEcef;
-using KfConfig = Typesd::KfConfig;
-using GnssConfig = Typesd::GnssConfig;
-using SatPosVel = Typesd::SatPosVel;
-using GnssMeasurements = Typesd::GnssMeasurements;
-using GnssLsPosVelClock = Typesd::GnssLsPosVelClock;
+using ImuMeasurements = Typest::ImuMeasurements;
+using PosMeasEcef = Typest::PosMeasEcef;
+using PosRotMeasEcef = Typest::PosRotMeasEcef;
+using GnssPosVelMeasEcef = Typest::GnssPosVelMeasEcef;
+using ImuErrors = Typest::ImuErrors;
+using NavSolutionNed = Typest::NavSolutionNed;
+using NavSolutionEcef = Typest::NavSolutionEcef;
+using StateEstEcef = Typest::StateEstEcef;
+using ErrorsNed = Typest::ErrorsNed;
+using EvalDataEcef = Typest::EvalDataEcef;
+using KfConfig = Typest::KfConfig;
+using GnssConfig = Typest::GnssConfig;
+using SatPosVel = Typest::SatPosVel;
+using GnssMeasurements = Typest::GnssMeasurements;
+using GnssLsPosVelClock = Typest::GnssLsPosVelClock;
 
 
 /// @}

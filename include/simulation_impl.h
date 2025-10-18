@@ -15,8 +15,8 @@ Simulation<T>::kinematicsEcef(const NavSolutionEcef & new_nav,
     // Init measurements to 0
     ImuMeasurements true_imu_meas;
     true_imu_meas.time = new_nav.time;
-    true_imu_meas.f = Eigen::Vector3d::Zero();
-    true_imu_meas.omega = Eigen::Vector3d::Zero();
+    true_imu_meas.f = Vector3::Zero();
+    true_imu_meas.omega = Vector3::Zero();
 
     if (tor_i > 0.0) {
 
@@ -28,17 +28,17 @@ Simulation<T>::kinematicsEcef(const NavSolutionEcef & new_nav,
     T cos_alpha_ie = cos(alpha_ie);
     T sin_alpha_ie = sin(alpha_ie);
 
-    Eigen::Matrix3d C_Earth;
+    Matrix3 C_Earth;
     C_Earth << cos_alpha_ie, sin_alpha_ie, 0.0,
                 -sin_alpha_ie, cos_alpha_ie, 0.0,
                     0.0,             0.0,  1.0;
 
     // Obtain coordinate transformation matrix from the old attitude (w.r.t.
     // an inertial frame) to the new (compensate for earth rotation)
-    Eigen::Matrix3d C_old_new = new_nav.C_b_e.transpose() * C_Earth * old_nav.C_b_e;
+    Matrix3 C_old_new = new_nav.C_b_e.transpose() * C_Earth * old_nav.C_b_e;
 
     // Calculate the approximate angular rate w.r.t. an inertial frame
-    Eigen::Vector3d alpha_ib_b;
+    Vector3 alpha_ib_b;
     alpha_ib_b(0) = 0.5 * (C_old_new(1,2) - C_old_new(2,1));
     alpha_ib_b(1) = 0.5 * (C_old_new(2,0) - C_old_new(0,2));
     alpha_ib_b(2) = 0.5 * (C_old_new(0,1) - C_old_new(1,0));
@@ -53,24 +53,24 @@ Simulation<T>::kinematicsEcef(const NavSolutionEcef & new_nav,
 
     // Calculate the specific force resolved about ECEF-frame axes
     // From (5.36)
-    Eigen::Vector3d kOmega_ie_vec;
+    Vector3 kOmega_ie_vec;
     kOmega_ie_vec << 0.0 , 0.0 , kOmega_ie;
-    Eigen::Vector3d f_ib_e = ((new_nav.v_eb_e - old_nav.v_eb_e) / tor_i) - gravityEcef(old_nav.r_eb_e)
+    Vector3 f_ib_e = ((new_nav.v_eb_e - old_nav.v_eb_e) / tor_i) - gravityEcef(old_nav.r_eb_e)
         + 2.0 * skewSymmetric(kOmega_ie_vec) * old_nav.v_eb_e;
 
     // Calculate the average body-to-ECEF-frame coordinate transformation
     // matrix over the update interval using (5.84) and (5.85)
 
     T mag_alpha = alpha_ib_b.norm();
-    Eigen::Matrix3d Alpha_ib_b = skewSymmetric(alpha_ib_b);
+    Matrix3 Alpha_ib_b = skewSymmetric(alpha_ib_b);
 
-    Eigen::Vector3d alpha_ie_vec;
+    Vector3 alpha_ie_vec;
     alpha_ie_vec << 0.0 , 0.0 , alpha_ie;   
 
-    Eigen::Matrix3d ave_C_b_e;
+    Matrix3 ave_C_b_e;
     if (mag_alpha>1.0e-8) {
         ave_C_b_e = old_nav.C_b_e * 
-            (Eigen::Matrix3d::Identity() + 
+            (Matrix3::Identity() + 
 
             ((1.0 - cos(mag_alpha)) / pow(mag_alpha,2.0)) *
             Alpha_ib_b + 
@@ -110,8 +110,8 @@ Simulation<T>::imuModel(const ImuMeasurements & true_imu_meas,
     imu_measurements.time = true_imu_meas.time;
 
     // Init noises
-    Eigen::Vector3d accel_noise = Eigen::Vector3d::Zero();
-    Eigen::Vector3d gyro_noise = Eigen::Vector3d::Zero();
+    Vector3 accel_noise = Vector3::Zero();
+    Vector3 gyro_noise = Vector3::Zero();
 
     // Normal distribution init
     std::normal_distribution<T> randn(0.0, 1.0); 
@@ -128,17 +128,17 @@ Simulation<T>::imuModel(const ImuMeasurements & true_imu_meas,
     // Calculate accelerometer and gyro outputs using (4.16) and (4.17)
 
     // Specific force
-    Eigen::Vector3d uq_f_ib_b = imu_errors.b_a + (Eigen::Matrix3d::Identity() + imu_errors.M_a) * true_imu_meas.f 
+    Vector3 uq_f_ib_b = imu_errors.b_a + (Matrix3::Identity() + imu_errors.M_a) * true_imu_meas.f 
                                 + accel_noise;
 
     // Angular velocity
-    Eigen::Vector3d uq_omega_ib_b = imu_errors.b_g + (Eigen::Matrix3d::Identity() + imu_errors.M_g) * true_imu_meas.omega 
+    Vector3 uq_omega_ib_b = imu_errors.b_g + (Matrix3::Identity() + imu_errors.M_g) * true_imu_meas.omega 
                                     + imu_errors.G_g * true_imu_meas.f 
                                     + gyro_noise;
 
     // Quantize accelerometer outputs
     if (imu_errors.accel_quant_level > kEpsilon) {
-        Eigen::Vector3d temp = (uq_f_ib_b + old_imu_meas.quant_residuals_f) / imu_errors.accel_quant_level;
+        Vector3 temp = (uq_f_ib_b + old_imu_meas.quant_residuals_f) / imu_errors.accel_quant_level;
         for(size_t i = 0; i < 3; i++) temp(i) = round(temp(i));
         imu_measurements.f = imu_errors.accel_quant_level * temp;
         imu_measurements.quant_residuals_f = uq_f_ib_b + old_imu_meas.quant_residuals_f -
@@ -146,12 +146,12 @@ Simulation<T>::imuModel(const ImuMeasurements & true_imu_meas,
     }
     else{
         imu_measurements.f = uq_f_ib_b;
-        imu_measurements.quant_residuals_f = Eigen::Vector3d::Zero();
+        imu_measurements.quant_residuals_f = Vector3::Zero();
     }
 
     // Quantize gyro outputs
     if (imu_errors.gyro_quant_level > kEpsilon) {
-        Eigen::Vector3d temp = (uq_omega_ib_b + old_imu_meas.quant_residuals_omega) / imu_errors.gyro_quant_level;
+        Vector3 temp = (uq_omega_ib_b + old_imu_meas.quant_residuals_omega) / imu_errors.gyro_quant_level;
         for(size_t i = 0; i < 3; i++) temp(i) = round(temp(i)); 
         imu_measurements.omega = imu_errors.gyro_quant_level * temp;
         imu_measurements.quant_residuals_omega = uq_omega_ib_b + old_imu_meas.quant_residuals_omega -
@@ -159,7 +159,7 @@ Simulation<T>::imuModel(const ImuMeasurements & true_imu_meas,
     }
     else {
         imu_measurements.omega = uq_omega_ib_b;
-        imu_measurements.quant_residuals_omega = Eigen::Vector3d::Zero();
+        imu_measurements.quant_residuals_omega = Vector3::Zero();
     }
 
     // // No quantization
@@ -181,10 +181,10 @@ Simulation<T>::genericPosSensModel(const NavSolutionEcef & true_nav,
     // nomally distributed error
     std::normal_distribution<T> randn(0.0, pos_sigma);
 
-    Eigen::Vector3d pos_error;
+    Vector3 pos_error;
     pos_error << randn(gen), randn(gen), randn(gen);
 
-    Eigen::Matrix3d cov_mat = Eigen::Matrix3d::Identity() * pos_sigma * pos_sigma;
+    Matrix3 cov_mat = Matrix3::Identity() * pos_sigma * pos_sigma;
 
     // add error
     pos_meas.r_eb_e = true_nav.r_eb_e + pos_error;
@@ -206,14 +206,14 @@ Simulation<T>::genericPosRotSensModel(const NavSolutionEcef & true_nav,
     std::normal_distribution<T> randn_pos(0.0, pos_sigma);
     std::normal_distribution<T> randn_rot(0.0, rot_sigma);
 
-    Eigen::Vector3d pos_error;
+    Vector3 pos_error;
     pos_error << randn_pos(gen), randn_pos(gen), randn_pos(gen);
 
-    Eigen::Vector3d rot_error;
+    Vector3 rot_error;
     rot_error << randn_rot(gen), randn_rot(gen), randn_rot(gen);
-    Eigen::Matrix3d C_b_b = eulerToDcm(rot_error); // perturbation Rot mat
+    Matrix3 C_b_b = eulerToDcm(rot_error); // perturbation Rot mat
 
-    Eigen::Matrix<double,6,6> cov_mat = Eigen::Matrix<double,6,6>::Identity();
+    Eigen::Matrix<T,6,6> cov_mat = Eigen::Matrix<T,6,6>::Identity();
     cov_mat.template block<3,3>(0,0) *= pos_sigma * pos_sigma;
     cov_mat.template block<3,3>(3,3) *= rot_sigma * rot_sigma;
 
@@ -252,7 +252,7 @@ Simulation<T>::satellitePositionsAndVelocities(const T & time, const GnssConfig 
         T u_os_o = 2 * M_PI * j / no_sat + omega_is * const_time;
         
         // Satellite position in the orbital frame
-        Eigen::Vector3d r_os_o;
+        Vector3 r_os_o;
         r_os_o << gnss_config.r_os * std::cos(u_os_o),
                     gnss_config.r_os * std::sin(u_os_o), 
                     0;
@@ -266,7 +266,7 @@ Simulation<T>::satellitePositionsAndVelocities(const T & time, const GnssConfig 
         gnssPosVel.sat_r_es_e(j, 2) = r_os_o(1) * std::sin(inclination);
 
         // Satellite velocity in the orbital frame
-        Eigen::Vector3d v_os_o;
+        Vector3 v_os_o;
         v_os_o << -gnss_config.r_os * omega_is * std::sin(u_os_o),
                     gnss_config.r_os * omega_is * std::cos(u_os_o), 0;
 
@@ -302,13 +302,13 @@ Simulation<T>::generateGnssMeasurements(const T & time,
     T sin_lat = std::sin(true_nav_ned.latitude);
     T cos_long = std::cos(true_nav_ned.longitude);
     T sin_long = std::sin(true_nav_ned.longitude);
-    Eigen::Matrix3d C_e_n;
+    Matrix3 C_e_n;
     C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
              -sin_long,            cos_long,        0,
              -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
      
     // Skew symmetric matrix of Earth rate
-    Eigen::Matrix3d Omega_ie = skewSymmetric(Eigen::Vector3d(0, 0, kOmega_ie));
+    Matrix3 Omega_ie = skewSymmetric(Vector3(0, 0, kOmega_ie));
        
     // Resize the GNSS measurements matrix to accommodate the maximum possible measurements
     gnss_measurements.meas = Eigen::MatrixXd(gnss_config.no_sat, 8);
@@ -316,9 +316,9 @@ Simulation<T>::generateGnssMeasurements(const T & time,
     // Loop over satellites
     for (int j = 0; j < gnss_config.no_sat; ++j) {
         // Determine ECEF line-of-sight vector
-        Eigen::Vector3d delta_r = gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
+        Vector3 delta_r = gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
         T approx_range = delta_r.norm();
-        Eigen::Vector3d u_as_e = delta_r / approx_range;
+        Vector3 u_as_e = delta_r / approx_range;
     
         // Convert line-of-sight vector to NED and determine elevation
         T elevation = -std::asin(C_e_n.row(2).dot(u_as_e));
@@ -329,7 +329,7 @@ Simulation<T>::generateGnssMeasurements(const T & time,
             gnss_measurements.no_meas++;
     
             // Calculate frame rotation during signal transit time
-            Eigen::Matrix3d C_e_I;
+            Matrix3 C_e_I;
             C_e_I << 1, kOmega_ie * approx_range / kC, 0,
                      -kOmega_ie * approx_range / kC, 1, 0,
                      0, 0, 1;
@@ -360,7 +360,7 @@ Simulation<T>::generateGnssMeasurements(const T & time,
     // 6. Set-up measurement noise covariance matrix assuming all measurements
     // are independent and have equal variance for a given measurement type.
     gnss_measurements.cov_mat =
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites>::Identity(2*gnss_measurements.no_meas, 2*gnss_measurements.no_meas);
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, 0, 2* kMaxGnssSatellites, 2* kMaxGnssSatellites>::Identity(2*gnss_measurements.no_meas, 2*gnss_measurements.no_meas);
 
     // Ranges
     gnss_measurements.cov_mat.block(0,0,gnss_measurements.no_meas,gnss_measurements.no_meas) 
@@ -390,7 +390,7 @@ Simulation<T>::initializeGnssBiases(const NavSolutionEcef & true_nav_ecef,
     T sin_lat = std::sin(true_nav_ned.latitude);
     T cos_long = std::cos(true_nav_ned.longitude);
     T sin_long = std::sin(true_nav_ned.longitude);
-    Eigen::Matrix3d C_e_n;
+    Matrix3 C_e_n;
     C_e_n << -sin_lat * cos_long, -sin_lat * sin_long,  cos_lat,
              -sin_long,            cos_long,        0,
              -cos_lat * cos_long, -cos_lat * sin_long, -sin_lat;
@@ -398,8 +398,8 @@ Simulation<T>::initializeGnssBiases(const NavSolutionEcef & true_nav_ecef,
     // Loop over satellites
     for (int j = 0; j < gnss_config.no_sat; ++j) {
         // Determine ECEF line-of-sight vector
-        Eigen::Vector3d delta_r = gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
-        Eigen::Vector3d u_as_e = delta_r / delta_r.norm();
+        Vector3 delta_r = gnss_pos_vel.sat_r_es_e.row(j).transpose() - true_nav_ecef.r_eb_e;
+        Vector3 u_as_e = delta_r / delta_r.norm();
     
         // Convert line-of-sight vector to NED and determine elevation
         T elevation = -std::asin(C_e_n.row(2).dot(u_as_e));

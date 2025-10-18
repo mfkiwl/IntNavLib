@@ -89,11 +89,11 @@ int main(int argc, char** argv)
     imu_meas_old.quant_residuals_omega = Eigen::Vector3d::Zero();
 
     // Time of last KF update
-    double time_last_update = -1.0;
+    nav_type time_last_update = -1.0;
 
     // Init GNSS range biases
     SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned.time,  gnss_config);
-    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
+    Eigen::Matrix<nav_type, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
                                                                                                         true_nav_ned,
                                                                                                         sat_pos_vel_0,
                                                                                                         gnss_config,
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
 
         // ========= Get ground truth ============
 
-        double tor_i = true_nav_ned.time - nav_filter.getTime();
+        nav_type tor_i = true_nav_ned.time - nav_filter.getTime();
         true_nav_ecef = nedToEcef(true_nav_ned);
 
         // ========== IMU Simulation ==========
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 
         // ========== Update =========
 
-        double tor_s = true_nav_ned.time - time_last_update;
+        nav_type tor_s = true_nav_ned.time - time_last_update;
         if(tor_s >= gnss_config.epoch_interval && sim_type != SimType::INS) {
 
             // Simulate GNSS measurements

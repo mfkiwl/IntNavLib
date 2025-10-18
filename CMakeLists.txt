@@ -9,6 +9,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Export compile commands for clang tidy
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(USE_FLOAT "Build with float precision instead of double" OFF)
+
+if(USE_FLOAT)
+    add_compile_definitions(USE_FLOAT)
+endif()
+
 find_package(Eigen3 REQUIRED)
 
 # Get all header files in the include directory

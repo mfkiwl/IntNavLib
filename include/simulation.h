@@ -122,55 +122,62 @@ namespace intnavlib {
 
 // =========== For back-compatibility ===========
 
-using Simulationd = Simulation<double>;
+// Define default type
+#ifdef USE_FLOAT
+    using nav_type = float;
+#else
+    using nav_type = double;
+#endif
+
+using Simulationt = Simulation<nav_type>;
 
 inline ImuMeasurements kinematicsEcef(const NavSolutionEcef & new_nav,
                                 const NavSolutionEcef & old_nav) {
-    return Simulationd::kinematicsEcef(new_nav, old_nav);
+    return Simulationt::kinematicsEcef(new_nav, old_nav);
 }
 
 inline ImuMeasurements imuModel(const ImuMeasurements & true_imu_meas, 
                         const ImuMeasurements & old_imu_meas,
                         const ImuErrors & imu_errors,
-                        const double & tor_i,
+                        const nav_type & tor_i,
                         std::mt19937 & gen) {
-    return Simulationd::imuModel(true_imu_meas, old_imu_meas, imu_errors, tor_i, gen);
+    return Simulationt::imuModel(true_imu_meas, old_imu_meas, imu_errors, tor_i, gen);
 }
 
 inline PosMeasEcef genericPosSensModel(const NavSolutionEcef & true_nav, 
-                            const double & pos_sigma,
+                            const nav_type & pos_sigma,
                             std::mt19937 & gen) {
-    return Simulationd::genericPosSensModel(true_nav, pos_sigma, gen);
+    return Simulationt::genericPosSensModel(true_nav, pos_sigma, gen);
 }
 
 inline PosRotMeasEcef genericPosRotSensModel(const NavSolutionEcef & true_nav, 
-                                    const double & pos_sigma,
-                                    const double & rot_sigma,
+                                    const nav_type & pos_sigma,
+                                    const nav_type & rot_sigma,
                                     std::mt19937 & gen) {
-    return Simulationd::genericPosRotSensModel(true_nav, pos_sigma, rot_sigma, gen);
+    return Simulationt::genericPosRotSensModel(true_nav, pos_sigma, rot_sigma, gen);
 }
 
-inline SatPosVel satellitePositionsAndVelocities(const double & time, const GnssConfig & gnss_config) {
-    return Simulationd::satellitePositionsAndVelocities(time, gnss_config);
+inline SatPosVel satellitePositionsAndVelocities(const nav_type & time, const GnssConfig & gnss_config) {
+    return Simulationt::satellitePositionsAndVelocities(time, gnss_config);
 }
 
-inline GnssMeasurements generateGnssMeasurements(const double & time,
+inline GnssMeasurements generateGnssMeasurements(const nav_type & time,
                                     const SatPosVel & gnss_pos_vel,
                                     const NavSolutionNed& true_nav_ned,
                                     const NavSolutionEcef& true_nav_ecef,
-                                    const Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> & gnss_biases, 
+                                    const Eigen::Matrix<nav_type, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> & gnss_biases, 
                                     const GnssConfig& gnss_config,
                                     std::mt19937 & gen) {
-    return Simulationd::generateGnssMeasurements(time, gnss_pos_vel, true_nav_ned, true_nav_ecef, gnss_biases, gnss_config, gen);
+    return Simulationt::generateGnssMeasurements(time, gnss_pos_vel, true_nav_ned, true_nav_ecef, gnss_biases, gnss_config, gen);
 }
 
-inline Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites>
+inline Eigen::Matrix<nav_type, Eigen::Dynamic, 1, 0, kMaxGnssSatellites>
 initializeGnssBiases(const NavSolutionEcef & true_nav_ecef,
                         const NavSolutionNed & true_nav_ned,
                         const SatPosVel & gnss_pos_vel,
                         const GnssConfig& gnss_config,
                         std::mt19937 & gen) {
-    return Simulationd::initializeGnssBiases(true_nav_ecef, true_nav_ned, gnss_pos_vel, gnss_config, gen);
+    return Simulationt::initializeGnssBiases(true_nav_ecef, true_nav_ned, gnss_pos_vel, gnss_config, gen);
 }
 
 };

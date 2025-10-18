@@ -5,11 +5,11 @@
 
 using namespace intnavlib;
 
-constexpr double max_pos_error = 0.001; // meters
+constexpr nav_type max_pos_error = 0.001; // meters
 constexpr char test_profile_path[] = "../data/Profile_3.csv";  // Provide your test profile path
 
 // Helper function to run the INS without IMU/init errors and return average position error
-double runIdealInsSimulation(const std::string& motion_profile_path) {
+nav_type runIdealInsSimulation(const std::string& motion_profile_path) {
     MotionProfileReader reader(motion_profile_path);
 
     NavSolutionNed true_nav_ned, true_nav_ned_old;
@@ -22,10 +22,10 @@ double runIdealInsSimulation(const std::string& motion_profile_path) {
     true_nav_ecef_old = nedToEcef(true_nav_ned_old);
     est_nav_ecef_old = true_nav_ecef_old;
 
-    double pos_error_sum = 0.0;
+    nav_type pos_error_sum = 0.0;
     long unsigned int count = 0;
     while (reader.readNextRow(true_nav_ned)) {
-        double tor_i = true_nav_ned.time - true_nav_ned_old.time;
+        nav_type tor_i = true_nav_ned.time - true_nav_ned_old.time;
 
         true_nav_ecef = nedToEcef(true_nav_ned);
         true_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
@@ -35,7 +35,7 @@ double runIdealInsSimulation(const std::string& motion_profile_path) {
 
         est_nav_ecef = navEquationsEcef(est_nav_ecef_old, imu_meas, tor_i);
 
-        double pos_error = (est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e).norm();
+        nav_type pos_error = (est_nav_ecef.r_eb_e - true_nav_ecef.r_eb_e).norm();
         pos_error_sum += pos_error;
         count++;
 
@@ -45,13 +45,13 @@ double runIdealInsSimulation(const std::string& motion_profile_path) {
         true_nav_ned_old = true_nav_ned;
     }
 
-    return pos_error_sum / (double) count;
+    return pos_error_sum / (nav_type) count;
 }
 
 
 TEST(inertial_navigation, test_ins_ideal) {
 
-    double avg_position_error = runIdealInsSimulation(test_profile_path);
+    nav_type avg_position_error = runIdealInsSimulation(test_profile_path);
 
     EXPECT_LT(avg_position_error, max_pos_error)
         << "Mean absolute position error should be under "

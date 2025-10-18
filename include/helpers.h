@@ -309,64 +309,72 @@ namespace intnavlib {
 
     // =========== For back-compatibility ===========
 
-    using Helpersd = Helpers<double>;
+    // Define default type
+    #ifdef USE_FLOAT
+        using nav_type = float;
+    #else
+        using nav_type = double;
+    #endif
+
+    using Helperst = Helpers<nav_type>;
     
-    using FileWriter = Helpersd::FileWriter;
-    using MotionProfileReader = Helpersd::MotionProfileReader;
+    using FileWriter = Helperst::FileWriter;
+    using MotionProfileReader = Helperst::MotionProfileReader;
 
     // Create wrapped non-templated functions:
 
-    inline Eigen::Vector3d gravityEcef(const Eigen::Vector3d & r_eb_e) {
-        return Helpersd::gravityEcef(r_eb_e);
+    inline Eigen::Matrix<nav_type,3,1> gravityEcef(const Eigen::Matrix<nav_type,3,1> & r_eb_e) {
+        return Helperst::gravityEcef(r_eb_e);
     }
 
     inline NavSolutionEcef nedToEcef(const NavSolutionNed & nav_sol_ned) {
-        return Helpersd::nedToEcef(nav_sol_ned);
+        return Helperst::nedToEcef(nav_sol_ned);
     }
 
     inline NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
-        return Helpersd::ecefToNed(nav_sol_ecef);
+        return Helperst::ecefToNed(nav_sol_ecef);
     }
 
-    inline EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, const NavSolutionEcef & true_nav_ecef){
-        return Helpersd::getEvalDataEcef(state_est_ecef, true_nav_ecef);
+    inline EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, 
+                                        const NavSolutionEcef & true_nav_ecef){
+        return Helperst::getEvalDataEcef(state_est_ecef, true_nav_ecef);
     }
 
-    inline Eigen::Matrix3d eulerToDcm(const Eigen::Vector3d & rpy){
-        return Helpersd::eulerToDcm(rpy);
+    inline Eigen::Matrix<nav_type,3,3> eulerToDcm(const Eigen::Matrix<nav_type,3,1> & rpy){
+        return Helperst::eulerToDcm(rpy);
     }
 
-    inline Eigen::Vector3d dcmToEuler(const Eigen::Matrix3d & C){
-        return Helpersd::dcmToEuler(C);
+    inline Eigen::Matrix<nav_type,3,1> dcmToEuler(const Eigen::Matrix<nav_type,3,3> & C){
+        return Helperst::dcmToEuler(C);
     }
 
-    inline Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d & a){
-        return Helpersd::skewSymmetric(a);
+    inline Eigen::Matrix<nav_type,3,3> skewSymmetric(const Eigen::Matrix<nav_type,3,1> & a){
+        return Helperst::skewSymmetric(a);
     }
 
     inline Eigen::Vector2d radiiOfCurvature(double L){
-        return Helpersd::radiiOfCurvature(L);
+        return Helperst::radiiOfCurvature(L);
     }
 
     inline ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
-                                const NavSolutionNed & est_nav_sol){
-        return Helpersd::calculateErrorsNed(true_nav_sol, est_nav_sol);
+                                        const NavSolutionNed & est_nav_sol){
+        return Helperst::calculateErrorsNed(true_nav_sol, est_nav_sol);
     }
 
     inline ImuErrors tacticalImuErrors(){
-        return Helpersd::tacticalImuErrors();
+        return Helperst::tacticalImuErrors();
     }  
 
     inline GnssConfig defaultGnssConfig(){
-        return Helpersd::defaultGnssConfig();
+        return Helperst::defaultGnssConfig();
     }
 
     inline KfConfig tacticalImuKFConfig(){
-        return Helpersd::tacticalImuKFConfig();
+        return Helperst::tacticalImuKFConfig();
     }
     
-    inline Eigen::Vector3d deSkew(const Eigen::Matrix3d & S) {
-        return Helpersd::deSkew(S);
+    inline Eigen::Matrix<nav_type,3,1> deSkew(const Eigen::Matrix<nav_type,3,3> & S) {
+        return Helperst::deSkew(S);
     }
                                 
 };
