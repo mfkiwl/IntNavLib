@@ -6,4 +6,4 @@
 #include "constants_types.h"
 #include "navigation.h"
 
-#endif
+#endif // INTNAVLIB_H

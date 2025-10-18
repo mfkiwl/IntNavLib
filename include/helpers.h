@@ -23,14 +23,21 @@ namespace intnavlib {
         using Vector2 = Eigen::Matrix<T,2,1>;
         using Matrix3 = Eigen::Matrix<T,3,3>;
 
-        using NavSolutionEcef = typename Types<T>::NavSolutionEcef;
-        using NavSolutionNed = typename Types<T>::NavSolutionNed;
-        using StateEstEcef = typename Types<T>::StateEstEcef;
-        using EvalDataEcef = typename Types<T>::EvalDataEcef;
-        using ErrorsNed = typename Types<T>::ErrorsNed;
+        using ImuMeasurements = typename Types<T>::ImuMeasurements;
+        using PosMeasEcef = typename Types<T>::PosMeasEcef;
+        using PosRotMeasEcef = typename Types<T>::PosRotMeasEcef;
+        using GnssPosVelMeasEcef = typename Types<T>::GnssPosVelMeasEcef;
         using ImuErrors = typename Types<T>::ImuErrors;
-        using GnssConfig = typename Types<T>::GnssConfig;
+        using NavSolutionNed = typename Types<T>::NavSolutionNed;
+        using NavSolutionEcef = typename Types<T>::NavSolutionEcef;
+        using StateEstEcef = typename Types<T>::StateEstEcef;
+        using ErrorsNed = typename Types<T>::ErrorsNed;
+        using EvalDataEcef = typename Types<T>::EvalDataEcef;
         using KfConfig = typename Types<T>::KfConfig;
+        using GnssConfig = typename Types<T>::GnssConfig;
+        using SatPosVel = typename Types<T>::SatPosVel;
+        using GnssMeasurements = typename Types<T>::GnssMeasurements;
+        using GnssLsPosVelClock = typename Types<T>::GnssLsPosVelClock;
     
         /// \brief Gets gravity vector at given ECEF position, in ECEF frame.
         /// \param[in] r_eb_e Position vector in ECEF frame.
@@ -300,10 +307,6 @@ namespace intnavlib {
     
     };
 
-    // Tell compiler to look for implementation elsewhere
-    // extern template struct Helpers<float>;
-    extern template struct Helpers<double>;
-
     // =========== For back-compatibility ===========
 
     using Helpersd = Helpers<double>;
@@ -368,4 +371,6 @@ namespace intnavlib {
                                 
 };
 
-#endif
+#endif // HELPERS_H
+
+#include "helpers_impl.h"

@@ -1,10 +1,13 @@
+#ifndef HELPERS_IMPL_H
+#define HELPERS_IMPL_H
+
 #include "helpers.h"
 
 namespace intnavlib {
 
 template <typename T>
 typename Types<T>::NavSolutionEcef 
-Helpers<T>::nedToEcef(const typename Types<T>::NavSolutionNed& nav_sol_ned) {
+Helpers<T>::nedToEcef(const NavSolutionNed& nav_sol_ned) {
     // Extract the inputs
     T L_b = nav_sol_ned.latitude;
     T lambda_b = nav_sol_ned.longitude;
@@ -42,7 +45,7 @@ Helpers<T>::nedToEcef(const typename Types<T>::NavSolutionNed& nav_sol_ned) {
 
 template <typename T>
 typename Types<T>::NavSolutionNed 
-Helpers<T>::ecefToNed(const typename Types<T>::NavSolutionEcef & nav_sol_ecef){
+Helpers<T>::ecefToNed(const NavSolutionEcef & nav_sol_ecef){
     // Convert position using Borkowski closed-form exact solution
     // From (2.113)
     T lambda_b = atan2(nav_sol_ecef.r_eb_e(1), nav_sol_ecef.r_eb_e(0));
@@ -94,8 +97,8 @@ Helpers<T>::ecefToNed(const typename Types<T>::NavSolutionEcef & nav_sol_ecef){
 
 template <typename T>
 typename Types<T>::EvalDataEcef 
-Helpers<T>::getEvalDataEcef(const typename Types<T>::StateEstEcef & state_est_ecef, 
-                            const typename Types<T>::NavSolutionEcef & true_nav_ecef) {
+Helpers<T>::getEvalDataEcef(const StateEstEcef & state_est_ecef, 
+                            const NavSolutionEcef & true_nav_ecef) {
 
     EvalDataEcef eval_data;
 
@@ -233,8 +236,8 @@ Helpers<T>::radiiOfCurvature(T L) {
 
 template <typename T>
 typename Types<T>::ErrorsNed 
-Helpers<T>::calculateErrorsNed(const typename Types<T>::NavSolutionNed & true_nav_sol, 
-                                const typename Types<T>::NavSolutionNed & est_nav_sol){
+Helpers<T>::calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
+                                const NavSolutionNed & est_nav_sol){
     // Position error calculation
     Vector2 radii = radiiOfCurvature(true_nav_sol.latitude);
     T R_N = radii(0);
@@ -327,11 +330,9 @@ Helpers<T>::tacticalImuKFConfig(){
     kf_config.clock_freq_psd = 1;
     kf_config.clock_phase_psd = 1;
     return kf_config;
-} 
-
-// Tell compiler to look for definition elsewhere
-// template struct Helpers<float>;
-template struct Helpers<double>;
+}
 
 
 };
+
+#endif // HELPERS_IMPL_H

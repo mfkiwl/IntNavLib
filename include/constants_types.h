@@ -388,4 +388,4 @@ using GnssLsPosVelClock = Typesd::GnssLsPosVelClock;
 
 };
 
-#endif
+#endif // CONSTANTS_TYPES_H

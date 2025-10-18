@@ -11,24 +11,24 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Eigen3 REQUIRED)
 
-# Create static library
-add_library(intnavlib STATIC) 
-
 # Get all header files in the include directory
 file(GLOB PUBLIC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-
 # Get all source files in the src directory
 file(GLOB PRIVATE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-# Add private source files
-target_sources(intnavlib
-    PRIVATE
-    ${PRIVATE_SOURCE_FILES}
-)
+# Create static library with its sources
+# add_library(intnavlib STATIC ${PRIVATE_SOURCE_FILES}) 
+
+add_library(intnavlib INTERFACE) # header-only lib
 
 # Add headers. We choose to keep them all public
+# target_include_directories(intnavlib
+#     PUBLIC
+#         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#         $<INSTALL_INTERFACE:include/intnavlib>
+# )
 target_include_directories(intnavlib
-    PUBLIC
+    INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include/intnavlib>
 )
@@ -43,10 +43,15 @@ set_target_properties(intnavlib PROPERTIES
 
 
 # Link dependencies. PRIVATE so only visible from lib
+# target_link_libraries( intnavlib
+#         PRIVATE
+#             Eigen3::Eigen
+#         )
 target_link_libraries( intnavlib
-        PRIVATE
+        INTERFACE
             Eigen3::Eigen
         )
+
 
 # ================= Tests =================
 
