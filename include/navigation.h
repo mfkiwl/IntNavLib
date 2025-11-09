@@ -16,6 +16,7 @@ template<typename T>
 struct Navigation {
 
     using Vector3 = Eigen::Matrix<T,3,1>;
+    using Vector4 = Eigen::Matrix<T,4,1>;
     using Vector2 = Eigen::Matrix<T,2,1>;
     using Matrix3 = Eigen::Matrix<T,3,3>;
 

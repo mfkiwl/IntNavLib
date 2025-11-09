@@ -40,6 +40,7 @@ struct Constants {
 template <typename T>
 struct Types {
 
+    using Vector2 = Eigen::Matrix<T,2,1>;
     using Vector3 = Eigen::Matrix<T,3,1>;
     using Matrix3 = Eigen::Matrix<T,3,3>;
 
@@ -340,7 +341,7 @@ struct Types {
         /// Estimated antenna velocity in ECEF frame.
         Vector3 v_ea_e;
         /// Estimated receiver clock offset and drift.
-        Eigen::Vector2d clock;
+        Vector2 clock;
     };
 
 };

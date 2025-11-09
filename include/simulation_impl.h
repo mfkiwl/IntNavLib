@@ -243,8 +243,8 @@ Simulation<T>::satellitePositionsAndVelocities(const T & time, const GnssConfig 
     // Resize output matrices
     int no_sat = static_cast<int>(gnss_config.no_sat);
 
-    gnssPosVel.sat_r_es_e = Eigen::MatrixXd(no_sat, 3);
-    gnssPosVel.sat_v_es_e = Eigen::MatrixXd(no_sat, 3);
+    gnssPosVel.sat_r_es_e = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(no_sat, 3);
+    gnssPosVel.sat_v_es_e = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(no_sat, 3);
 
     // Loop over satellites
     for (int j = 0; j < no_sat; ++j) {
@@ -311,7 +311,7 @@ Simulation<T>::generateGnssMeasurements(const T & time,
     Matrix3 Omega_ie = skewSymmetric(Vector3(0, 0, kOmega_ie));
        
     // Resize the GNSS measurements matrix to accommodate the maximum possible measurements
-    gnss_measurements.meas = Eigen::MatrixXd(gnss_config.no_sat, 8);
+    gnss_measurements.meas = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(gnss_config.no_sat, 8);
 
     // Loop over satellites
     for (int j = 0; j < gnss_config.no_sat; ++j) {

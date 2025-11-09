@@ -4,3 +4,5 @@
 **/results
 **/output
 **/docs/doxygen
+
+*/callgrind.out**

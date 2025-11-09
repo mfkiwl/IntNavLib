@@ -46,13 +46,21 @@ firefox docs/doxygen/html/index.html
 
 - Building: use scripts/build.sh file
 
-- Linting: see .clang-tidy file, lint using scripts/lint.sh
+- Linting: Follow the [Google](https://google.github.io/styleguide/cppguide.html) style guide and see .clang-tidy file, lint using scripts/lint.sh
 
 - Testing: write Google tests, launch using scripts/test.sh
 
+- Test Coverage: ensure tests have good coverage using scripts/test_coverage.sh
+
+- Profiling: use profile.sh to ensure no leaks and identify bottlenecks
+
 - Documentation: document code using Doxygen-compatible comments, launch Doxygen using scripts/doc.sh
 
+- Git workflow: [Gitflow](https://nvie.com/posts/a-successful-git-branching-model/)
+
 - **Hooks**: paste hook.sh to .git/hooks/ so builds and tests are run before committing
+
+- Profiling: use profile.sh to ensure no leaks and identify bottlenecks.
 
 ## Using IntNavLib
 
@@ -71,10 +79,4 @@ source install/setup.bash
 ros2 launch ros2_lc_ins_gnss_ecef Profile_3_launch.py log_level:=ERROR
 ```
 
-Find Python and C++ scripts to plot results in the [utils](/utils/) directory. You can launch them like this:
-
-```
-python3 plot_profile.py <path_to_profile_csv> # to plot a motion profile
-python3 plot_errors.py <path_to_errors_csv> # to plot nav errors
-python3 plot_errors_sigmas_ecef.py <path_to_ecef_errors_sigmas_csv> # to plot errors + estimated uncertainty 
-```
+Find Python and C++ scripts to plot results in the [utils](/utils/) directory.

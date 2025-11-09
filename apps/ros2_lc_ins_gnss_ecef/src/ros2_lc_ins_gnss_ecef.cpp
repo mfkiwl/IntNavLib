@@ -24,6 +24,10 @@
 using namespace std::chrono_literals;
 using namespace intnavlib;
 
+using Vector3 = Eigen::Matrix<nav_type,3,1>;
+using Vector2 = Eigen::Matrix<nav_type,2,1>;
+using Matrix3 = Eigen::Matrix<nav_type,3,3>;
+
 class InsGnssNode : public rclcpp::Node {
 
 public:
@@ -85,9 +89,9 @@ private:
     std::mutex gnss_buffer_mutex_;
 
     // Init params
-    std::vector<double> init_lla_;
-    std::vector<double> init_rpy_b_n_;
-    std::vector<double> init_v_eb_n_;
+    std::vector<nav_type> init_lla_;
+    std::vector<nav_type> init_rpy_b_n_;
+    std::vector<nav_type> init_v_eb_n_;
 
     // Navigation state
     StateEstEcef state_est_ecef_;
@@ -115,20 +119,20 @@ private:
         declare_parameter<std::string>("log_path");
 
         // EKF config
-        declare_parameter<double>("kf_config.init_att_unc");
-        declare_parameter<double>("kf_config.init_vel_unc");
-        declare_parameter<double>("kf_config.init_pos_unc");
-        declare_parameter<double>("kf_config.init_b_a_unc");
-        declare_parameter<double>("kf_config.init_b_g_unc");
-        declare_parameter<double>("kf_config.gyro_noise_psd");
-        declare_parameter<double>("kf_config.accel_noise_psd");
-        declare_parameter<double>("kf_config.accel_bias_psd");
-        declare_parameter<double>("kf_config.gyro_bias_psd");
+        declare_parameter<nav_type>("kf_config.init_att_unc");
+        declare_parameter<nav_type>("kf_config.init_vel_unc");
+        declare_parameter<nav_type>("kf_config.init_pos_unc");
+        declare_parameter<nav_type>("kf_config.init_b_a_unc");
+        declare_parameter<nav_type>("kf_config.init_b_g_unc");
+        declare_parameter<nav_type>("kf_config.gyro_noise_psd");
+        declare_parameter<nav_type>("kf_config.accel_noise_psd");
+        declare_parameter<nav_type>("kf_config.accel_bias_psd");
+        declare_parameter<nav_type>("kf_config.gyro_bias_psd");
 
         // Init 
-        declare_parameter<std::vector<double>>("init_lla");
-        declare_parameter<std::vector<double>>("init_v_eb_n");
-        declare_parameter<std::vector<double>>("init_rpy_b_n");
+        declare_parameter<std::vector<nav_type>>("init_lla");
+        declare_parameter<std::vector<nav_type>>("init_v_eb_n");
+        declare_parameter<std::vector<nav_type>>("init_rpy_b_n");
 
         // Get parameters
 
@@ -164,13 +168,13 @@ private:
                                                     kDegToRad * init_lla_[0], 
                                                     kDegToRad * init_lla_[1], 
                                                     init_lla_[2], 
-                                                    Eigen::Vector3d(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
-                                                    eulerToDcm(kDegToRad * Eigen::Vector3d(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]))};
+                                                    Vector3(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
+                                                    eulerToDcm(kDegToRad * Vector3(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]))};
         
         state_est_ecef_.valid = true;
         state_est_ecef_.nav_sol = nedToEcef(est_nav_ned);
-        state_est_ecef_.acc_bias = Eigen::Vector3d::Zero();
-        state_est_ecef_.gyro_bias = Eigen::Vector3d::Zero();
+        state_est_ecef_.acc_bias = Vector3::Zero();
+        state_est_ecef_.gyro_bias = Vector3::Zero();
         state_est_ecef_.P_matrix = initializePMmatrix(kf_config_);
 
         // Log loaded parameters for debugging
@@ -215,7 +219,7 @@ private:
 
             // Threadsafe read from message buffers
             // Want to get oldest IMU measurement (front)
-            double imu_time = 0;
+            nav_type imu_time = 0;
             {   
                 // Wait on IMU buffer
                 std::unique_lock<std::mutex> lock(imu_buffer_mutex_);
@@ -243,17 +247,17 @@ private:
             RCLCPP_INFO(this->get_logger(), "Predict: %f", imu_time);
 
             ImuMeasurements imu_meas;
-            imu_meas.f = Eigen::Vector3d(
+            imu_meas.f = Vector3(
                 imu_msg->linear_acceleration.x,
                 imu_msg->linear_acceleration.y,
                 imu_msg->linear_acceleration.z);
-            imu_meas.omega = Eigen::Vector3d(
+            imu_meas.omega = Vector3(
                 imu_msg->angular_velocity.x,
                 imu_msg->angular_velocity.y,
                 imu_msg->angular_velocity.z);
             imu_meas.time = imu_time;
 
-            double tor_i = imu_meas.time - state_est_ecef_.nav_sol.time;
+            nav_type tor_i = imu_meas.time - state_est_ecef_.nav_sol.time;
 
             // Predict
             state_est_ecef_ = lcPredictKF(state_est_ecef_, imu_meas, kf_config_, tor_i);
@@ -279,13 +283,13 @@ private:
             if (gnss_msg) {
 
                 rclcpp::Time gnss_stamp(gnss_msg->header.stamp);
-                double gnss_time = gnss_stamp.seconds();
+                nav_type gnss_time = gnss_stamp.seconds();
                 RCLCPP_INFO(this->get_logger(), "GNSS Update: %f", gnss_time);
 
                 PosMeasEcef gnss_meas;
                 gnss_meas.time = gnss_time;
-                gnss_meas.r_eb_e = nedToEcef(NavSolutionNed{0,gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude, Eigen::Vector3d::Zero(), Eigen::Matrix3d::Identity()}).r_eb_e;
-                gnss_meas.cov_mat = Eigen::Matrix3d::Identity() * std::pow(2.5,2); // Covariance matrix
+                gnss_meas.r_eb_e = nedToEcef(NavSolutionNed{0,gnss_msg->latitude, gnss_msg->longitude, gnss_msg->altitude, Vector3::Zero(), Matrix3::Identity()}).r_eb_e;
+                gnss_meas.cov_mat = Matrix3::Identity() * std::pow(2.5,2); // Covariance matrix
 
                 state_est_ecef_ = lcUpdateKFPosEcef(gnss_meas, state_est_ecef_);
                 
@@ -322,7 +326,7 @@ private:
         pose_msg.pose.pose.orientation.z = q.z();
         pose_msg.pose.pose.orientation.w = q.w();
 
-        Eigen::Matrix<double, 6, 6> pose_cov;
+        Eigen::Matrix<nav_type, 6, 6> pose_cov;
         pose_cov.block<3,3>(0,0) = state_est_ecef_.P_matrix.block<3,3>(6,6);  // position covariance
         pose_cov.block<3,3>(0,3) = state_est_ecef_.P_matrix.block<3,3>(6,0);  // cross-covariance
         pose_cov.block<3,3>(3,0) = state_est_ecef_.P_matrix.block<3,3>(0,6);  // cross-covariance

@@ -352,7 +352,7 @@ namespace intnavlib {
         return Helperst::skewSymmetric(a);
     }
 
-    inline Eigen::Vector2d radiiOfCurvature(double L){
+    inline Eigen::Matrix<nav_type,2,1> radiiOfCurvature(nav_type L){
         return Helperst::radiiOfCurvature(L);
     }
 

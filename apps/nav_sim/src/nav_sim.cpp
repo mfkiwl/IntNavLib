@@ -12,6 +12,10 @@
 
 using namespace intnavlib;
 
+using Vector3 = Eigen::Matrix<nav_type,3,1>;
+using Vector2 = Eigen::Matrix<nav_type,2,1>;
+using Matrix3 = Eigen::Matrix<nav_type,3,3>;
+
 enum SimType {
     INS,
     INS_POS,
@@ -22,11 +26,11 @@ enum SimType {
 };
 
 SimType parseSimType(const std::string& sim_type) {
-    if (sim_type == "ins") return SimType::INS;
-    if (sim_type == "ins_pos")          return SimType::INS_POS;
-    if (sim_type == "ins_pos_rot")         return SimType::INS_POS_ROT;
-    if (sim_type == "ins_gnss_lc")         return SimType::INS_GNSS_LC;
-    if (sim_type == "ins_gnss_tc")         return SimType::INS_GNSS_TC;
+    if (sim_type == "ins")                  return SimType::INS;
+    if (sim_type == "ins_pos")              return SimType::INS_POS;
+    if (sim_type == "ins_pos_rot")          return SimType::INS_POS_ROT;
+    if (sim_type == "ins_gnss_lc")          return SimType::INS_GNSS_LC;
+    if (sim_type == "ins_gnss_tc")          return SimType::INS_GNSS_TC;
     return SimType::UNKNOWN;
 }
 
@@ -85,8 +89,8 @@ int main(int argc, char** argv)
 
     // Old IMU measurements
     ImuMeasurements imu_meas_old;
-    imu_meas_old.quant_residuals_f = Eigen::Vector3d::Zero();
-    imu_meas_old.quant_residuals_omega = Eigen::Vector3d::Zero();
+    imu_meas_old.quant_residuals_f = Vector3::Zero();
+    imu_meas_old.quant_residuals_omega = Vector3::Zero();
 
     // Time of last KF update
     nav_type time_last_update = -1.0;

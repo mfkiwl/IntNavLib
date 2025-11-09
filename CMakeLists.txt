@@ -12,8 +12,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(USE_FLOAT "Build with float precision instead of double" OFF)
 
 if(USE_FLOAT)
+    message(STATUS "Build with float precision")
     add_compile_definitions(USE_FLOAT)
 endif()
+
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+
+function(enable_coverage target)
+    if(CHECK_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PRIVATE -O0 -g --coverage)
+        target_link_options(${target} PRIVATE --coverage)
+    endif()
+endfunction()
 
 find_package(Eigen3 REQUIRED)
 
@@ -97,6 +107,7 @@ if(BUILD_TESTING)
                 intnavlib
         )
         add_test(NAME ${test_name} COMMAND ${test_name})
+        enable_coverage(${test_name})
     endforeach()
 endif()
 

@@ -10,7 +10,12 @@
 
 using namespace intnavlib;
 
+using Vector3 = Eigen::Matrix<nav_type,3,1>;
+using Vector2 = Eigen::Matrix<nav_type,2,1>;
+using Matrix3 = Eigen::Matrix<nav_type,3,3>;
+
 constexpr nav_type max_pos_error = 15.0; // meters
+
 constexpr char test_profile_path[] = "../data/Profile_3.csv";
 
 enum SimType {
@@ -57,8 +62,8 @@ TEST(navigation_filter, test_integrated)
 
     // Old IMU measurements
     ImuMeasurements imu_meas_old;
-    imu_meas_old.quant_residuals_f = Eigen::Vector3d::Zero();
-    imu_meas_old.quant_residuals_omega = Eigen::Vector3d::Zero();
+    imu_meas_old.quant_residuals_f = Vector3::Zero();
+    imu_meas_old.quant_residuals_omega = Vector3::Zero();
 
     // Time of last KF update
     nav_type time_last_update = -1.0;
@@ -84,7 +89,7 @@ TEST(navigation_filter, test_integrated)
     
     NavKF nav_filter(state_est_ecef_init, kf_config);
     
-    nav_type pos_error_sum = 0.0;
+    double pos_error_sum = 0.0;
     long unsigned int count = 0;
 
     while (reader.readNextRow(true_nav_ned)) {
@@ -151,7 +156,7 @@ TEST(navigation_filter, test_integrated)
         // ========== Compute error ==========
 
         nav_type pos_error = (nav_filter.getStateEst().nav_sol.r_eb_e - true_nav_ecef.r_eb_e).norm();
-        pos_error_sum += pos_error;
+        pos_error_sum += double(pos_error);
         count++;
         
         // ============= Update simulation state ==============
@@ -160,7 +165,7 @@ TEST(navigation_filter, test_integrated)
         imu_meas_old = imu_meas;
     }
 
-    nav_type avg_position_error = pos_error_sum / (nav_type) count;
+    double avg_position_error = pos_error_sum / double(count);
 
     EXPECT_LT(avg_position_error, max_pos_error)
         << "Simulation setup n." << sim_type << "failed. \n"

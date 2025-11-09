@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch ins",
+            "name": "(gdb) Launch nav_sim ins",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/apps/ins_ecef/build/ins_ecef",
-            "args": ["${workspaceFolder}/data/Profile_3.csv"],
+            "program": "${workspaceFolder}/apps/nav_sim/build/nav_sim",
+            "args": ["${workspaceFolder}/data/Profile_3.csv", "ins"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
@@ -28,105 +28,84 @@
                 }
             ]
         },
-        {
-        "name": "(gdb) Launch lc pos",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/apps/lc_ins_pos_ecef/build/lc_ins_pos_ecef",
-        "args": ["${workspaceFolder}/data/Profile_3.csv"],
-        "stopAtEntry": false,
-        "cwd": "${fileDirname}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            },
-            {
-                "description": "Set Disassembly Flavor to Intel",
-                "text": "-gdb-set disassembly-flavor intel",
-                "ignoreFailures": true
-            }
-        ]
-    },
-    {
-        "name": "(gdb) Launch lc gnss",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/apps/lc_ins_gnss_ecef/build/lc_ins_gnss_ecef",
-        "args": ["${workspaceFolder}/data/Profile_3.csv"],
-        "stopAtEntry": false,
-        "cwd": "${fileDirname}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            },
-            {
-                "description": "Set Disassembly Flavor to Intel",
-                "text": "-gdb-set disassembly-flavor intel",
-                "ignoreFailures": true
-            }
-        ]
-    },
-    {
-        "name": "(gdb) Launch tc gnss",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/apps/tc_ins_gnss_ecef/build/tc_ins_gnss_ecef",
-        "args": ["${workspaceFolder}/data/Profile_3.csv"],
-        "stopAtEntry": false,
-        "cwd": "${fileDirname}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            },
-            {
-                "description": "Set Disassembly Flavor to Intel",
-                "text": "-gdb-set disassembly-flavor intel",
-                "ignoreFailures": true
-            }
-        ]
-    },
-    {
-        "name": "(gdb) Launch lc pos rot",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/apps/lc_ins_pos_rot_ecef/build/lc_ins_pos_rot_ecef",
-        "args": ["${workspaceFolder}/data/Profile_3.csv"],
-        "stopAtEntry": false,
-        "cwd": "${fileDirname}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            },
-            {
-                "description": "Set Disassembly Flavor to Intel",
-                "text": "-gdb-set disassembly-flavor intel",
-                "ignoreFailures": true
-            }
-        ]
-    }
 
-    {
-        "name": "(gdb) launch ros node",
+        {
+            "name": "(gdb) Launch nav_sim tc gnss",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/apps/ins_ecef/build/ins_ecef",
+            "args": ["${workspaceFolder}/data/Profile_3.csv", "gnss_tc"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "(gdb) Launch gtest integrated",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/test_integrated",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "(gdb) Launch gtest ins ideal",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/test_ins_ideal",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+        "name": "(gdb) launch ros2 node",
         "request": "launch",
         "type": "cppdbg",
         "miDebuggerServerAddress": "localhost:3000",

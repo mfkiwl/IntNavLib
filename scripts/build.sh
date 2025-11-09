@@ -3,10 +3,13 @@
 # This script builds the IntNavLib library and all associated applications.
 #
 # Usage:
-# ./build.sh [--clean] [BuildType]
+# ./build.sh [--clean | --float | --coverage] [BuildType]
 #
 # Options:
 #   --clean      Remove all build folders before building
+#   --float      Use float build for templates
+#   --coverage   Build with code coverage enabled
+#   
 #   BuildType    "Debug" or "Release" (default: Release)
 #
 # The script will:
@@ -20,12 +23,20 @@ set -e
 # --- Configuration ---
 BUILD_TYPE="Release"
 CLEAN_BUILD=false
+USE_FLOAT=false
+CHECK_COVERAGE=false
 
 # Parse args
 for arg in "$@"; do
   case "$arg" in
     --clean)
       CLEAN_BUILD=true
+      ;;
+    --float)
+      USE_FLOAT=true
+      ;;
+    --coverage)
+      CHECK_COVERAGE=true
       ;;
     [Dd]ebug)
       BUILD_TYPE="Debug"
@@ -46,6 +57,8 @@ echo "Build Type:           $BUILD_TYPE"
 echo "Installation Prefix:  $INSTALL_PREFIX"
 echo "Repository Root:      $REPO_ROOT"
 echo "Clean Build:          $CLEAN_BUILD"
+echo "Use Float:            $USE_FLOAT"
+echo "Check Coverage        $CHECK_COVERAGE"
 echo "================================================="
 
 # --- Clean step ---
@@ -67,7 +80,7 @@ LIB_BUILD_DIR="$REPO_ROOT/build"
 mkdir -p "$LIB_BUILD_DIR"
 cd "$LIB_BUILD_DIR"
 
-cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" -DUSE_FLOAT=OFF
+cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" -DUSE_FLOAT="$USE_FLOAT" -DCHECK_COVERAGE="$CHECK_COVERAGE"
 make -j$(nproc)
 make install
 

@@ -14,8 +14,6 @@
 
 - better eval: display NEES, NIS, MAE, RMSE
 
-- template double float filter funcs and classes
-
 - generic core templated kalman update func
 
 - monte carlo bash script + eval script
@@ -38,7 +36,11 @@
 
 - doxygen: add more latex to documentation, complete docs stubs
 
+- why tests fail with float build? But apps seem to work.
+
 # DONE
+
+- template double float filter funcs and classes
 
 - modular update functions, no duplications
 
