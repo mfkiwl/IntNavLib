@@ -1,5 +1,5 @@
-#include <thread>
-#include <chrono>
+
+#include <iostream>
 #include <random>
 #include <filesystem>
 
@@ -7,8 +7,10 @@
 
 #include "intnavlib.h"
 
-/// @example nav_sim.cpp
-/// Integrated navigation demo script - open loop
+#include <FGFDMExec.h>
+
+/// @example nav_sim_cl.cpp
+/// Integrated navigation demo script - closed loop
 
 using namespace intnavlib;
 
@@ -16,41 +18,62 @@ using Vector3 = Eigen::Matrix<nav_type,3,1>;
 using Vector2 = Eigen::Matrix<nav_type,2,1>;
 using Matrix3 = Eigen::Matrix<nav_type,3,3>;
 
-enum SimType {
-    INS,
-    INS_POS,
-    INS_POS_ROT,
-    INS_GNSS_LC,
-    INS_GNSS_TC,
-    UNKNOWN
-};
+static constexpr nav_type kFeetToMeters = 0.3048;
 
-SimType parseSimType(const std::string& sim_type) {
-    if (sim_type == "ins")                  return SimType::INS;
-    if (sim_type == "ins_pos")              return SimType::INS_POS;
-    if (sim_type == "ins_pos_rot")          return SimType::INS_POS_ROT;
-    if (sim_type == "ins_gnss_lc")          return SimType::INS_GNSS_LC;
-    if (sim_type == "ins_gnss_tc")          return SimType::INS_GNSS_TC;
-    return SimType::UNKNOWN;
+// Helper to get na sol from FDM
+NavSolutionNed getNavSolFromFdm(const JSBSim::FGFDMExec & fdm) {
+
+    std::shared_ptr<JSBSim::FGPropagate> prop = fdm.GetPropagate();
+
+    NavSolutionNed true_nav_ned;
+
+    true_nav_ned.time = fdm.GetSimTime();
+    true_nav_ned.latitude = prop->GetGeodLatitudeRad();
+    true_nav_ned.longitude = prop->GetLongitude();
+
+    // Height: convert to m
+    true_nav_ned.height = prop->GetGeodeticAltitude() * kFeetToMeters;
+
+    // Velocity: convert to m/s
+    true_nav_ned.v_eb_n = Eigen::Vector3d(prop->GetVel(1), prop->GetVel(2), prop->GetVel(3)) * kFeetToMeters;
+
+    auto C = prop->GetTb2l();
+    true_nav_ned.C_b_n << C(1,1), C(1,2), C(1,3),
+                            C(2,1), C(2,2), C(2,3),
+                            C(3,1), C(3,2), C(3,3);
+    
+    return true_nav_ned;
 }
 
-int main(int argc, char** argv)
-{   
+int main(int argc, char* argv[]) {
+
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = 0; // INFO: 0, WARNING: 1, ERROR: 2, FATAL: 3
     FLAGS_colorlogtostderr = 1;
 
-    if(argc != 3) {
-        LOG(ERROR) << "Usage: ./nav_sim <profile_path> <sim_type>";
+    if (argc < 2) {
+        LOG(ERROR) << "Usage: " << argv[0] << " <path_to_jsbsim_script.xml>\n";
+        LOG(ERROR) << "Example: ./build/" << argv[0] << " scripts/c3105.xml\n";
         return 1;
     }
 
-    // Get simulation type
-    SimType sim_type = parseSimType(argv[2]);
-    if(sim_type == SimType::UNKNOWN) {
-        LOG(ERROR) << "Unknown simulation type";
+    // Get path from command line
+    std::string script_path = argv[1];
+
+    JSBSim::FGFDMExec fdm;
+
+    // Try to load the provided run script
+    std::cout << "Loading JSBSim script: " << script_path << std::endl;
+    bool ok = fdm.LoadScript(SGPath(script_path));
+    if (!ok) {
+        LOG(ERROR) << "Failed to load JSBSim script: " << script_path << "\n";
         return 1;
     }
+
+    // Initialize the model according to script
+    fdm.RunIC();
+
+    nav_type end_time = 3600; // TODO Get from xml
 
     // ============== Init sim ==============
 
@@ -67,11 +90,9 @@ int main(int argc, char** argv)
     // Tactcal grade IMU - KF config
     KfConfig kf_config = tacticalImuKFConfig();
 
-    // Init profile reader + writers 
-    std::string motion_profile_filename_in(argv[1]);
-    MotionProfileReader reader(motion_profile_filename_in);
+    // Init profile writer
     std::string new_directory = "./results";
-    std::string base_filename = std::filesystem::path(motion_profile_filename_in).filename().string();
+    std::string base_filename = std::filesystem::path(script_path).filename().string();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string eval_filename_out = new_directory + "/" + filename_without_extension + "_eval.csv";
     if (!std::filesystem::exists(new_directory)) {
@@ -80,9 +101,8 @@ int main(int argc, char** argv)
     FileWriter eval_data_writer(eval_filename_out);
 
     // True nav solution
-    NavSolutionNed true_nav_ned;
-    reader.readNextRow(true_nav_ned);
-    NavSolutionEcef true_nav_ecef = nedToEcef(true_nav_ned);
+    NavSolutionNed true_nav_ned = getNavSolFromFdm(fdm);
+    NavSolutionEcef true_nav_ecef = nedToEcef(true_nav_ned);   
     NavSolutionEcef true_nav_ecef_old = true_nav_ecef;
 
     // Old IMU measurements
@@ -111,66 +131,43 @@ int main(int argc, char** argv)
 
     // Init navigation filter
     StateEstEcef state_est_ecef_init = initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas_t0, gen);
+    state_est_ecef_init.nav_sol = true_nav_ecef; // Debug: Ideal init
     NavKF nav_filter(state_est_ecef_init, kf_config);
 
-    while (reader.readNextRow(true_nav_ned)) {
+    while (fdm.GetSimTime() < end_time) { // run until script end
+
+        // Run sim step
+        fdm.Run();
 
         // ========= Get ground truth ============
 
-        nav_type tor_i = true_nav_ned.time - nav_filter.getTime();
+        true_nav_ned = getNavSolFromFdm(fdm);
         true_nav_ecef = nedToEcef(true_nav_ned);
+
+        // LOG(INFO)<< "t=" << true_nav_ned.time
+        //           << "  LLA=(" << true_nav_ned.latitude << ", " << true_nav_ned.longitude << ", " << true_nav_ned.height << ")";
+
+        nav_type tor_i = true_nav_ned.time - nav_filter.getTime();
 
         // ========== IMU Simulation ==========
 
         // Get true specific force and angular rates
         ImuMeasurements ideal_imu_meas = kinematicsEcef(true_nav_ecef, true_nav_ecef_old);
-        // Get imu measurements by applying IMU model
-        ImuMeasurements imu_meas = imuModel(ideal_imu_meas, imu_meas_old, imu_errors, tor_i, gen);    
 
+        // Get imu measurements by applying IMU model
+        ImuMeasurements imu_meas = imuModel(ideal_imu_meas, imu_meas_old, imu_errors, tor_i, gen);
+        // imu_meas = ideal_imu_meas; // Debug: ideal IMU
+        
         // ========== Predict ==========
 
-        if (sim_type == SimType::INS_GNSS_TC) {
-            nav_filter.tcPredict(imu_meas, tor_i);
-        }
-        else {
-            nav_filter.lcPredict(imu_meas, tor_i);
-        }
+        nav_filter.lcPredict(imu_meas, tor_i);
 
-        // ========== Update =========
+        // ========== Update ===========
 
         nav_type tor_s = true_nav_ned.time - time_last_update;
-        if(tor_s >= gnss_config.epoch_interval && sim_type != SimType::INS) {
-
-            // Simulate GNSS measurements
-            SatPosVel sat_pos_vel = satellitePositionsAndVelocities(true_nav_ned.time, gnss_config);
-            GnssMeasurements gnss_meas = generateGnssMeasurements(true_nav_ned.time,
-                                                                    sat_pos_vel,
-                                                                    true_nav_ned,
-                                                                    true_nav_ecef,
-                                                                    gnss_biases, 
-                                                                    gnss_config,
-                                                                    gen);
-            
-            // Loose GNSS Update
-            if(sim_type == SimType::INS_GNSS_LC) {
-                nav_filter.lcUpdateGnssEcef(gnss_meas, gnss_config);
-            }
-            // Tight GNSS Update
-            else if(sim_type == SimType::INS_GNSS_TC) {
-                nav_filter.tcUpdateGnssEcef(gnss_meas, tor_s);
-            }
-            // Loose position update
-            else if(sim_type == SimType::INS_POS) {
-                // Simulate position + attitude sensor measurement
-                PosMeasEcef pos_meas_ecef = genericPosSensModel(true_nav_ecef, 10.0, gen);
-                nav_filter.lcUpdatePosEcef(pos_meas_ecef);
-            }
-            // Loose position + attitude update
-            else if(sim_type == SimType::INS_POS_ROT) {
-                // Simulate position + attitude sensor measurement
-                PosRotMeasEcef pos_rot_meas_ecef = genericPosRotSensModel(true_nav_ecef, 10.0, 0.01, gen);
-                nav_filter.lcUpdatePosRotEcef(pos_rot_meas_ecef);
-            }
+        if(tor_s >= gnss_config.epoch_interval) {
+            PosMeasEcef pos_meas_ecef = genericPosSensModel(true_nav_ecef, 10.0, gen);
+            nav_filter.lcUpdatePosEcef(pos_meas_ecef);
             time_last_update = true_nav_ned.time;
         }
 
@@ -184,6 +181,7 @@ int main(int argc, char** argv)
 
         true_nav_ecef_old = true_nav_ecef;
         imu_meas_old = imu_meas;
+
     }
 
     LOG(INFO) << "Done!";

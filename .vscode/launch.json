@@ -4,6 +4,32 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
+        {
+            "name": "(gdb) Launch nav_sim_cl",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/apps/nav_sim_cl/build/nav_sim_cl",
+            "args": ["${workspaceFolder}/apps/nav_sim_cl/scripts/c3105.xml"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/apps/nav_sim_cl/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
         {
             "name": "(gdb) Launch nav_sim ins",
             "type": "cppdbg",

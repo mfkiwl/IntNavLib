@@ -14,8 +14,6 @@
 
 - better eval: display NEES, NIS, MAE, RMSE
 
-- generic core templated kalman update func
-
 - monte carlo bash script + eval script
 
 - in-house trajectory generator
@@ -23,6 +21,8 @@
 - no dynamic memory allocation
 
 - Joseph update
+
+- templating: add double and float aliases.
 
 ### Support & Infrastructure
 
@@ -39,6 +39,8 @@
 - why tests fail with float build? But apps seem to work.
 
 # DONE
+
+- generic core templated kalman update func
 
 - template double float filter funcs and classes
 
