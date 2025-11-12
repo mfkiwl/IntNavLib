@@ -458,7 +458,7 @@ struct Navigation {
     /// \return Navigation filter state.
     static StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, const KfConfig & kf_config, const GnssMeasurements & gnss_meas, std::mt19937 & gen);
 
-    /// \brief Navigation Kalman filter class.
+    /// \brief Nav Kalman filter class.
     class NavKF {
         private:
             /// \brief State estimate

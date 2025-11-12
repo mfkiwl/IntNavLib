@@ -40,6 +40,11 @@
   <property>ap/airspeed_hold</property>
   <property>ap/throttle-cmd-norm</property>
 
+  <property>estimation/attitude/phi-rad</property>
+  <property>estimation/attitude/heading-true-rad</property>
+  <property>estimation/position/h-sl-ft</property>
+  <property>estimation/velocities/h-dot-fps</property>
+
 <!--  <property>attitude/sensor/phi-rad</property> -->
 
 <!-- SENSOR -->
@@ -74,7 +79,7 @@ ROLL CHANNEL
   </switch>
 
   <pid name="fcs/roll-ap-error-pid">
-    <input>attitude/phi-rad</input>
+    <input>estimation/attitude/phi-rad</input>
     <kp> ap/roll-pid-kp </kp>
     <ki> ap/roll-pid-ki </ki>
     <kd> ap/roll-pid-kd </kd>
@@ -113,7 +118,7 @@ ROLL CHANNEL
   </switch>
 
   <pure_gain name="fcs/heading-true-degrees">
-    <input>attitude/heading-true-rad</input>
+    <input>estimation/attitude/heading-true-rad</input>
     <gain>57.3</gain> <!-- convert to degrees -->
   </pure_gain>
 
@@ -222,7 +227,7 @@ PITCH CHANNEL
   -->
   <summer name="fcs/altitude-error">
     <input> ap/altitude_setpoint </input>
-    <input> -position/h-sl-ft </input>
+    <input> -estimation/position/h-sl-ft </input>
     <clipto>
       <min>-100</min>
       <max> 100</max>
@@ -255,7 +260,7 @@ PITCH CHANNEL
         <difference>
           <value>25.70</value>
           <quotient>
-            <property>position/h-sl-ft</property>
+            <property>estimation/position/h-sl-ft</property>
             <value>833.33</value>
           </quotient>
         </difference>
@@ -271,7 +276,7 @@ PITCH CHANNEL
   -->
   <summer name="fcs/hdot-error">
     <input>fcs/hdot-command</input>
-    <input>-velocities/h-dot-fps</input>
+    <input>-estimation/velocities/h-dot-fps</input>
   </summer>
 
   <!--

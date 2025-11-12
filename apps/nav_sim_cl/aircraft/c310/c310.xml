@@ -319,9 +319,9 @@
         </tank>
     </propulsion>
 
-  <system file="GNCUtilities"/>
+  <system file="GNCUtilities_est"/>
 
-  <autopilot file="c310ap">
+  <autopilot file="c310ap_est">
 
     <!-- Roll channel A/P gains -->
 

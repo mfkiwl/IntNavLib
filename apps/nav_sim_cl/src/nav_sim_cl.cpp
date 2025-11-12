@@ -20,6 +20,11 @@ using Matrix3 = Eigen::Matrix<nav_type,3,3>;
 
 static constexpr nav_type kFeetToMeters = 0.3048;
 
+// Helper to wrap angle between -pi and pi
+inline double wrapPi(double angle) {
+    return std::atan2(std::sin(angle), std::cos(angle));
+}
+
 // Helper to get na sol from FDM
 NavSolutionNed getNavSolFromFdm(const JSBSim::FGFDMExec & fdm) {
 
@@ -35,7 +40,7 @@ NavSolutionNed getNavSolFromFdm(const JSBSim::FGFDMExec & fdm) {
     true_nav_ned.height = prop->GetGeodeticAltitude() * kFeetToMeters;
 
     // Velocity: convert to m/s
-    true_nav_ned.v_eb_n = Eigen::Vector3d(prop->GetVel(1), prop->GetVel(2), prop->GetVel(3)) * kFeetToMeters;
+    true_nav_ned.v_eb_n = Vector3(prop->GetVel(1), prop->GetVel(2), prop->GetVel(3)) * kFeetToMeters;
 
     auto C = prop->GetTb2l();
     true_nav_ned.C_b_n << C(1,1), C(1,2), C(1,3),
@@ -95,10 +100,12 @@ int main(int argc, char* argv[]) {
     std::string base_filename = std::filesystem::path(script_path).filename().string();
     std::string filename_without_extension = base_filename.substr(0, base_filename.find_last_of('.'));
     std::string eval_filename_out = new_directory + "/" + filename_without_extension + "_eval.csv";
+    std::string profile_filename_out = new_directory + "/" + filename_without_extension + "_profile.csv";
     if (!std::filesystem::exists(new_directory)) {
         std::filesystem::create_directory(new_directory);
     }
     FileWriter eval_data_writer(eval_filename_out);
+    FileWriter profile_writer(profile_filename_out);
 
     // True nav solution
     NavSolutionNed true_nav_ned = getNavSolFromFdm(fdm);
@@ -176,11 +183,27 @@ int main(int argc, char* argv[]) {
         StateEstEcef state_est_ecef = nav_filter.getStateEst();
         EvalDataEcef eval_data_ecef = getEvalDataEcef(state_est_ecef, true_nav_ecef);
         eval_data_writer.writeEvalDataRow(eval_data_ecef);
+        profile_writer.writeProfileRow(true_nav_ned);
         
         // ============= Update simulation state ==============
 
         true_nav_ecef_old = true_nav_ecef;
         imu_meas_old = imu_meas;
+
+        // ============== Close the guidance loop ==============
+
+        NavSolutionNed est_nav_ned = ecefToNed(state_est_ecef.nav_sol);
+        Vector3 rpy = dcmToEuler(est_nav_ned.C_b_n);
+
+        // Autopilot properties
+        fdm.SetPropertyValue("estimation/attitude/phi-rad", wrapPi(rpy(0))); // Roll
+        fdm.SetPropertyValue("estimation/attitude/heading-true-rad", wrapPi(rpy(2))); // Heading
+        fdm.SetPropertyValue("estimation/position/h-sl-ft", est_nav_ned.height / kFeetToMeters); // Altitude (feet) 
+        fdm.SetPropertyValue("estimation/velocities/h-dot-fps", - est_nav_ned.v_eb_n(2) / kFeetToMeters); // Vertical speed (feet/s)
+
+        // Guidance properties
+        fdm.SetPropertyValue("estimation/position/lat-geod-rad", wrapPi(est_nav_ned.latitude));
+        fdm.SetPropertyValue("estimation/position/long-geod-rad", wrapPi(est_nav_ned.longitude));
 
     }
 

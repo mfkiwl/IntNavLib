@@ -36,7 +36,6 @@ struct Constants {
     static constexpr T kMuGToMetersPerSecondSquared = 9.80665e-6;
 };
 
-/// \brief Structure to hold IMU measurements.
 template <typename T>
 struct Types {
 
@@ -44,6 +43,7 @@ struct Types {
     using Vector3 = Eigen::Matrix<T,3,1>;
     using Matrix3 = Eigen::Matrix<T,3,3>;
 
+    /// \brief Structure to hold IMU measurements.
     struct ImuMeasurements {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         /// Time of the measurement.
