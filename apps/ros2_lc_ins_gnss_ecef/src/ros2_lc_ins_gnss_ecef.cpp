@@ -24,9 +24,32 @@
 using namespace std::chrono_literals;
 using namespace intnavlib;
 
-using Vector3 = Eigen::Matrix<nav_type,3,1>;
-using Vector2 = Eigen::Matrix<nav_type,2,1>;
-using Matrix3 = Eigen::Matrix<nav_type,3,3>;
+// Typedefs for convenience
+
+using ScalarType = double;
+
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+using NavSolutionNed = Types<ScalarType>::NavSolutionNed;
+using ImuErrors = Types<ScalarType>::ImuErrors;
+using GnssConfig = Types<ScalarType>::GnssConfig;
+using KfConfig = Types<ScalarType>::KfConfig;
+using FileWriter = Helpers<ScalarType>::FileWriter;
+using NavSolutionEcef = Types<ScalarType>::NavSolutionEcef;
+using ImuMeasurements = Types<ScalarType>::ImuMeasurements;
+using SatPosVel = Types<ScalarType>::SatPosVel;
+using GnssMeasurements = Types<ScalarType>::GnssMeasurements;
+using NavKF = Navigation<ScalarType>::NavKF;
+using PosMeasEcef = Types<ScalarType>::PosMeasEcef;
+using StateEstEcef = Types<ScalarType>::StateEstEcef;
+using EvalDataEcef = Types<ScalarType>::EvalDataEcef;
+using MotionProfileReader = Helpers<ScalarType>::MotionProfileReader;
+using PosRotMeasEcef = Types<ScalarType>::PosRotMeasEcef;
 
 class InsGnssNode : public rclcpp::Node {
 
@@ -89,9 +112,9 @@ private:
     std::mutex gnss_buffer_mutex_;
 
     // Init params
-    std::vector<nav_type> init_lla_;
-    std::vector<nav_type> init_rpy_b_n_;
-    std::vector<nav_type> init_v_eb_n_;
+    std::vector<ScalarType> init_lla_;
+    std::vector<ScalarType> init_rpy_b_n_;
+    std::vector<ScalarType> init_v_eb_n_;
 
     // Navigation state
     StateEstEcef state_est_ecef_;
@@ -119,20 +142,20 @@ private:
         declare_parameter<std::string>("log_path");
 
         // EKF config
-        declare_parameter<nav_type>("kf_config.init_att_unc");
-        declare_parameter<nav_type>("kf_config.init_vel_unc");
-        declare_parameter<nav_type>("kf_config.init_pos_unc");
-        declare_parameter<nav_type>("kf_config.init_b_a_unc");
-        declare_parameter<nav_type>("kf_config.init_b_g_unc");
-        declare_parameter<nav_type>("kf_config.gyro_noise_psd");
-        declare_parameter<nav_type>("kf_config.accel_noise_psd");
-        declare_parameter<nav_type>("kf_config.accel_bias_psd");
-        declare_parameter<nav_type>("kf_config.gyro_bias_psd");
+        declare_parameter<ScalarType>("kf_config.init_att_unc");
+        declare_parameter<ScalarType>("kf_config.init_vel_unc");
+        declare_parameter<ScalarType>("kf_config.init_pos_unc");
+        declare_parameter<ScalarType>("kf_config.init_b_a_unc");
+        declare_parameter<ScalarType>("kf_config.init_b_g_unc");
+        declare_parameter<ScalarType>("kf_config.gyro_noise_psd");
+        declare_parameter<ScalarType>("kf_config.accel_noise_psd");
+        declare_parameter<ScalarType>("kf_config.accel_bias_psd");
+        declare_parameter<ScalarType>("kf_config.gyro_bias_psd");
 
         // Init 
-        declare_parameter<std::vector<nav_type>>("init_lla");
-        declare_parameter<std::vector<nav_type>>("init_v_eb_n");
-        declare_parameter<std::vector<nav_type>>("init_rpy_b_n");
+        declare_parameter<std::vector<ScalarType>>("init_lla");
+        declare_parameter<std::vector<ScalarType>>("init_v_eb_n");
+        declare_parameter<std::vector<ScalarType>>("init_rpy_b_n");
 
         // Get parameters
 
@@ -165,11 +188,11 @@ private:
         init_rpy_b_n_ = get_parameter("init_rpy_b_n").as_double_array();
 
         NavSolutionNed est_nav_ned = NavSolutionNed{0.0,
-                                                    kDegToRad * init_lla_[0], 
-                                                    kDegToRad * init_lla_[1], 
+                                                    Constants<ScalarType>::kDegToRad * init_lla_[0], 
+                                                    Constants<ScalarType>::kDegToRad * init_lla_[1], 
                                                     init_lla_[2], 
                                                     Vector3(init_v_eb_n_[0], init_v_eb_n_[1], init_v_eb_n_[2]), 
-                                                    eulerToDcm(kDegToRad * Vector3(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]))};
+                                                    Constants<ScalarType>::kDegToRad * eulerToDcm(Vector3(init_rpy_b_n_[0], init_rpy_b_n_[1], init_rpy_b_n_[2]))};
         
         state_est_ecef_.valid = true;
         state_est_ecef_.nav_sol = nedToEcef(est_nav_ned);
@@ -219,7 +242,7 @@ private:
 
             // Threadsafe read from message buffers
             // Want to get oldest IMU measurement (front)
-            nav_type imu_time = 0;
+            ScalarType imu_time = 0;
             {   
                 // Wait on IMU buffer
                 std::unique_lock<std::mutex> lock(imu_buffer_mutex_);
@@ -257,7 +280,7 @@ private:
                 imu_msg->angular_velocity.z);
             imu_meas.time = imu_time;
 
-            nav_type tor_i = imu_meas.time - state_est_ecef_.nav_sol.time;
+            ScalarType tor_i = imu_meas.time - state_est_ecef_.nav_sol.time;
 
             // Predict
             state_est_ecef_ = lcPredictKF(state_est_ecef_, imu_meas, kf_config_, tor_i);
@@ -283,7 +306,7 @@ private:
             if (gnss_msg) {
 
                 rclcpp::Time gnss_stamp(gnss_msg->header.stamp);
-                nav_type gnss_time = gnss_stamp.seconds();
+                ScalarType gnss_time = gnss_stamp.seconds();
                 RCLCPP_INFO(this->get_logger(), "GNSS Update: %f", gnss_time);
 
                 PosMeasEcef gnss_meas;
@@ -326,7 +349,7 @@ private:
         pose_msg.pose.pose.orientation.z = q.z();
         pose_msg.pose.pose.orientation.w = q.w();
 
-        Eigen::Matrix<nav_type, 6, 6> pose_cov;
+        Eigen::Matrix<ScalarType, 6, 6> pose_cov;
         pose_cov.block<3,3>(0,0) = state_est_ecef_.P_matrix.block<3,3>(6,6);  // position covariance
         pose_cov.block<3,3>(0,3) = state_est_ecef_.P_matrix.block<3,3>(6,0);  // cross-covariance
         pose_cov.block<3,3>(3,0) = state_est_ecef_.P_matrix.block<3,3>(0,6);  // cross-covariance

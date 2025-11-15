@@ -373,7 +373,7 @@ Simulation<T>::generateGnssMeasurements(const T & time,
 }
 
 template<typename T>
-Eigen::Matrix<T, Eigen::Dynamic, 1, 0, kMaxGnssSatellites, 1>
+Eigen::Matrix<T, Eigen::Dynamic, 1, 0, Simulation<T>::kMaxGnssSatellites, 1>
 Simulation<T>::initializeGnssBiases(const NavSolutionEcef & true_nav_ecef,
                                     const NavSolutionNed & true_nav_ned,
                                     const SatPosVel & gnss_pos_vel,

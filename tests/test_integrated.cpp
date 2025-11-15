@@ -10,11 +10,34 @@
 
 using namespace intnavlib;
 
-using Vector3 = Eigen::Matrix<nav_type,3,1>;
-using Vector2 = Eigen::Matrix<nav_type,2,1>;
-using Matrix3 = Eigen::Matrix<nav_type,3,3>;
+using ScalarType = double;
 
-constexpr nav_type max_pos_error = 15.0; // meters
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+
+// Typedefs for convenience
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+using NavSolutionNed = Types<ScalarType>::NavSolutionNed;
+using ImuErrors = Types<ScalarType>::ImuErrors;
+using GnssConfig = Types<ScalarType>::GnssConfig;
+using KfConfig = Types<ScalarType>::KfConfig;
+using FileWriter = Helpers<ScalarType>::FileWriter;
+using NavSolutionEcef = Types<ScalarType>::NavSolutionEcef;
+using ImuMeasurements = Types<ScalarType>::ImuMeasurements;
+using SatPosVel = Types<ScalarType>::SatPosVel;
+using GnssMeasurements = Types<ScalarType>::GnssMeasurements;
+using NavKF = Navigation<ScalarType>::NavKF;
+using PosMeasEcef = Types<ScalarType>::PosMeasEcef;
+using StateEstEcef = Types<ScalarType>::StateEstEcef;
+using EvalDataEcef = Types<ScalarType>::EvalDataEcef;
+using MotionProfileReader = Helpers<ScalarType>::MotionProfileReader;
+using PosRotMeasEcef = Types<ScalarType>::PosRotMeasEcef;
+
+
+constexpr ScalarType max_pos_error = 15.0; // meters
 
 constexpr char test_profile_path[] = "../data/Profile_3.csv";
 
@@ -41,13 +64,13 @@ TEST(navigation_filter, test_integrated)
     std::mt19937 gen(43);
 
     // Tactcal grade IMU errors
-    ImuErrors imu_errors = tacticalImuErrors();
+    ImuErrors imu_errors = Helpers<ScalarType>::tacticalImuErrors();
 
     // Default GNSS config
-    GnssConfig gnss_config = defaultGnssConfig();
+    GnssConfig gnss_config = Helpers<ScalarType>::defaultGnssConfig();
 
     // Tactcal grade IMU - KF config
-    KfConfig kf_config = tacticalImuKFConfig();
+    KfConfig kf_config = Helpers<ScalarType>::tacticalImuKFConfig();
 
     // ============ Test each sim type ===========
 
@@ -66,11 +89,11 @@ TEST(navigation_filter, test_integrated)
     imu_meas_old.quant_residuals_omega = Vector3::Zero();
 
     // Time of last KF update
-    nav_type time_last_update = -1.0;
+    ScalarType time_last_update = -1.0;
 
     // Init GNSS range biases
     SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned.time,  gnss_config);
-    Eigen::Matrix<nav_type, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
+    Eigen::Matrix<ScalarType, Eigen::Dynamic, 1, 0, Constants<ScalarType>::kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
                                                                                                         true_nav_ned,
                                                                                                         sat_pos_vel_0,
                                                                                                         gnss_config,
@@ -96,7 +119,7 @@ TEST(navigation_filter, test_integrated)
 
         // ========= Get ground truth ============
 
-        nav_type tor_i = true_nav_ned.time - nav_filter.getTime();
+        ScalarType tor_i = true_nav_ned.time - nav_filter.getTime();
         true_nav_ecef = nedToEcef(true_nav_ned);
 
         // ========== IMU Simulation ==========
@@ -117,7 +140,7 @@ TEST(navigation_filter, test_integrated)
 
         // ========== Update =========
 
-        nav_type tor_s = true_nav_ned.time - time_last_update;
+        ScalarType tor_s = true_nav_ned.time - time_last_update;
         if(tor_s >= gnss_config.epoch_interval) {
 
             // Simulate GNSS measurements
@@ -155,7 +178,7 @@ TEST(navigation_filter, test_integrated)
 
         // ========== Compute error ==========
 
-        nav_type pos_error = (nav_filter.getStateEst().nav_sol.r_eb_e - true_nav_ecef.r_eb_e).norm();
+        ScalarType pos_error = (nav_filter.getStateEst().nav_sol.r_eb_e - true_nav_ecef.r_eb_e).norm();
         pos_error_sum += double(pos_error);
         count++;
         

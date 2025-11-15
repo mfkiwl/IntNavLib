@@ -202,7 +202,7 @@ Navigation<T>::lcPropUnc(const Eigen::Matrix<T,15,15> & P_matrix_old,
     Eigen::Matrix<T,15,15> Phi_matrix = Eigen::Matrix<T,15,15>::Identity();
     Phi_matrix.template block<3,3>(0,0) -= Omega_ie * tor_i;
     Phi_matrix.template block<3,3>(0,12) = old_nav_est_ecef.C_b_e * tor_i;
-    Phi_matrix.template block<3,3>(3,0) = - tor_i * skewSymmetric(old_nav_est_ecef.C_b_e * imu_meas.f);
+    Phi_matrix.template block<3,3>(3,0) = - tor_i * skewSymmetric(Vector3(old_nav_est_ecef.C_b_e * imu_meas.f));
     Phi_matrix.template block<3,3>(3,3) -= 2.0 * Omega_ie * tor_i;
     Phi_matrix.template block<3,3>(3,6) = -tor_i * 2 * gravityEcef(old_nav_est_ecef.r_eb_e) /
         geocentric_radius * old_nav_est_ecef.r_eb_e.transpose() / old_nav_est_ecef.r_eb_e.norm();
@@ -244,7 +244,7 @@ Navigation<T>::tcPropUnc(const Eigen::Matrix<T,17,17> & P_matrix_old,
     Eigen::Matrix<T,17,17> Phi_matrix = Eigen::Matrix<T,17,17>::Identity();
     Phi_matrix.template block<3,3>(0,0) -= Omega_ie * tor_i;
     Phi_matrix.template block<3,3>(0,12) = old_nav_est_ecef.C_b_e * tor_i;
-    Phi_matrix.template block<3,3>(3,0) = - tor_i * skewSymmetric(old_nav_est_ecef.C_b_e * imu_meas.f);
+    Phi_matrix.template block<3,3>(3,0) = - tor_i * skewSymmetric(Vector3(old_nav_est_ecef.C_b_e * imu_meas.f));
     Phi_matrix.template block<3,3>(3,3) -= 2.0 * Omega_ie * tor_i;
     Phi_matrix.template block<3,3>(3,6) = -tor_i * 2 * gravityEcef(old_nav_est_ecef.r_eb_e) /
         geocentric_radius * old_nav_est_ecef.r_eb_e.transpose() / old_nav_est_ecef.r_eb_e.norm();
@@ -313,7 +313,7 @@ Navigation<T>::lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
     state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Matrix3::Identity() - 
-                                skewSymmetric(x_est_new.template block<3,1>(0,0))) * 
+                                skewSymmetric(Vector3(x_est_new.template block<3,1>(0,0)))) * 
                                 state_est_prior.nav_sol.C_b_e;
     state_est_post.nav_sol.v_eb_e = state_est_prior.nav_sol.v_eb_e - x_est_new.template block<3,1>(3,0);
     state_est_post.nav_sol.r_eb_e = state_est_prior.nav_sol.r_eb_e - x_est_new.template block<3,1>(6,0);
@@ -380,7 +380,7 @@ Navigation<T>::lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Matrix3::Identity() - 
-                                skewSymmetric(x_est_new.template block<3,1>(0,0))) * 
+                                skewSymmetric(Vector3(x_est_new.template block<3,1>(0,0)))) * 
                                 state_est_prior.nav_sol.C_b_e;
     state_est_post.nav_sol.v_eb_e = state_est_prior.nav_sol.v_eb_e - x_est_new.template block<3,1>(3,0);
     state_est_post.nav_sol.r_eb_e = state_est_prior.nav_sol.r_eb_e - x_est_new.template block<3,1>(6,0);
@@ -495,7 +495,7 @@ Navigation<T>::tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
     state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Matrix3::Identity() - 
-                                skewSymmetric(x_est_new.template block<3,1>(0,0))) * 
+                                skewSymmetric(Vector3(x_est_new.template block<3,1>(0,0)))) * 
                                 state_est_prior.nav_sol.C_b_e;
     state_est_post.nav_sol.v_eb_e = state_est_prior.nav_sol.v_eb_e - x_est_new.template block<3,1>(3,0);
     state_est_post.nav_sol.r_eb_e = state_est_prior.nav_sol.r_eb_e - x_est_new.template block<3,1>(6,0);
@@ -539,7 +539,7 @@ Navigation<T>::lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
     // lever arm is assumed here. See (14.151) for attitude int
     Eigen::Matrix<T,6,1> delta_z;
     delta_z.template block<3,1>(0,0) = pos_rot_meas.r_eb_e - state_est_prior.nav_sol.r_eb_e; // pos
-    delta_z.template block<3,1>(3,0) = deSkew(pos_rot_meas.C_b_e * state_est_prior.nav_sol.C_b_e.transpose() - Matrix3::Identity());// rot
+    delta_z.template block<3,1>(3,0) = deSkew(Matrix3(pos_rot_meas.C_b_e * state_est_prior.nav_sol.C_b_e.transpose() - Matrix3::Identity()));// rot
 
     // Do error-state Kalman filter update
     Eigen::Matrix<T, 6, 6> S_matrix;
@@ -561,7 +561,7 @@ Navigation<T>::lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
     state_est_post.valid = valid_update;
     state_est_post.nav_sol.time = state_est_prior.nav_sol.time;
     state_est_post.nav_sol.C_b_e = (Matrix3::Identity() - 
-                                skewSymmetric(x_est_new.template block<3,1>(0,0))) * 
+                                skewSymmetric(Vector3(x_est_new.template block<3,1>(0,0)))) * 
                                 state_est_prior.nav_sol.C_b_e;
     state_est_post.nav_sol.v_eb_e = state_est_prior.nav_sol.v_eb_e - x_est_new.template block<3,1>(3,0);
     state_est_post.nav_sol.r_eb_e = state_est_prior.nav_sol.r_eb_e - x_est_new.template block<3,1>(6,0);

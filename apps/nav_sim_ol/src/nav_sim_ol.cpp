@@ -12,9 +12,32 @@
 
 using namespace intnavlib;
 
-using Vector3 = Eigen::Matrix<nav_type,3,1>;
-using Vector2 = Eigen::Matrix<nav_type,2,1>;
-using Matrix3 = Eigen::Matrix<nav_type,3,3>;
+// Typedefs for convenience
+
+using ScalarType= double;
+
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+using NavSolutionNed = Types<ScalarType>::NavSolutionNed;
+using ImuErrors = Types<ScalarType>::ImuErrors;
+using GnssConfig = Types<ScalarType>::GnssConfig;
+using KfConfig = Types<ScalarType>::KfConfig;
+using FileWriter = Helpers<ScalarType>::FileWriter;
+using NavSolutionEcef = Types<ScalarType>::NavSolutionEcef;
+using ImuMeasurements = Types<ScalarType>::ImuMeasurements;
+using SatPosVel = Types<ScalarType>::SatPosVel;
+using GnssMeasurements = Types<ScalarType>::GnssMeasurements;
+using NavKF = Navigation<ScalarType>::NavKF;
+using PosMeasEcef = Types<ScalarType>::PosMeasEcef;
+using StateEstEcef = Types<ScalarType>::StateEstEcef;
+using EvalDataEcef = Types<ScalarType>::EvalDataEcef;
+using MotionProfileReader = Helpers<ScalarType>::MotionProfileReader;
+using PosRotMeasEcef = Types<ScalarType>::PosRotMeasEcef;
 
 enum SimType {
     INS,
@@ -59,13 +82,13 @@ int main(int argc, char** argv)
     std::mt19937 gen(rd());
 
     // Tactcal grade IMU errors
-    ImuErrors imu_errors = tacticalImuErrors();
+    ImuErrors imu_errors = Helpers<ScalarType>::tacticalImuErrors();
 
     // Default GNSS config
-    GnssConfig gnss_config = defaultGnssConfig();
+    GnssConfig gnss_config = Helpers<ScalarType>::defaultGnssConfig();
 
     // Tactcal grade IMU - KF config
-    KfConfig kf_config = tacticalImuKFConfig();
+    KfConfig kf_config = Helpers<ScalarType>::tacticalImuKFConfig();
 
     // Init profile reader + writers 
     std::string motion_profile_filename_in(argv[1]);
@@ -91,11 +114,11 @@ int main(int argc, char** argv)
     imu_meas_old.quant_residuals_omega = Vector3::Zero();
 
     // Time of last KF update
-    nav_type time_last_update = -1.0;
+    ScalarType time_last_update = -1.0;
 
     // Init GNSS range biases
     SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned.time,  gnss_config);
-    Eigen::Matrix<nav_type, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
+    Eigen::Matrix<ScalarType, Eigen::Dynamic, 1, 0, Constants<ScalarType>::kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
                                                                                                         true_nav_ned,
                                                                                                         sat_pos_vel_0,
                                                                                                         gnss_config,
@@ -117,7 +140,7 @@ int main(int argc, char** argv)
 
         // ========= Get ground truth ============
 
-        nav_type tor_i = true_nav_ned.time - nav_filter.getTime();
+        ScalarType tor_i = true_nav_ned.time - nav_filter.getTime();
         true_nav_ecef = nedToEcef(true_nav_ned);
 
         // ========== IMU Simulation ==========
@@ -138,7 +161,7 @@ int main(int argc, char** argv)
 
         // ========== Update =========
 
-        nav_type tor_s = true_nav_ned.time - time_last_update;
+        ScalarType tor_s = true_nav_ned.time - time_last_update;
         if(tor_s >= gnss_config.epoch_interval && sim_type != SimType::INS) {
 
             // Simulate GNSS measurements

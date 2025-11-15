@@ -36,6 +36,18 @@ struct Navigation {
     using GnssMeasurements = typename Types<T>::GnssMeasurements;
     using GnssLsPosVelClock = typename Types<T>::GnssLsPosVelClock;
 
+    static constexpr auto kMaxGnssSatellites = Constants<T>::kMaxGnssSatellites;
+    static constexpr auto kEpsilon = Constants<T>::kEpsilon;
+    static constexpr auto kR0 = Constants<T>::kR0;
+    static constexpr auto kEccentricity = Constants<T>::kEccentricity;
+    static constexpr auto kOmega_ie = Constants<T>::kOmega_ie;
+    static constexpr auto kGravConst = Constants<T>::kGravConst;
+    static constexpr auto kJ2 = Constants<T>::kJ2;
+    static constexpr auto kC = Constants<T>::kC;
+    static constexpr auto kDegToRad = Constants<T>::kDegToRad;
+    static constexpr auto kRadToDeg = Constants<T>::kRadToDeg;
+    static constexpr auto kMuGToMetersPerSecondSquared = Constants<T>::kMuGToMetersPerSecondSquared;
+
     /// \brief Predicts the state estimation error covariance matrix.
     /// This function propagates the error covariance matrix using the discrete-time Kalman filter prediction equation.
     /// \tparam n_x The dimension of the state vector.
@@ -491,126 +503,229 @@ struct Navigation {
     };
 };
 
-// =========== For back-compatibility ===========
+// Convenience wrappers
 
-// Define default type
-#ifdef USE_FLOAT
-    using nav_type = float;
-#else
-    using nav_type = double;
-#endif
+using Navigationd = Navigation<double>;
+using Navigationf = Navigation<float>;
 
-using Navigationt = Navigation<nav_type>;
-
-using NavKF = Navigationt::NavKF;
-
+// double
 
 template<int n_x>
-inline void predictKF(const Eigen::Matrix<nav_type, n_x, n_x> & Phi_matrix,
-                const Eigen::Matrix<nav_type, n_x, n_x> & Q_matrix,
-                const Eigen::Matrix<nav_type, n_x, n_x> & P_matrix_old,
-                Eigen::Matrix<nav_type, n_x, n_x> & P_matrix) {
-    Navigationt::predictKF<n_x>(Phi_matrix, Q_matrix, P_matrix_old, P_matrix);
+inline void predictKF(const Eigen::Matrix<double, n_x, n_x> & Phi_matrix,
+                const Eigen::Matrix<double, n_x, n_x> & Q_matrix,
+                const Eigen::Matrix<double, n_x, n_x> & P_matrix_old,
+                Eigen::Matrix<double, n_x, n_x> & P_matrix) {
+    Navigationd::predictKF<n_x>(Phi_matrix, Q_matrix, P_matrix_old, P_matrix);
 }
 
-template<int n_x, int n_z, int max_n_z = 2* kMaxGnssSatellites>
-inline bool updateKF(const Eigen::Matrix<nav_type, n_z, 1, 0, max_n_z, 1> & delta_z,
-            const Eigen::Matrix<nav_type, n_x, n_x> & P_matrix,
-            const Eigen::Matrix<nav_type, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
-            const Eigen::Matrix<nav_type, n_z, n_z> & R_matrix,
-            const nav_type & p_value,
-            Eigen::Matrix<nav_type, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
-            Eigen::Matrix<nav_type, n_x, 1> & x_est_new,
-            Eigen::Matrix<nav_type, n_x, n_x> & P_matrix_post) {
-    return Navigationt::updateKF<n_x, n_z, max_n_z>(delta_z, P_matrix, H_matrix, R_matrix, p_value, S_matrix, x_est_new, P_matrix_post);
+template<int n_x, int n_z, int max_n_z = 2* Constantsd::kMaxGnssSatellites>
+inline bool updateKF(const Eigen::Matrix<double, n_z, 1, 0, max_n_z, 1> & delta_z,
+            const Eigen::Matrix<double, n_x, n_x> & P_matrix,
+            const Eigen::Matrix<double, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
+            const Eigen::Matrix<double, n_z, n_z> & R_matrix,
+            const double & p_value,
+            Eigen::Matrix<double, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
+            Eigen::Matrix<double, n_x, 1> & x_est_new,
+            Eigen::Matrix<double, n_x, n_x> & P_matrix_post) {
+    return Navigationd::updateKF<n_x, n_z, max_n_z>(delta_z, P_matrix, H_matrix, R_matrix, p_value, S_matrix, x_est_new, P_matrix_post);
 }
 
-inline NavSolutionEcef navEquationsEcef(const NavSolutionEcef & old_nav,
-                            const ImuMeasurements & imu_meas,
-                            const nav_type & tor_i) {
-    return Navigationt::navEquationsEcef(old_nav, imu_meas, tor_i);
+inline Typesd::NavSolutionEcef navEquationsEcef(const Typesd::NavSolutionEcef & old_nav,
+                            const Typesd::ImuMeasurements & imu_meas,
+                            const double & tor_i) {
+    return Navigationd::navEquationsEcef(old_nav, imu_meas, tor_i);
 }
 
-inline StateEstEcef lcPredictKF(const StateEstEcef & state_est_old,
-                            const ImuMeasurements & imu_meas,
-                            const KfConfig & kf_config,
-                            const nav_type & tor_i) {
-    return Navigationt::lcPredictKF(state_est_old, imu_meas, kf_config, tor_i);
+inline Typesd::StateEstEcef lcPredictKF(const Typesd::StateEstEcef & state_est_old,
+                            const Typesd::ImuMeasurements & imu_meas,
+                            const Typesd::KfConfig & kf_config,
+                            const double & tor_i) {
+    return Navigationd::lcPredictKF(state_est_old, imu_meas, kf_config, tor_i);
 }
 
-inline StateEstEcef tcPredictKF(const StateEstEcef & state_est_old,
-                            const ImuMeasurements & imu_meas,
-                            const KfConfig & kf_config,
-                            const nav_type & tor_i) {
-    return Navigationt::tcPredictKF(state_est_old, imu_meas, kf_config, tor_i);
+inline Typesd::StateEstEcef tcPredictKF(const Typesd::StateEstEcef & state_est_old,
+                            const Typesd::ImuMeasurements & imu_meas,
+                            const Typesd::KfConfig & kf_config,
+                            const double & tor_i) {
+    return Navigationd::tcPredictKF(state_est_old, imu_meas, kf_config, tor_i);
 }
 
-inline Eigen::Matrix<nav_type,15,15> lcPropUnc(const Eigen::Matrix<nav_type,15,15> & P_matrix_old,
-                                        const NavSolutionEcef & old_nav_est_ecef,
-                                        const NavSolutionNed & old_nav_est_ned,
-                                        const ImuMeasurements & imu_meas,
-                                        const KfConfig & lc_kf_config,
-                                        const nav_type & tor_s) {
-    return Navigationt::lcPropUnc(P_matrix_old, old_nav_est_ecef, old_nav_est_ned, imu_meas, lc_kf_config, tor_s);
+inline Eigen::Matrix<double,15,15> lcPropUnc(const Eigen::Matrix<double,15,15> & P_matrix_old,
+                                        const Typesd::NavSolutionEcef & old_nav_est_ecef,
+                                        const Typesd::NavSolutionNed & old_nav_est_ned,
+                                        const Typesd::ImuMeasurements & imu_meas,
+                                        const Typesd::KfConfig & lc_kf_config,
+                                        const double & tor_s) {
+    return Navigationd::lcPropUnc(P_matrix_old, old_nav_est_ecef, old_nav_est_ned, imu_meas, lc_kf_config, tor_s);
 }
 
-inline Eigen::Matrix<nav_type,17,17> tcPropUnc(const Eigen::Matrix<nav_type,17,17> & P_matrix_old,
-                                        const NavSolutionEcef & old_nav_est_ecef,
-                                        const NavSolutionNed & old_nav_est_ned,
-                                        const ImuMeasurements & imu_meas,
-                                        const KfConfig & tc_kf_config,
-                                        const nav_type & tor_s) {
-    return Navigationt::tcPropUnc(P_matrix_old, old_nav_est_ecef, old_nav_est_ned, imu_meas, tc_kf_config, tor_s);
+inline Eigen::Matrix<double,17,17> tcPropUnc(const Eigen::Matrix<double,17,17> & P_matrix_old,
+                                        const Typesd::NavSolutionEcef & old_nav_est_ecef,
+                                        const Typesd::NavSolutionNed & old_nav_est_ned,
+                                        const Typesd::ImuMeasurements & imu_meas,
+                                        const Typesd::KfConfig & tc_kf_config,
+                                        const double & tor_s) {
+    return Navigationd::tcPropUnc(P_matrix_old, old_nav_est_ecef, old_nav_est_ned, imu_meas, tc_kf_config, tor_s);
 }
 
-inline StateEstEcef lcUpdateKFPosEcef (const PosMeasEcef & pos_meas,
-                                    const StateEstEcef & state_est_old,
-                                    const nav_type & p_value = 0.99) {
-    return Navigationt::lcUpdateKFPosEcef(pos_meas, state_est_old, p_value);
+inline Typesd::StateEstEcef lcUpdateKFPosEcef (const Typesd::PosMeasEcef & pos_meas,
+                                    const Typesd::StateEstEcef & state_est_old,
+                                    const double & p_value = 0.99) {
+    return Navigationd::lcUpdateKFPosEcef(pos_meas, state_est_old, p_value);
 }
 
-inline StateEstEcef lcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
-                                    const StateEstEcef & state_est_old,
-                                    const GnssConfig & gnss_config,
-                                    const nav_type & p_value = 0.99) {
-    return Navigationt::lcUpdateKFGnssEcef(gnss_meas, state_est_old, gnss_config, p_value);
+inline Typesd::StateEstEcef lcUpdateKFGnssEcef (const Typesd::GnssMeasurements & gnss_meas,
+                                    const Typesd::StateEstEcef & state_est_old,
+                                    const Typesd::GnssConfig & gnss_config,
+                                    const double & p_value = 0.99) {
+    return Navigationd::lcUpdateKFGnssEcef(gnss_meas, state_est_old, gnss_config, p_value);
 }
 
-inline StateEstEcef tcUpdateKFGnssEcef (const GnssMeasurements & gnss_meas,
-                                    const StateEstEcef & state_est_prior,
-                                    const nav_type & tor_s,
-                                    const nav_type & p_value = 0.99) {
-    return Navigationt::tcUpdateKFGnssEcef(gnss_meas, state_est_prior, tor_s, p_value);
+inline Typesd::StateEstEcef tcUpdateKFGnssEcef (const Typesd::GnssMeasurements & gnss_meas,
+                                    const Typesd::StateEstEcef & state_est_prior,
+                                    const double & tor_s,
+                                    const double & p_value = 0.99) {
+    return Navigationd::tcUpdateKFGnssEcef(gnss_meas, state_est_prior, tor_s, p_value);
 }
 
-inline StateEstEcef lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
-                                    const StateEstEcef & state_est_old,
-                                    const nav_type & p_value = 0.99) {
-    return Navigationt::lcUpdateKFPosRotEcef(pos_rot_meas, state_est_old, p_value);
+inline Typesd::StateEstEcef lcUpdateKFPosRotEcef (const Typesd::PosRotMeasEcef & pos_rot_meas,
+                                    const Typesd::StateEstEcef & state_est_old,
+                                    const double & p_value = 0.99) {
+    return Navigationd::lcUpdateKFPosRotEcef(pos_rot_meas, state_est_old, p_value);
 }
 
-inline GnssLsPosVelClock gnssLsPositionVelocityClock(const GnssMeasurements & gnss_meas,
-                                            const Eigen::Matrix<nav_type,3,1> & prior_r_ea_e,
-                                            const Eigen::Matrix<nav_type,3,1> & prior_v_ea_e) {
-    return Navigationt::gnssLsPositionVelocityClock(gnss_meas, prior_r_ea_e, prior_v_ea_e);
+inline Typesd::GnssLsPosVelClock gnssLsPositionVelocityClock(const Typesd::GnssMeasurements & gnss_meas,
+                                            const Eigen::Matrix<double,3,1> & prior_r_ea_e,
+                                            const Eigen::Matrix<double,3,1> & prior_v_ea_e) {
+    return Navigationd::gnssLsPositionVelocityClock(gnss_meas, prior_r_ea_e, prior_v_ea_e);
 }
 
-inline GnssPosVelMeasEcef gnssLsPositionVelocity(const GnssMeasurements & gnss_meas,
-                                const Eigen::Matrix<nav_type,3,1> & prior_r_ea_e,
-                                const Eigen::Matrix<nav_type,3,1> & prior_v_ea_e,
-                                const GnssConfig & gnss_config) {
-    return Navigationt::gnssLsPositionVelocity(gnss_meas, prior_r_ea_e, prior_v_ea_e, gnss_config);
+inline Typesd::GnssPosVelMeasEcef gnssLsPositionVelocity(const Typesd::GnssMeasurements & gnss_meas,
+                                const Eigen::Matrix<double,3,1> & prior_r_ea_e,
+                                const Eigen::Matrix<double,3,1> & prior_v_ea_e,
+                                const Typesd::GnssConfig & gnss_config) {
+    return Navigationd::gnssLsPositionVelocity(gnss_meas, prior_r_ea_e, prior_v_ea_e, gnss_config);
 }
 
-inline Eigen::Matrix<nav_type,17,17> initializePMmatrix(const KfConfig & tc_kf_config) {
-    return Navigationt::initializePMmatrix(tc_kf_config);
+inline Eigen::Matrix<double,17,17> initializePMmatrix(const Typesd::KfConfig & tc_kf_config) {
+    return Navigationd::initializePMmatrix(tc_kf_config);
 }
 
-inline StateEstEcef initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef, 
-                                            const KfConfig & kf_config, 
-                                            const GnssMeasurements & gnss_meas, 
+inline Typesd::StateEstEcef initStateFromGroundTruth(const Typesd::NavSolutionEcef & true_nav_ecef, 
+                                            const Typesd::KfConfig & kf_config, 
+                                            const Typesd::GnssMeasurements & gnss_meas, 
                                             std::mt19937 & gen) {
-    return Navigationt::initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas, gen);
+    return Navigationd::initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas, gen);
+}
+
+// float 
+
+template<int n_x>
+inline void predictKF(const Eigen::Matrix<float, n_x, n_x> & Phi_matrix,
+                const Eigen::Matrix<float, n_x, n_x> & Q_matrix,
+                const Eigen::Matrix<float, n_x, n_x> & P_matrix_old,
+                Eigen::Matrix<float, n_x, n_x> & P_matrix) {
+    Navigationf::predictKF<n_x>(Phi_matrix, Q_matrix, P_matrix_old, P_matrix);
+}
+
+template<int n_x, int n_z, int max_n_z = 2* Constantsf::kMaxGnssSatellites>
+inline bool updateKF(const Eigen::Matrix<float, n_z, 1, 0, max_n_z, 1> & delta_z,
+            const Eigen::Matrix<float, n_x, n_x> & P_matrix,
+            const Eigen::Matrix<float, n_z, n_x, 0, max_n_z, n_x> & H_matrix,
+            const Eigen::Matrix<float, n_z, n_z> & R_matrix,
+            const float & p_value,
+            Eigen::Matrix<float, n_z, n_z, 0, max_n_z, max_n_z> & S_matrix,
+            Eigen::Matrix<float, n_x, 1> & x_est_new,
+            Eigen::Matrix<float, n_x, n_x> & P_matrix_post) {
+    return Navigationf::updateKF<n_x, n_z, max_n_z>(delta_z, P_matrix, H_matrix, R_matrix, p_value, S_matrix, x_est_new, P_matrix_post);
+}
+
+inline Typesf::NavSolutionEcef navEquationsEcef(const Typesf::NavSolutionEcef & old_nav,
+                            const Typesf::ImuMeasurements & imu_meas,
+                            const float & tor_i) {
+    return Navigationf::navEquationsEcef(old_nav, imu_meas, tor_i);
+}
+
+inline Typesf::StateEstEcef lcPredictKF(const Typesf::StateEstEcef & state_est_old,
+                            const Typesf::ImuMeasurements & imu_meas,
+                            const Typesf::KfConfig & kf_config,
+                            const float & tor_i) {
+    return Navigationf::lcPredictKF(state_est_old, imu_meas, kf_config, tor_i);
+}
+
+inline Typesf::StateEstEcef tcPredictKF(const Typesf::StateEstEcef & state_est_old,
+                            const Typesf::ImuMeasurements & imu_meas,
+                            const Typesf::KfConfig & kf_config,
+                            const float & tor_i) {
+    return Navigationf::tcPredictKF(state_est_old, imu_meas, kf_config, tor_i);
+}
+
+inline Eigen::Matrix<float,15,15> lcPropUnc(const Eigen::Matrix<float,15,15> & P_matrix_old,
+                                        const Typesf::NavSolutionEcef & old_nav_est_ecef,
+                                        const Typesf::NavSolutionNed & old_nav_est_ned,
+                                        const Typesf::ImuMeasurements & imu_meas,
+                                        const Typesf::KfConfig & lc_kf_config,
+                                        const float & tor_s) {
+    return Navigationf::lcPropUnc(P_matrix_old, old_nav_est_ecef, old_nav_est_ned, imu_meas, lc_kf_config, tor_s);
+}
+
+inline Eigen::Matrix<float,17,17> tcPropUnc(const Eigen::Matrix<float,17,17> & P_matrix_old,
+                                        const Typesf::NavSolutionEcef & old_nav_est_ecef,
+                                        const Typesf::NavSolutionNed & old_nav_est_ned,
+                                        const Typesf::ImuMeasurements & imu_meas,
+                                        const Typesf::KfConfig & tc_kf_config,
+                                        const float & tor_s) {
+    return Navigationf::tcPropUnc(P_matrix_old, old_nav_est_ecef, old_nav_est_ned, imu_meas, tc_kf_config, tor_s);
+}
+
+inline Typesf::StateEstEcef lcUpdateKFPosEcef (const Typesf::PosMeasEcef & pos_meas,
+                                    const Typesf::StateEstEcef & state_est_old,
+                                    const float & p_value = 0.99) {
+    return Navigationf::lcUpdateKFPosEcef(pos_meas, state_est_old, p_value);
+}
+
+inline Typesf::StateEstEcef lcUpdateKFGnssEcef (const Typesf::GnssMeasurements & gnss_meas,
+                                    const Typesf::StateEstEcef & state_est_old,
+                                    const Typesf::GnssConfig & gnss_config,
+                                    const float & p_value = 0.99) {
+    return Navigationf::lcUpdateKFGnssEcef(gnss_meas, state_est_old, gnss_config, p_value);
+}
+
+inline Typesf::StateEstEcef tcUpdateKFGnssEcef (const Typesf::GnssMeasurements & gnss_meas,
+                                    const Typesf::StateEstEcef & state_est_prior,
+                                    const float & tor_s,
+                                    const float & p_value = 0.99) {
+    return Navigationf::tcUpdateKFGnssEcef(gnss_meas, state_est_prior, tor_s, p_value);
+}
+
+inline Typesf::StateEstEcef lcUpdateKFPosRotEcef (const Typesf::PosRotMeasEcef & pos_rot_meas,
+                                    const Typesf::StateEstEcef & state_est_old,
+                                    const float & p_value = 0.99) {
+    return Navigationf::lcUpdateKFPosRotEcef(pos_rot_meas, state_est_old, p_value);
+}
+
+inline Typesf::GnssLsPosVelClock gnssLsPositionVelocityClock(const Typesf::GnssMeasurements & gnss_meas,
+                                            const Eigen::Matrix<float,3,1> & prior_r_ea_e,
+                                            const Eigen::Matrix<float,3,1> & prior_v_ea_e) {
+    return Navigationf::gnssLsPositionVelocityClock(gnss_meas, prior_r_ea_e, prior_v_ea_e);
+}
+
+inline Typesf::GnssPosVelMeasEcef gnssLsPositionVelocity(const Typesf::GnssMeasurements & gnss_meas,
+                                const Eigen::Matrix<float,3,1> & prior_r_ea_e,
+                                const Eigen::Matrix<float,3,1> & prior_v_ea_e,
+                                const Typesf::GnssConfig & gnss_config) {
+    return Navigationf::gnssLsPositionVelocity(gnss_meas, prior_r_ea_e, prior_v_ea_e, gnss_config);
+}
+
+inline Eigen::Matrix<float,17,17> initializePMmatrix(const Typesf::KfConfig & tc_kf_config) {
+    return Navigationf::initializePMmatrix(tc_kf_config);
+}
+
+inline Typesf::StateEstEcef initStateFromGroundTruth(const Typesf::NavSolutionEcef & true_nav_ecef, 
+                                            const Typesf::KfConfig & kf_config, 
+                                            const Typesf::GnssMeasurements & gnss_meas, 
+                                            std::mt19937 & gen) {
+    return Navigationf::initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas, gen);
 }
 
 };

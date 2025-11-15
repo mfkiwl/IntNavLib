@@ -22,7 +22,7 @@
 
 - Joseph update
 
-- templating: add double and float aliases.
+- templating: add double and float aliases, rewrite apps to use those. no weird compile time type
 
 ### Support & Infrastructure
 
@@ -37,6 +37,10 @@
 - doxygen: add more latex to documentation, complete docs stubs
 
 - why tests fail with float build? But apps seem to work.
+
+- document apps, add jsbsim version tag
+
+- improve readme, add images & gifs, better plots
 
 # DONE
 

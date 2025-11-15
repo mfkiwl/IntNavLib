@@ -38,6 +38,18 @@ namespace intnavlib {
         using SatPosVel = typename Types<T>::SatPosVel;
         using GnssMeasurements = typename Types<T>::GnssMeasurements;
         using GnssLsPosVelClock = typename Types<T>::GnssLsPosVelClock;
+
+        static constexpr auto kMaxGnssSatellites = Constants<T>::kMaxGnssSatellites;
+        static constexpr auto kEpsilon = Constants<T>::kEpsilon;
+        static constexpr auto kR0 = Constants<T>::kR0;
+        static constexpr auto kEccentricity = Constants<T>::kEccentricity;
+        static constexpr auto kOmega_ie = Constants<T>::kOmega_ie;
+        static constexpr auto kGravConst = Constants<T>::kGravConst;
+        static constexpr auto kJ2 = Constants<T>::kJ2;
+        static constexpr auto kC = Constants<T>::kC;
+        static constexpr auto kDegToRad = Constants<T>::kDegToRad;
+        static constexpr auto kRadToDeg = Constants<T>::kRadToDeg;
+        static constexpr auto kMuGToMetersPerSecondSquared = Constants<T>::kMuGToMetersPerSecondSquared;
     
         /// \brief Gets gravity vector at given ECEF position, in ECEF frame.
         /// \param[in] r_eb_e Position vector in ECEF frame.
@@ -307,74 +319,97 @@ namespace intnavlib {
     
     };
 
-    // =========== For back-compatibility ===========
+    // Convenience wrappers
 
-    // Define default type
-    #ifdef USE_FLOAT
-        using nav_type = float;
-    #else
-        using nav_type = double;
-    #endif
+    using Helpersd = Helpers<double>;
+    using Helpersf = Helpers<float>;
 
-    using Helperst = Helpers<nav_type>;
-    
-    using FileWriter = Helperst::FileWriter;
-    using MotionProfileReader = Helperst::MotionProfileReader;
+    // double
 
-    // Create wrapped non-templated functions:
-
-    inline Eigen::Matrix<nav_type,3,1> gravityEcef(const Eigen::Matrix<nav_type,3,1> & r_eb_e) {
-        return Helperst::gravityEcef(r_eb_e);
+    inline Eigen::Matrix<double,3,1> gravityEcef(const Eigen::Matrix<double,3,1> & r_eb_e) {
+        return Helpersd::gravityEcef(r_eb_e);
     }
 
-    inline NavSolutionEcef nedToEcef(const NavSolutionNed & nav_sol_ned) {
-        return Helperst::nedToEcef(nav_sol_ned);
+    inline Typesd::NavSolutionEcef nedToEcef(const Typesd::NavSolutionNed & nav_sol_ned) {
+        return Helpersd::nedToEcef(nav_sol_ned);
     }
 
-    inline NavSolutionNed ecefToNed(const NavSolutionEcef & nav_sol_ecef){
-        return Helperst::ecefToNed(nav_sol_ecef);
+    inline Typesd::NavSolutionNed ecefToNed(const Typesd::NavSolutionEcef & nav_sol_ecef){
+        return Helpersd::ecefToNed(nav_sol_ecef);
     }
 
-    inline EvalDataEcef getEvalDataEcef(const StateEstEcef & state_est_ecef, 
-                                        const NavSolutionEcef & true_nav_ecef){
-        return Helperst::getEvalDataEcef(state_est_ecef, true_nav_ecef);
+    inline Typesd::EvalDataEcef getEvalDataEcef(const Typesd::StateEstEcef & state_est_ecef, 
+                                        const Typesd::NavSolutionEcef & true_nav_ecef){
+        return Helpersd::getEvalDataEcef(state_est_ecef, true_nav_ecef);
     }
 
-    inline Eigen::Matrix<nav_type,3,3> eulerToDcm(const Eigen::Matrix<nav_type,3,1> & rpy){
-        return Helperst::eulerToDcm(rpy);
+    inline Eigen::Matrix<double,3,3> eulerToDcm(const Eigen::Matrix<double,3,1> & rpy){
+        return Helpersd::eulerToDcm(rpy);
     }
 
-    inline Eigen::Matrix<nav_type,3,1> dcmToEuler(const Eigen::Matrix<nav_type,3,3> & C){
-        return Helperst::dcmToEuler(C);
+    inline Eigen::Matrix<double,3,1> dcmToEuler(const Eigen::Matrix<double,3,3> & C){
+        return Helpersd::dcmToEuler(C);
     }
 
-    inline Eigen::Matrix<nav_type,3,3> skewSymmetric(const Eigen::Matrix<nav_type,3,1> & a){
-        return Helperst::skewSymmetric(a);
+    inline Eigen::Matrix<double,3,3> skewSymmetric(const Eigen::Matrix<double,3,1> & a){
+        return Helpersd::skewSymmetric(a);
     }
 
-    inline Eigen::Matrix<nav_type,2,1> radiiOfCurvature(nav_type L){
-        return Helperst::radiiOfCurvature(L);
+    inline Eigen::Matrix<double,2,1> radiiOfCurvature(double L){
+        return Helpersd::radiiOfCurvature(L);
     }
 
-    inline ErrorsNed calculateErrorsNed(const NavSolutionNed & true_nav_sol, 
-                                        const NavSolutionNed & est_nav_sol){
-        return Helperst::calculateErrorsNed(true_nav_sol, est_nav_sol);
-    }
-
-    inline ImuErrors tacticalImuErrors(){
-        return Helperst::tacticalImuErrors();
-    }  
-
-    inline GnssConfig defaultGnssConfig(){
-        return Helperst::defaultGnssConfig();
-    }
-
-    inline KfConfig tacticalImuKFConfig(){
-        return Helperst::tacticalImuKFConfig();
+    inline Typesd::ErrorsNed calculateErrorsNed(const Typesd::NavSolutionNed & true_nav_sol, 
+                                        const Typesd::NavSolutionNed & est_nav_sol){
+        return Helpersd::calculateErrorsNed(true_nav_sol, est_nav_sol);
     }
     
-    inline Eigen::Matrix<nav_type,3,1> deSkew(const Eigen::Matrix<nav_type,3,3> & S) {
-        return Helperst::deSkew(S);
+    inline Eigen::Matrix<double,3,1> deSkew(const Eigen::Matrix<double,3,3> & S) {
+        return Helpersd::deSkew(S);
+    }
+
+    // float 
+
+    inline Eigen::Matrix<float,3,1> gravityEcef(const Eigen::Matrix<float,3,1> & r_eb_e) {
+        return Helpersf::gravityEcef(r_eb_e);
+    }
+
+    inline Typesf::NavSolutionEcef nedToEcef(const Typesf::NavSolutionNed & nav_sol_ned) {
+        return Helpersf::nedToEcef(nav_sol_ned);
+    }
+
+    inline Typesf::NavSolutionNed ecefToNed(const Typesf::NavSolutionEcef & nav_sol_ecef){
+        return Helpersf::ecefToNed(nav_sol_ecef);
+    }
+
+    inline Typesf::EvalDataEcef getEvalDataEcef(const Typesf::StateEstEcef & state_est_ecef, 
+                                        const Typesf::NavSolutionEcef & true_nav_ecef){
+        return Helpersf::getEvalDataEcef(state_est_ecef, true_nav_ecef);
+    }
+
+    inline Eigen::Matrix<float,3,3> eulerToDcm(const Eigen::Matrix<float,3,1> & rpy){
+        return Helpersf::eulerToDcm(rpy);
+    }
+
+    inline Eigen::Matrix<float,3,1> dcmToEuler(const Eigen::Matrix<float,3,3> & C){
+        return Helpersf::dcmToEuler(C);
+    }
+
+    inline Eigen::Matrix<float,3,3> skewSymmetric(const Eigen::Matrix<float,3,1> & a){
+        return Helpersf::skewSymmetric(a);
+    }
+
+    inline Eigen::Matrix<float,2,1> radiiOfCurvature(float L){
+        return Helpersf::radiiOfCurvature(L);
+    }
+
+    inline Typesf::ErrorsNed calculateErrorsNed(const Typesf::NavSolutionNed & true_nav_sol, 
+                                        const Typesf::NavSolutionNed & est_nav_sol){
+        return Helpersf::calculateErrorsNed(true_nav_sol, est_nav_sol);
+    }
+    
+    inline Eigen::Matrix<float,3,1> deSkew(const Eigen::Matrix<float,3,3> & S) {
+        return Helpersf::deSkew(S);
     }
                                 
 };
