@@ -728,10 +728,11 @@ inline Typesf::StateEstEcef initStateFromGroundTruth(const Typesf::NavSolutionEc
     return Navigationf::initStateFromGroundTruth(true_nav_ecef, kf_config, gnss_meas, gen);
 }
 
+extern template struct Navigation<double>;
+extern template struct Navigation<float>;
+
 };
 
 /// @}
 
 #endif // NAVIGATION_H
-
-#include "navigation_impl.h"

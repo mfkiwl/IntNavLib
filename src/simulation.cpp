@@ -1,6 +1,3 @@
-#ifndef SIMULATION_IMPL_H
-#define SIMULATION_IMPL_H
-
 #include "simulation.h"
 
 namespace intnavlib {
@@ -418,7 +415,7 @@ Simulation<T>::initializeGnssBiases(const NavSolutionEcef & true_nav_ecef,
     return gnss_biases;
 }
 
+template struct Simulation<double>;
+template struct Simulation<float>;
 
 };
-
-#endif // SIMULATION_IMPL_H

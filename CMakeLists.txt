@@ -9,13 +9,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Export compile commands for clang tidy
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(USE_FLOAT "Build with float precision instead of double" OFF)
-
-if(USE_FLOAT)
-    message(STATUS "Build with float precision")
-    add_compile_definitions(USE_FLOAT)
-endif()
-
 option(CODE_COVERAGE "Enable coverage reporting" OFF)
 
 function(enable_coverage target)
@@ -33,38 +26,27 @@ file(GLOB PUBLIC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 file(GLOB PRIVATE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # Create static library with its sources
-# add_library(intnavlib STATIC ${PRIVATE_SOURCE_FILES}) 
-
-add_library(intnavlib INTERFACE) # header-only lib
+add_library(intnavlib STATIC ${PRIVATE_SOURCE_FILES})
 
 # Add headers. We choose to keep them all public
-# target_include_directories(intnavlib
-#     PUBLIC
-#         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#         $<INSTALL_INTERFACE:include/intnavlib>
-# )
 target_include_directories(intnavlib
-    INTERFACE
+    PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include/intnavlib>
 )
 
 # Set properties
 set_target_properties(intnavlib PROPERTIES
-                        VERSION ${PROJECT_VERSION}
-                        SOVERSION ${PROJECT_VERSION_MAJOR}
-                        POSITION_INDEPENDENT_CODE ON
-                        LINKER_LANGUAGE CXX 
-                        PUBLIC_HEADER "${PUBLIC_HEADERS}")
-
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    POSITION_INDEPENDENT_CODE ON
+    LINKER_LANGUAGE CXX
+    PUBLIC_HEADER "${PUBLIC_HEADERS}"
+)
 
 # Link dependencies. PRIVATE so only visible from lib
-# target_link_libraries( intnavlib
-#         PRIVATE
-#             Eigen3::Eigen
-#         )
 target_link_libraries( intnavlib
-        INTERFACE
+        PRIVATE
             Eigen3::Eigen
         )
 
@@ -77,18 +59,22 @@ find_package(glog REQUIRED)
 
 option(BUILD_TESTING "Enable testing" ON)
 if(BUILD_TESTING)
+
     include(CTest)
     enable_testing()
 
-    # Fetch GoogleTest
-    include(FetchContent)
-    FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
-    )
-
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
+    # Find GoogleTest or Fetch it
+    find_package(GTest)
+    if (NOT GTest_FOUND)
+        # Fetch GoogleTest
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
+        )
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif()
 
     # Get all test sources
     file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")

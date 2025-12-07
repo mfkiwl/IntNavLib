@@ -240,8 +240,9 @@ initializeGnssBiases(const Typesf::NavSolutionEcef & true_nav_ecef,
     return Simulationf::initializeGnssBiases(true_nav_ecef, true_nav_ned, gnss_pos_vel, gnss_config, gen);
 }
 
+extern template struct Simulation<double>;
+extern template struct Simulation<float>;
+
 };
 
 #endif // SIMULATION_H
-
-#include "simulation_impl.h"

@@ -1,6 +1,3 @@
-#ifndef HELPERS_IMPL_H
-#define HELPERS_IMPL_H
-
 #include "helpers.h"
 
 namespace intnavlib {
@@ -332,7 +329,7 @@ Helpers<T>::tacticalImuKFConfig(){
     return kf_config;
 }
 
+template struct Helpers<float>;
+template struct Helpers<double>;
 
 };
-
-#endif // HELPERS_IMPL_H

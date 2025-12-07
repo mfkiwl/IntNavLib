@@ -411,9 +411,10 @@ namespace intnavlib {
     inline Eigen::Matrix<float,3,1> deSkew(const Eigen::Matrix<float,3,3> & S) {
         return Helpersf::deSkew(S);
     }
+
+    extern template struct Helpers<float>;
+    extern template struct Helpers<double>;
                                 
 };
 
 #endif // HELPERS_H
-
-#include "helpers_impl.h"

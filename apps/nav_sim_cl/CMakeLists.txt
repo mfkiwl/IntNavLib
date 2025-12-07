@@ -14,7 +14,7 @@ find_package(intnavlib REQUIRED)
 add_executable(nav_sim_cl 
                     src/nav_sim_cl.cpp
                     )
-
+ 
 target_link_libraries(nav_sim_cl  
                         PRIVATE
                             ${OPENTHREADS_LIBRARY}

@@ -1,6 +1,3 @@
-#ifndef NAVIGATION_IMPL_H
-#define NAVIGATION_IMPL_H
-
 #include "navigation.h"
 
 namespace intnavlib {
@@ -553,7 +550,7 @@ Navigation<T>::lcUpdateKFPosRotEcef (const PosRotMeasEcef & pos_rot_meas,
                                         S_matrix,
                                         x_est_new,
                                         P_matrix_post);
-
+    
     // CLOSED-LOOP CORRECTION
 
     // Correct attitude, velocity, and position using (14.7-9)
@@ -727,6 +724,7 @@ Navigation<T>::initStateFromGroundTruth(const NavSolutionEcef & true_nav_ecef,
     return state_est_ecef;
 }
 
-};
+template struct Navigation<double>;
+template struct Navigation<float>;
 
-#endif // NAVIGATION_IMPL_H
+};

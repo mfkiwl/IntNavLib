@@ -74,10 +74,10 @@ LIB_BUILD_DIR="$REPO_ROOT/build"
 mkdir -p "$LIB_BUILD_DIR"
 cd "$LIB_BUILD_DIR"
 
-cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" -DCHECK_COVERAGE="$CHECK_COVERAGE" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache cmake -G Ninja ..
+cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" -DCHECK_COVERAGE="$CHECK_COVERAGE" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-ninja -j$(nproc)
-ninja install
+make -j$(nproc)
+make install
 
 echo
 echo "--> IntNavLib installed successfully to $INSTALL_PREFIX"
@@ -100,14 +100,14 @@ for app_path in "$APPS_DIR"/*; do
       echo "--> Detected ROS 2 package. Using colcon."
       cd "$app_path"
       colcon build --install-base "install" \
-        --cmake-args -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -G Ninja
+        --cmake-args -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
     else
       echo "--> Detected standard CMake project."
       APP_BUILD_DIR="$app_path/build"
       mkdir -p "$APP_BUILD_DIR"
       cd "$APP_BUILD_DIR"
-      cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -G Ninja
-      ninja -j$(nproc)
+      cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      make -j$(nproc)
     fi
     echo "--> Finished building $APP_NAME."
     echo
