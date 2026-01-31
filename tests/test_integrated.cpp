@@ -39,7 +39,7 @@ using PosRotMeasEcef = Types<ScalarType>::PosRotMeasEcef;
 
 constexpr ScalarType max_pos_error = 15.0; // meters
 
-constexpr char test_profile_path[] = "../data/Profile_3.csv";
+constexpr char test_profile_path[] = "../apps/nav_sim/motion_profiles/Profile_3.csv";
 
 enum SimType {
     INS_POS,

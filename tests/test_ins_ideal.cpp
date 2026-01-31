@@ -30,7 +30,7 @@ using StateEstEcef = Types<ScalarType>::StateEstEcef;
 using EvalDataEcef = Types<ScalarType>::EvalDataEcef;
 using MotionProfileReader = Helpers<ScalarType>::MotionProfileReader;
 
-constexpr char test_profile_path[] = "../data/Profile_3.csv";  // Provide your test profile path
+constexpr char test_profile_path[] = "../apps/nav_sim/motion_profiles/Profile_3.csv";  // Provide your test profile path
 
 // Helper function to run the INS without IMU/init errors and return average position error
 ScalarType runIdealInsSimulation(const std::string& motion_profile_path) {
