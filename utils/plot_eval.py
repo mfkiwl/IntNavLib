@@ -48,6 +48,9 @@ def plot_eval(csv_file):
     for i, (title, err_idx, sigma_idx, color) in enumerate(errors):
         row, col = divmod(i, 3)
         error = data.iloc[:, err_idx].to_numpy()
+        mae = np.mean(np.abs(error))
+        rmse = np.sqrt(np.mean(error**2))
+        print(title + " - MAE: ", mae, " - RMSE: ", rmse)
         sigma = data.iloc[:, sigma_idx].to_numpy() * 3
         xlabel = "Time, s" if row == 2 else None
         plot_with_bounds(axs[row, col], time, error, sigma, color, title, xlabel, centered=True)

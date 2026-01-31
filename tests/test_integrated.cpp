@@ -10,8 +10,36 @@
 
 using namespace intnavlib;
 
-constexpr double max_pos_error = 15.0; // meters
-constexpr char test_profile_path[] = "../data/Profile_3.csv";
+using ScalarType = double;
+
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+
+// Typedefs for convenience
+using Vector3 = Eigen::Matrix<ScalarType,3,1>;
+using Vector2 = Eigen::Matrix<ScalarType,2,1>;
+using Matrix3 = Eigen::Matrix<ScalarType,3,3>;
+using NavSolutionNed = Types<ScalarType>::NavSolutionNed;
+using ImuErrors = Types<ScalarType>::ImuErrors;
+using GnssConfig = Types<ScalarType>::GnssConfig;
+using KfConfig = Types<ScalarType>::KfConfig;
+using FileWriter = Helpers<ScalarType>::FileWriter;
+using NavSolutionEcef = Types<ScalarType>::NavSolutionEcef;
+using ImuMeasurements = Types<ScalarType>::ImuMeasurements;
+using SatPosVel = Types<ScalarType>::SatPosVel;
+using GnssMeasurements = Types<ScalarType>::GnssMeasurements;
+using NavKF = Navigation<ScalarType>::NavKF;
+using PosMeasEcef = Types<ScalarType>::PosMeasEcef;
+using StateEstEcef = Types<ScalarType>::StateEstEcef;
+using EvalDataEcef = Types<ScalarType>::EvalDataEcef;
+using MotionProfileReader = Helpers<ScalarType>::MotionProfileReader;
+using PosRotMeasEcef = Types<ScalarType>::PosRotMeasEcef;
+
+
+constexpr ScalarType max_pos_error = 15.0; // meters
+
+constexpr char test_profile_path[] = "../apps/nav_sim/motion_profiles/Profile_3.csv";
 
 enum SimType {
     INS_POS,
@@ -36,13 +64,13 @@ TEST(navigation_filter, test_integrated)
     std::mt19937 gen(43);
 
     // Tactcal grade IMU errors
-    ImuErrors imu_errors = tacticalImuErrors();
+    ImuErrors imu_errors = Helpers<ScalarType>::tacticalImuErrors();
 
     // Default GNSS config
-    GnssConfig gnss_config = defaultGnssConfig();
+    GnssConfig gnss_config = Helpers<ScalarType>::defaultGnssConfig();
 
     // Tactcal grade IMU - KF config
-    KfConfig kf_config = tacticalImuKFConfig();
+    KfConfig kf_config = Helpers<ScalarType>::tacticalImuKFConfig();
 
     // ============ Test each sim type ===========
 
@@ -57,15 +85,15 @@ TEST(navigation_filter, test_integrated)
 
     // Old IMU measurements
     ImuMeasurements imu_meas_old;
-    imu_meas_old.quant_residuals_f = Eigen::Vector3d::Zero();
-    imu_meas_old.quant_residuals_omega = Eigen::Vector3d::Zero();
+    imu_meas_old.quant_residuals_f = Vector3::Zero();
+    imu_meas_old.quant_residuals_omega = Vector3::Zero();
 
     // Time of last KF update
-    double time_last_update = -1.0;
+    ScalarType time_last_update = -1.0;
 
     // Init GNSS range biases
     SatPosVel sat_pos_vel_0 = satellitePositionsAndVelocities(true_nav_ned.time,  gnss_config);
-    Eigen::Matrix<double, Eigen::Dynamic, 1, 0, kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
+    Eigen::Matrix<ScalarType, Eigen::Dynamic, 1, 0, Constants<ScalarType>::kMaxGnssSatellites> gnss_biases = initializeGnssBiases(true_nav_ecef,
                                                                                                         true_nav_ned,
                                                                                                         sat_pos_vel_0,
                                                                                                         gnss_config,
@@ -91,7 +119,7 @@ TEST(navigation_filter, test_integrated)
 
         // ========= Get ground truth ============
 
-        double tor_i = true_nav_ned.time - nav_filter.getTime();
+        ScalarType tor_i = true_nav_ned.time - nav_filter.getTime();
         true_nav_ecef = nedToEcef(true_nav_ned);
 
         // ========== IMU Simulation ==========
@@ -112,7 +140,7 @@ TEST(navigation_filter, test_integrated)
 
         // ========== Update =========
 
-        double tor_s = true_nav_ned.time - time_last_update;
+        ScalarType tor_s = true_nav_ned.time - time_last_update;
         if(tor_s >= gnss_config.epoch_interval) {
 
             // Simulate GNSS measurements
@@ -150,8 +178,8 @@ TEST(navigation_filter, test_integrated)
 
         // ========== Compute error ==========
 
-        double pos_error = (nav_filter.getStateEst().nav_sol.r_eb_e - true_nav_ecef.r_eb_e).norm();
-        pos_error_sum += pos_error;
+        ScalarType pos_error = (nav_filter.getStateEst().nav_sol.r_eb_e - true_nav_ecef.r_eb_e).norm();
+        pos_error_sum += double(pos_error);
         count++;
         
         // ============= Update simulation state ==============
@@ -160,12 +188,17 @@ TEST(navigation_filter, test_integrated)
         imu_meas_old = imu_meas;
     }
 
-    double avg_position_error = pos_error_sum / (double) count;
+    double avg_position_error = pos_error_sum / double(count);
+
     EXPECT_LT(avg_position_error, max_pos_error)
         << "Simulation setup n." << sim_type << "failed. \n"
         << "Mean absolute position error should be under "
         << max_pos_error << " m, but was "
         << avg_position_error << " m.";
+
+    // always print summary for visibility
+    std::cout << "[INFO] Avg position error (" << sim_type << "): "
+            << avg_position_error << " m" << std::endl;
 
     }
 

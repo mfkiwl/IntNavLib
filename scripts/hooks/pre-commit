@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+
+echo "Initing pre-commit hook..."
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SCRIPTS_DIR="$REPO_ROOT/scripts"
+
+# build
+
+cd "$SCRIPTS_DIR"
+./build.sh
+
+# test
+
+cd "$SCRIPTS_DIR"
+./test.sh
+
+cd "$REPO_ROOT"
+echo "Hook passed - proceeding with commit!"
